@@ -1,0 +1,12 @@
+# Setup B — Multi-Agent SLMs (CrewAI + LangGraph)
+# Llama-3-8B (port 8001), CodeLlama-7B (port 8002), Mistral-7B (port 8003)
+architecture: multi_agent_crew
+benchmark: mmlu
+n_samples: 1000
+seed: 42
+output_dir: results
+mlflow_tracking_uri: "http://localhost:5000"
+llama8b_url: "http://localhost:8001/v1"
+codellama_url: "http://localhost:8002/v1"
+mistral_url: "http://localhost:8003/v1"
+cross_check: false

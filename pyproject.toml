@@ -53,10 +53,25 @@ api_server = [
     "thesis[mlflow]",
 ]
 
+# Energy tracking
+energy = [
+    "codecarbon>=2.3.4",
+    "pynvml>=11.5",
+]
+
+# Statistical analysis + visualization
+stats = [
+    "scipy>=1.13",
+    "matplotlib>=3.9",
+    "pandas>=2.2",
+]
+
 # Development
 dev = [
     "thesis[runner]",
     "thesis[backend]",
+    "thesis[energy]",
+    "thesis[stats]",
     "pytest>=8.2",
     "pytest-asyncio>=0.23",
     "ruff>=0.4",
@@ -67,7 +82,7 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["core*", "architectures*", "benchmarks*", "evaluation*", "experiments*", "mlops*", "web*"]
+include = ["core*", "architectures*", "benchmarks*", "evaluation*", "experiments*", "mlops*", "web*", "analysis*"]
 
 [tool.ruff]
 line-length = 100

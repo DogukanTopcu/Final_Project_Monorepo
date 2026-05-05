@@ -1,0 +1,15 @@
+# Setup C — Hybrid Speculative Decoding
+# Drafter: Llama-3-8B (port 8001), Verifier: Llama-3-70B (port 8000)
+# confidence_threshold set by pilot_study.py (default 0.75)
+architecture: speculative
+benchmark: mmlu
+n_samples: 1000
+seed: 42
+output_dir: results
+mlflow_tracking_uri: "http://localhost:5000"
+drafter_url: "http://localhost:8001/v1"
+verifier_url: "http://localhost:8000/v1"
+drafter_model: "meta-llama/Meta-Llama-3-8B-Instruct"
+verifier_model: "meta-llama/Meta-Llama-3-70B-Instruct"
+confidence_threshold: 0.75
+max_tokens: 256

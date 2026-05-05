@@ -1,0 +1,118 @@
+version: "3.9"
+
+# vLLM multi-model serving stack for NVIDIA L40S 48GB
+# Each service exposes an OpenAI-compatible API on its own port.
+#
+# Memory allocation (4-bit quantization):
+#   llama-70b:   ~40 GB  → sole occupant of GPU 0
+#   llama-8b:    ~5  GB  → GPU 0 (shared with other small models)
+#   codellama-7b: ~4.5 GB
+#   mistral-7b:  ~4.5 GB
+#
+# Run Setup B/C: start all services. Run Setup A alone: start only llama-70b.
+
+services:
+
+  llama-70b:
+    image: vllm/vllm-openai:v0.4.3
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=0
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    ports:
+      - "8000:8000"
+    command: >
+      --model meta-llama/Meta-Llama-3-70B-Instruct
+      --quantization awq
+      --max-model-len 4096
+      --gpu-memory-utilization 0.85
+      --port 8000
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/models"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  llama-8b:
+    image: vllm/vllm-openai:v0.4.3
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=0
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    ports:
+      - "8001:8001"
+    command: >
+      --model meta-llama/Meta-Llama-3-8B-Instruct
+      --max-model-len 4096
+      --gpu-memory-utilization 0.12
+      --port 8001
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles: ["multi-agent", "speculative"]
+
+  codellama-7b:
+    image: vllm/vllm-openai:v0.4.3
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=0
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    ports:
+      - "8002:8002"
+    command: >
+      --model codellama/CodeLlama-7b-Instruct-hf
+      --max-model-len 4096
+      --gpu-memory-utilization 0.10
+      --port 8002
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles: ["multi-agent"]
+
+  mistral-7b:
+    image: vllm/vllm-openai:v0.4.3
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=0
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    ports:
+      - "8003:8003"
+    command: >
+      --model mistralai/Mistral-7B-Instruct-v0.3
+      --max-model-len 4096
+      --gpu-memory-utilization 0.10
+      --port 8003
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles: ["multi-agent"]
+
+volumes:
+  hf_cache:
