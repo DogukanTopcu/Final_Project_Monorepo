@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    ports:
+      - "8000:8000"
+    env_file: ../.env
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - THESIS_MLFLOW_TRACKING_URI=http://mlflow:5000
+    volumes:
+      - ../results:/app/results
+    depends_on:
+      - mlflow
+
+  frontend:
+    build:
+      context: ../web/frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+
+  mlflow:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.mlflow
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow_data:/app
+    environment:
+      - MLFLOW_ARTIFACT_ROOT=s3://thesis-artifacts-dev/mlflow
+
+  ollama:
+    image: ollama/ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+volumes:
+  mlflow_data:
+  ollama_data:

@@ -1,0 +1,79 @@
+variable "project" {
+  type    = string
+  default = "thesis"
+}
+
+variable "environment" {
+  type = string
+}
+
+variable "vpc_id" {
+  type = string
+}
+
+variable "vpc_cidr" {
+  type = string
+}
+
+variable "subnet_id" {
+  type = string
+}
+
+variable "instance_type" {
+  type    = string
+  default = "t3.medium"
+}
+
+variable "ami_id" {
+  type    = string
+  default = ""
+}
+
+variable "use_spot" {
+  type    = bool
+  default = false
+}
+
+variable "spot_price" {
+  type    = string
+  default = ""
+}
+
+variable "is_gpu" {
+  type    = bool
+  default = false
+}
+
+variable "instance_count" {
+  type    = number
+  default = 1
+}
+
+variable "public_key_path" {
+  type    = string
+  default = "~/.ssh/thesis-key.pub"
+}
+
+variable "allowed_ssh_cidr" {
+  type        = string
+  description = "CIDR allowed to SSH — never 0.0.0.0/0"
+}
+
+variable "instance_profile_arn" {
+  type = string
+}
+
+variable "ecr_repo_url" {
+  type    = string
+  default = ""
+}
+
+variable "aws_region" {
+  type    = string
+  default = "eu-west-1"
+}
+
+variable "secret_name" {
+  type    = string
+  default = "thesis/api-keys"
+}

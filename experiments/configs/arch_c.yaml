@@ -1,0 +1,12 @@
+# Architecture C — SLM Ensemble with Voting
+# Reference: S51 (TextNeX), S55 (Cielen et al.)
+architecture: ensemble
+benchmark: mmlu
+n_samples: 100
+slm: phi3-mini
+llm: gpt-4o-mini
+n_models: 3
+voting: majority
+seed: 42
+output_dir: results
+mlflow_tracking_uri: "http://localhost:5000"

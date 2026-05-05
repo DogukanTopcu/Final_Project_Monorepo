@@ -1,0 +1,20 @@
+FROM python:3.11-slim AS base
+WORKDIR /app
+
+FROM base AS deps
+COPY pyproject.toml .
+RUN pip install --no-cache-dir -e ".[runner]" || \
+    pip install --no-cache-dir mlflow boto3 requests pyyaml
+
+FROM base AS runtime
+COPY --from=deps /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=deps /usr/local/bin /usr/local/bin
+COPY core/ /app/core/
+COPY architectures/ /app/architectures/
+COPY benchmarks/ /app/benchmarks/
+COPY evaluation/ /app/evaluation/
+COPY experiments/ /app/experiments/
+COPY mlops/ /app/mlops/
+
+ENV PYTHONUNBUFFERED=1
+ENTRYPOINT ["python", "-m", "experiments.run_experiment"]

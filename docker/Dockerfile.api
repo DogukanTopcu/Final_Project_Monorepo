@@ -1,0 +1,17 @@
+FROM python:3.11-slim AS base
+WORKDIR /app
+
+FROM base AS deps
+COPY pyproject.toml .
+RUN pip install --no-cache-dir -e ".[api]" || \
+    pip install --no-cache-dir fastapi uvicorn pydantic-settings boto3 httpx mlflow
+
+FROM base AS runtime
+COPY --from=deps /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=deps /usr/local/bin /usr/local/bin
+COPY web/backend/ /app/web/backend/
+COPY mlops/ /app/mlops/
+
+ENV PYTHONUNBUFFERED=1
+EXPOSE 8000
+CMD ["uvicorn", "web.backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

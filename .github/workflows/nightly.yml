@@ -1,0 +1,59 @@
+name: Nightly Benchmark
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+env:
+  AWS_REGION: eu-west-1
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GITHUB_ACTIONS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install dependencies
+        run: pip install -e ".[runner]"
+
+      - name: Run nightly benchmarks
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        run: |
+          DATE=$(date +%Y%m%d)
+          python -m experiments.run_experiment \
+            --architecture all \
+            --benchmark mmlu \
+            --n_samples 200 \
+            --slm phi3-mini \
+            --llm gpt-4o-mini \
+            --output s3://thesis-results-dev/nightly/${DATE}/
+
+      - name: Upload results summary
+        run: |
+          DATE=$(date +%Y%m%d)
+          aws s3 cp results/ s3://thesis-results-dev/nightly/${DATE}/ --recursive || true
+
+      - name: Notify Slack
+        if: always()
+        run: |
+          STATUS="${{ job.status }}"
+          DATE=$(date +%Y%m%d)
+          curl -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"text\": \"Nightly benchmark ${DATE}: ${STATUS}\"}" || true

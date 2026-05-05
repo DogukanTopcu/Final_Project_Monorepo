@@ -1,0 +1,11 @@
+# Architecture A — Confidence-Based Query Routing
+# Reference: S49 (>80% cost reduction), S10 (instance-level selection)
+architecture: routing
+benchmark: mmlu
+n_samples: 100
+slm: phi3-mini
+llm: gpt-4o-mini
+confidence_threshold: 0.70
+seed: 42
+output_dir: results
+mlflow_tracking_uri: "http://localhost:5000"

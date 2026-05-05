@@ -1,0 +1,71 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+env:
+  AWS_REGION: eu-west-1
+
+jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GITHUB_ACTIONS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: ecr-login
+
+      - name: Build and push thesis-api
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+        run: |
+          docker build -f docker/Dockerfile.api -t $ECR_REGISTRY/thesis-api:$GITHUB_SHA .
+          docker tag $ECR_REGISTRY/thesis-api:$GITHUB_SHA $ECR_REGISTRY/thesis-api:latest
+          docker push $ECR_REGISTRY/thesis-api:$GITHUB_SHA
+          docker push $ECR_REGISTRY/thesis-api:latest
+
+      - name: Build and push thesis-runner
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+        run: |
+          docker build -f docker/Dockerfile.runner -t $ECR_REGISTRY/thesis-runner:$GITHUB_SHA .
+          docker tag $ECR_REGISTRY/thesis-runner:$GITHUB_SHA $ECR_REGISTRY/thesis-runner:latest
+          docker push $ECR_REGISTRY/thesis-runner:$GITHUB_SHA
+          docker push $ECR_REGISTRY/thesis-runner:latest
+
+  terraform-apply:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GITHUB_ACTIONS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Apply
+        run: |
+          cd infrastructure/terraform/environments/dev
+          terraform init
+          terraform plan -out=tfplan
+          terraform apply tfplan

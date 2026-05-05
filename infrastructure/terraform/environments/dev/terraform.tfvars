@@ -1,0 +1,7 @@
+project          = "thesis"
+environment      = "dev"
+aws_region       = "eu-west-1"
+allowed_ssh_cidr = "0.0.0.0/32" # REPLACE with your IP, e.g. "203.0.113.0/32"
+public_key_path  = "~/.ssh/thesis-key.pub"
+alert_email      = ""
+github_repo      = "*"

@@ -1,0 +1,10 @@
+# Nightly batch — runs all 3 architectures on MMLU-200
+# Used by .github/workflows/nightly.yml
+architecture: all
+benchmark: mmlu
+n_samples: 200
+slm: phi3-mini
+llm: gpt-4o-mini
+seed: 42
+output_dir: results/nightly
+mlflow_tracking_uri: "http://localhost:5000"
