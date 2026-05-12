@@ -1,6 +1,6 @@
 # Thesis Experiment Platform — Monorepo
 
-An end-to-end platform for running, tracking, and comparing SLM/LLM experiments across three architectures (Routing, Multi-Agent, Ensemble) with full AWS infrastructure and MLOps pipeline.
+An end-to-end platform for running, tracking, and comparing SLM/LLM experiments across three architectures (Routing, Multi-Agent, Ensemble), automated benchmarks, UI-backed human preference evaluation, and full AWS/MLOps infrastructure.
 
 ## Architecture Overview
 
@@ -104,6 +104,14 @@ mlflow server --host 0.0.0.0 --port 5000
 | **Live Progress** | SSE-powered real-time progress bar and metric updates |
 | **Results** | Browse and compare up to 4 experiments side-by-side |
 | **Infrastructure** | EC2 instance management, cost estimates |
+
+## Benchmark Scope
+
+| Benchmark | Purpose |
+|-----------|---------|
+| **MMLU / GSM8K / ARC / HellaSwag / TruthfulQA** | Automated accuracy benchmarks for reasoning, math, commonsense, and truthfulness |
+| **HumanEval (project-specific)** | UI-backed human preference benchmark: prepared-prompt LLM Arena plus live user chat comparisons |
+| **Custom Stratified Coding** | Easy/medium/hard coding problem set with versioned prompts, tests, and difficulty labels |
 
 ## AWS Infrastructure
 

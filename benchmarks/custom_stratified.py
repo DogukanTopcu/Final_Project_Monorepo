@@ -1,12 +1,31 @@
-"""Custom stratified benchmark — Easy / Medium / Hard (300 / 400 / 300).
+"""Custom stratified coding benchmark plan.
 
-Draws from MMLU and GSM8K to build a 1,000-query set balanced across
-difficulty tiers. Difficulty is assigned via a proxy heuristic:
-  - Easy:   short MCQ questions, single-step reasoning
-  - Medium: multi-step MCQ or moderate math
-  - Hard:   complex multi-hop or 3+ step GSM8K problems
+Target dataset: basic coding tasks split by difficulty, used to compare how
+well each architecture solves practical programming problems.
 
-The split is deterministic (fixed random seed) so results are reproducible.
+Recommended thesis-sized set:
+  - Pilot: 30 tasks (10 easy, 10 medium, 10 hard)
+  - Main benchmark: 150 tasks minimum (50 per tier)
+  - Stronger benchmark: 300 tasks (100 per tier) if annotation/test authoring
+    time allows
+
+Recommended sources:
+  - Original course-style problems authored by the team
+  - MBPP / sanitized beginner Python tasks
+  - HumanEval-style function-completion prompts as inspiration, not as the
+    project HumanEval benchmark
+  - Easy LeetCode-style / HackerRank-style tasks rewritten to avoid licensing
+    and memorization issues
+
+Recommended record shape:
+  - id, difficulty, topic, prompt, starter_code, language
+  - public_tests, hidden_tests, expected_solution_notes
+  - scoring_type: exact_output | unit_tests | human_preference
+  - metadata: source, estimated_time_min, concepts, constraints
+
+The implementation below is a legacy MMLU/GSM8K difficulty mix. It should be
+replaced by a coding-task loader before the custom stratified benchmark is used
+for thesis results.
 """
 from __future__ import annotations
 
@@ -30,7 +49,8 @@ _EASY_N = 300
 _MEDIUM_N = 400
 _HARD_N = 300
 
-# MMLU subjects mapped to difficulty tier
+# Legacy MMLU subject mapping. The target custom benchmark should instead use
+# curated coding-task difficulty labels.
 _EASY_SUBJECTS = {
     "high_school_us_history", "high_school_world_history",
     "elementary_mathematics", "nutrition",

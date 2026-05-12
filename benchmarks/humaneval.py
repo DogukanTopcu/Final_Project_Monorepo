@@ -1,12 +1,23 @@
-"""HumanEval benchmark — 164 Python code-generation problems.
+"""Project HumanEval benchmark plan.
 
-Ground-truth evaluation requires executing the generated code against the
-provided unit tests in a sandboxed subprocess. This module handles loading,
-prompt construction, and correctness checking.
+In this project, "HumanEval" means human preference evaluation through the
+product UI, not the OpenAI HumanEval code-generation dataset.
 
-Safety: code is executed with a 10-second timeout inside a restricted
-subprocess. Never run this outside a sandboxed environment (Docker with
---network none is recommended).
+Planned surfaces:
+  1. LLM Arena: users evaluate answers produced for prepared prompts.
+  2. Live chat: users ask their own question; multiple architectures answer;
+     the user selects the better response, with ties allowed.
+
+Planned record shape:
+  - prompt_id, prompt_text, prompt_source, task_category
+  - architecture_a, architecture_b, answer_a, answer_b
+  - randomized_display_order, selected_winner, tie/skip flag
+  - evaluator_id/session_id, timestamp, optional rationale/rating
+  - latency/cost/token metadata for each architecture
+
+The implementation below is a legacy OpenAI HumanEval prototype. It should not
+be treated as the target benchmark until it is replaced by the UI-backed human
+preference pipeline described above.
 """
 from __future__ import annotations
 

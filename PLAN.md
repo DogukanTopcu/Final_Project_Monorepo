@@ -1,7 +1,7 @@
 # Project Execution Plan
 ## CENG415 Senior Design — LLM/SLM Hybrid Architecture Benchmark Platform
 
-> **Goal**: Systematically compare three inference architectures (Monolithic LLM, Multi-Agent SLMs, Hybrid Speculative Decoding) across accuracy, latency, energy, and cost on MMLU, GSM8K, and HumanEval benchmarks.
+> **Goal**: Systematically compare three inference architectures (Monolithic LLM, Multi-Agent SLMs, Hybrid Speculative Decoding) across accuracy, latency, energy, cost, and human preference. HumanEval in this project means UI-backed human evaluation, not the OpenAI HumanEval code-generation dataset.
 
 ---
 
@@ -87,14 +87,16 @@ CODECARBON_PROJECT_NAME=thesis_benchmark
 
 ## WP2: Pilot Study (100 Stratified Queries)
 
-**Purpose**: Calibrate the confidence threshold for Setup A (routing) and Setup C (speculative decoding) before committing to the full 1,664-query run.
+**Purpose**: Calibrate the confidence threshold for Setup A (routing) and Setup C (speculative decoding) before committing to the full automated and human-evaluated runs.
 
 ### 2.1 Stratified Sample Construction
 
-Draw from the custom stratified dataset (`benchmarks/custom_stratified.py`):
-- Easy: 30 queries (30%)
-- Medium: 40 queries (40%)
-- Hard: 30 queries (30%)
+Draw from the custom stratified coding dataset (`benchmarks/custom_stratified.py`):
+- Easy: 10 tasks
+- Medium: 10 tasks
+- Hard: 10 tasks
+
+Keep the pilot small because every architecture answer may need either unit-test execution or human review.
 
 ### 2.2 Threshold Sweep
 
@@ -129,10 +131,53 @@ The selected threshold is written to `experiments/configs/arch_a.yaml` and `expe
 |-----------|----------------|-------------|-------------------|
 | MMLU | 14,042 | 1,000 | Stratified by subject |
 | GSM8K | 1,319 | 500 | Random |
-| HumanEval | 164 | 164 | All (code exec required) |
-| Custom Stratified | 1,000 | 1,000 | Fixed split (300/400/300) |
+| HumanEval Arena | Prepared prompt bank | 100-200 prompts | Users compare anonymized answers |
+| HumanEval Live Chat | User-generated | Continuous collection | User asks; architectures answer; user picks winner |
+| Custom Stratified Coding | Curated set | 150 minimum / 300 ideal | Fixed split across easy, medium, hard |
 
-Total: **2,664 queries × 3 setups = 7,992 inference calls** (minimum; Setup B and C make additional internal calls).
+Automated benchmark inference count depends on selected MMLU/GSM8K/coding sample sizes. HumanEval produces preference records rather than a single exact-match accuracy score.
+
+### 3.1.1 HumanEval UI Design
+
+Two interfaces are required:
+
+| Interface | User Flow | Benchmark Record |
+|-----------|-----------|------------------|
+| LLM Arena | User sees a prepared question and anonymized answers from multiple architectures, then selects the better answer or tie | `prompt_id`, answer pair, hidden architecture IDs, winner/tie, evaluator/session ID |
+| Live Chat | User writes a question; multiple architectures answer; user selects the better response | raw user prompt, answer pair, hidden architecture IDs, winner/tie, optional feedback |
+
+Store answer order after randomization so preference labels can be mapped back to the producing architecture without revealing it to the user.
+
+### 3.1.2 Custom Stratified Coding Dataset
+
+Recommended dataset size:
+- Pilot: 30 tasks total, 10 per tier.
+- Main thesis set: 150 tasks total, 50 per tier.
+- Stronger set if time allows: 300 tasks total, 100 per tier.
+
+Recommended sources:
+- Team-authored course-style Python problems.
+- MBPP-style beginner programming tasks.
+- APPS introductory/interview-style tasks.
+- Rewritten LeetCode/HackerRank-style tasks to avoid direct memorization and licensing issues.
+
+Recommended JSONL format:
+
+```json
+{
+  "id": "coding_medium_042",
+  "difficulty": "medium",
+  "topic": "arrays",
+  "language": "python",
+  "prompt": "Write a function ...",
+  "starter_code": "def solve(...):",
+  "public_tests": ["assert solve(...) == ..."],
+  "hidden_tests": ["assert solve(...) == ..."],
+  "scoring_type": "unit_tests",
+  "source": "team_authored",
+  "constraints": "No external packages."
+}
+```
 
 ### 3.2 Execution Order
 
@@ -173,10 +218,10 @@ mlflow/
   experiments/
     setup_a_mmlu/          run_id, accuracy, eats, p95_latency, energy_kwh
     setup_a_gsm8k/
-    setup_a_humaneval/
+    setup_a_humaneval_arena/
     setup_b_mmlu/
     ...
-    setup_c_humaneval/
+    setup_c_humaneval_arena/
 ```
 
 ### 3.5 Fault Tolerance
@@ -299,8 +344,8 @@ Contents: all result JSONs, MLflow export, CodeCarbon emissions.csv, conda envir
 - [x] `benchmarks/hellaswag.py`
 - [x] `benchmarks/arc.py`
 - [x] `benchmarks/truthfulqa.py`
-- [ ] `benchmarks/humaneval.py` — HumanEval (164 code problems)
-- [ ] `benchmarks/custom_stratified.py` — Easy/Medium/Hard stratified set
+- [ ] `benchmarks/humaneval.py` — project HumanEval preference records from LLM Arena and live chat
+- [ ] `benchmarks/custom_stratified.py` — easy/medium/hard coding problem set
 
 ### Evaluation
 
@@ -336,7 +381,8 @@ Contents: all result JSONs, MLflow export, CodeCarbon emissions.csv, conda envir
 |------|-----------|--------|------------|
 | L40S OOM for 70B + 8B simultaneously | Medium | High | Run Setup A and C on separate VRAM windows; don't load both concurrently |
 | vLLM version incompatibility | Low | Medium | Pin `vllm==0.4.3` in requirements |
-| HumanEval code execution sandbox escape | Low | High | Run in Docker with `--network none` |
+| HumanEval answer-order or architecture leakage | Medium | High | Randomize answer order and keep architecture labels hidden from evaluators |
+| Custom coding benchmark memorization/data leakage | Medium | Medium | Prefer team-authored or rewritten tasks; track source metadata |
 | CodeCarbon import failure on headless server | Medium | Low | Wrap in try/except; fall back to NVML only |
 | Pilot threshold calibration inconclusive | Low | Medium | Default to 0.75 per literature |
 

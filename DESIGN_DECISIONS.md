@@ -141,21 +141,55 @@ The experimental design is constructed so that all three run on the same benchma
 |-----------|-----------|-------|---------|-------------|---------------|
 | **MMLU** | Multiple-choice, 57 subjects | test | 1,000 (stratified) | Domain-agnostic breadth; most cited benchmark across SLR | Used as primary metric throughout SLR |
 | **GSM8K** | Grade-school math, chain-of-thought | test | 500 | Tests multi-step reasoning; relevant to energy-per-token analysis (longer CoT = more tokens = more cost) | S4 (Wilhelm et al., energy-per-token) |
-| **HumanEval** | Python code generation, unit test execution | test | 164 (all) | Code tasks require CodeLlama-7B specialization — tests whether domain routing in Architecture B adds value | Architecture B uses CodeLlama agent |
+| **HumanEval (project-specific)** | Human preference evaluation | UI-collected | Target: 100-200 prepared prompts + live user prompts | Measures which architecture users prefer when answers are judged by humans instead of exact-match labels | Supports LLM Arena and live chat evaluation |
 | **ARC-Challenge** | Abstract reasoning, adversarially filtered | test | 500 | Routing test: questions intentionally hard for retrieval — forces genuine reasoning vs pattern match | S43, S29 |
 | **HellaSwag** | Commonsense completion | validation | 500 | SLMs tend to fail commonsense; reveals where confidence routing correctly escalates | Common SLM evaluation |
 | **TruthfulQA** | Hallucination resistance | validation | 500 | Measures whether multi-agent debate (Arch B) reduces hallucination vs single-pass | S33 (uncertainty estimation) |
 
-### Custom Benchmark — Stratified Difficulty Set
+### HumanEval — Human Preference Evaluation
+
+This project's HumanEval is **not** the OpenAI HumanEval code-generation dataset. It is a UI-backed human evaluation workflow with two surfaces:
+
+| Surface | Prompt Source | Evaluation Method | Output |
+|---------|---------------|-------------------|--------|
+| **LLM Arena** | Prepared prompt bank | Users compare anonymized model/architecture answers | Pairwise win/tie/lose records |
+| **Live Chat Evaluation** | User-written questions | Multiple architectures answer the same user prompt; the user selects the better answer | Real-world preference records |
+
+Recommended safeguards:
+- Randomize answer order so users do not know which architecture produced which answer.
+- Include **tie** and **skip/unsafe** options so forced choices do not pollute labels.
+- Store latency, cost, token count, architecture ID, and model IDs with each answer.
+- Use at least 3 independent votes per prepared Arena prompt when possible.
+- Keep live-chat votes separate from prepared-prompt votes because prompt distribution differs.
+
+### Custom Benchmark — Stratified Coding Difficulty Set
 
 | Tier | Count | Source | Criteria |
 |------|-------|--------|----------|
-| Easy | 300 | MMLU (easy subjects) + GSM8K (≤ 2 steps) | Short questions, single-hop reasoning |
-| Medium | 400 | MMLU (mixed subjects) + GSM8K (3–5 steps) | Multi-hop reasoning, moderate length |
-| Hard | 300 | MMLU (hard subjects: abstract algebra, formal logic) + GSM8K (6+ steps) | Complex multi-hop, long chain-of-thought |
-| **Total** | **1,000** | Mixed | Fixed seed=42 for reproducibility |
+| Easy | 50 minimum / 100 ideal | Team-authored tasks, MBPP-style beginner problems | Single function, one core concept, direct unit tests |
+| Medium | 50 minimum / 100 ideal | MBPP/APPS introductory tasks, rewritten LeetCode-style tasks | Multiple conditions, data structures, edge cases |
+| Hard | 50 minimum / 100 ideal | APPS/interview-style tasks, team-authored composites | Multi-step algorithmic reasoning, hidden edge cases |
+| **Total** | **150 minimum / 300 ideal** | Curated coding set | Fixed split and versioned JSONL for reproducibility |
 
-**Why this matters:** Standard benchmarks report aggregate accuracy. The stratified set reveals *at which difficulty level* each architecture diverges. Hypothesis: routing (Arch A) underperforms on Easy (over-escalates) and Hard (confidence miscalibrated), but excels on Medium.
+**Why this matters:** Standard benchmarks report aggregate accuracy. The stratified coding set reveals *at which programming difficulty level* each architecture diverges. Hypothesis: routing should work well on easy tasks, multi-agent/domain-routing should help on medium and code-specialized tasks, and harder tasks should expose when escalation or verification is necessary.
+
+Recommended record format:
+
+```json
+{
+  "id": "coding_easy_001",
+  "difficulty": "easy",
+  "topic": "strings",
+  "language": "python",
+  "prompt": "Write a function ...",
+  "starter_code": "def solve(...):",
+  "public_tests": ["assert solve(...) == ..."],
+  "hidden_tests": ["assert solve(...) == ..."],
+  "scoring_type": "unit_tests",
+  "source": "team_authored",
+  "constraints": "No external packages."
+}
+```
 
 ---
 
@@ -250,8 +284,8 @@ Higher EATS = better efficiency per unit of accuracy. This metric directly fills
      │                │  │                 │  │                    │
      │ A: Routing     │  │ MMLU (breadth)  │  │ Accuracy /         │
      │ B: Multi-Agent │  │ GSM8K (math)    │  │ (LLM_ratio × cost) │
-     │ C: Ensemble    │  │ HumanEval (code)│  │                    │
-     │                │  │ Custom (diff.)  │  │ Fills RQ2 gap      │
+     │ C: Ensemble    │  │ HumanEval (UI)  │  │                    │
+     │                │  │ Coding (diff.)  │  │ Fills RQ2 gap      │
      └────────────────┘  └─────────────────┘  └────────────────────┘
               │                    │                    │
               └────────────────────┴────────────────────┘
