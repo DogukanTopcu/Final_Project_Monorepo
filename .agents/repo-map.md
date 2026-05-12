@@ -190,6 +190,32 @@ Bilinen durum:
 - MLflow global run state concurrency açısından dikkat ister.
 - Web backend tarafında mock servis var; gerçek runner entegrasyonu ayrı iş.
 
+## `training/`
+
+Amaç: Fine-tune edilmiş SLM deneylerini ana orchestration benchmark hattından ayrı bir ablation ekseni olarak yönetmek.
+
+Ana dosyalar:
+
+- `README.md`
+- `config.py`
+- `datasets.py`
+- `train_lora.py`
+- `registry.py`
+- `configs/qlora_coding_pilot.yaml`
+- `configs/qlora_domain_pilot.yaml`
+
+Mevcut durum:
+
+- LoRA/QLoRA SFT için opsiyonel training paketi oluşturuldu.
+- Dataset hazırlama, train/validation/test split, adapter registry ve örnek pilot config'ler var.
+- Ağır bağımlılıklar `pip install -e ".[training]"` ile opsiyonel kurulacak şekilde ayrıldı.
+
+Bilinen durum:
+
+- Training hattı bilinçli olarak ana experiment runner'a doğrudan bağlanmadı.
+- Fine-tuned adapter inference desteği core model provider ve architecture config tarafında ayrıca entegre edilmeli.
+- Fine-tune sonuçları ana sonuçlarla karıştırılmadan ablation olarak raporlanmalı.
+
 ## `web/`
 
 Amaç: Kullanıcı arayüzü ve API üzerinden deney yönetimi, sonuç gösterimi ve insan tercih değerlendirmesi.
@@ -201,4 +227,3 @@ Beklenen rol:
 - Deney başlatma/izleme ekranları.
 
 Bilinen durum: Bu repo extraction sırasında web detayına henüz ayrı ayrı inilmedi. Mevcut notlarda web backend'in mock experiment service kullandığı ve gerçek runner entegrasyonunun yapılmadığı belirtilmiştir.
-

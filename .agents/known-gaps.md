@@ -74,6 +74,15 @@ Bu dosya, repo extraction sırasında görülen yapılacak işleri merkezi olara
 - Concurrent run senaryolarında MLflow global state gözden geçirilmeli.
 - Registry helper gerçek akışta kullanılacaksa runner/tracker ile bağlanmalı.
 
+## Training / Fine-Tuning İşleri
+
+- Fine-tuned adapter'ların inference sırasında nasıl yükleneceği core model provider tarafında tasarlanmalı.
+- Adapter registry ile experiment config arasında bağlantı kurulmalı.
+- Base SLM vs fine-tuned SLM vs LLM ablation config'leri eklenmeli.
+- Training çıktıları MLflow artifact/model registry tarafına bağlanmalı.
+- Custom stratified coding dataset hazırlandığında `training/data/processed/*` dosyaları üretilmeli.
+- Human preference benchmark'ta fine-tuned model cevapları ayrı treatment olarak loglanmalı.
+
 ## Web İşleri
 
 - LLM Arena UI veri modeli tasarlanmalı.
@@ -81,4 +90,3 @@ Bu dosya, repo extraction sırasında görülen yapılacak işleri merkezi olara
 - İnsan tercih kayıtları benchmark/evaluation hattına bağlanmalı.
 - Mock experiment service yerine gerçek experiment runner entegrasyonu yapılmalı.
 - Benchmark/model/architecture isimleri backend ve frontend arasında normalize edilmeli.
-

@@ -59,6 +59,16 @@ energy = [
     "pynvml>=11.5",
 ]
 
+# Fine-tuning / adapter training
+training = [
+    "thesis[core]",
+    "torch>=2.3",
+    "transformers>=4.40",
+    "accelerate>=0.30",
+    "peft>=0.11",
+    "bitsandbytes>=0.43; platform_system == 'Linux'",
+]
+
 # Statistical analysis + visualization
 stats = [
     "scipy>=1.13",
@@ -82,7 +92,7 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["core*", "architectures*", "benchmarks*", "evaluation*", "experiments*", "mlops*", "web*", "analysis*"]
+include = ["core*", "architectures*", "benchmarks*", "evaluation*", "experiments*", "mlops*", "web*", "analysis*", "training*"]
 
 [tool.ruff]
 line-length = 100

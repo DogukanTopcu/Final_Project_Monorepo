@@ -80,3 +80,12 @@ wandb/
 runs/
 checkpoints/
 artifacts/
+
+# Fine-tuning artifacts
+training/data/raw/
+training/data/processed/
+training/adapters/*
+!training/adapters/README.md
+!training/adapters/registry.json
+!training/adapters/registry.example.json
+training/outputs/

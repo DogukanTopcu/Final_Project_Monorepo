@@ -252,7 +252,9 @@ Higher EATS = better efficiency per unit of accuracy. This metric directly fills
 
 ### Recommendation
 
-**Do not fine-tune by default.** The primary research question is about orchestration strategy, not model optimization. Fine-tuning would confound the architecture comparison.
+**Do not fine-tune in the primary experiment by default.** The primary research question is about orchestration strategy, not model optimization. Fine-tuning would confound the architecture comparison if mixed directly into the main benchmark matrix.
+
+Fine-tuning is now treated as a separate ablation track under `training/`. This keeps the main experiment clean while still allowing the thesis to test whether domain-specialized SLM orchestration can beat a larger LLM on quality/cost/latency/energy tradeoffs.
 
 **Exception trigger:** If the pilot study (100 queries) shows that Architecture A's SLM escalates > 40% of queries to the LLM (indicating poor confidence calibration), apply QLoRA to Phi-3 Mini with an instruction-following dataset to improve calibration. This should be reported as a separate ablation, not the primary experiment.
 

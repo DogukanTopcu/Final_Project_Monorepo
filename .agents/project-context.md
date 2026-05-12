@@ -18,6 +18,7 @@ Bu yüzden repo yalnızca model çağıran bir uygulama değildir. Aşağıdaki 
 - MLOps: MLflow tracking, callback ve registry yardımcıları.
 - Web/API: deney başlatma/izleme ve insan tercih değerlendirmesi için arayüz hedefi.
 - Infrastructure/Docker: yerel ve bulut ortamlarında çalıştırılabilirlik hedefi.
+- Training: fine-tuned SLM deneylerini ana architecture karşılaştırmasından ayrı ablation hattı olarak yürütme.
 
 ## Kritik Kavramlar
 
@@ -72,3 +73,15 @@ Planlanan formatta her örnek en az şu alanlara sahip olmalıdır:
 
 İdeal tez değerlendirmesi: 300 örnek, yani her zorluk için 100 örnek.
 
+### Fine-Tuning / Training
+
+Fine-tune edilmiş SLM'ler ana deneyin parçası olarak değil, ayrı bir ablation ekseni olarak ele alınmalıdır. Ana deney architecture etkisini izole eder; training hattı ise base SLM, fine-tuned SLM ve LLM tradeoff'unu ayrıca ölçer.
+
+Beklenen karşılaştırma:
+
+- Base SLM
+- Fine-tuned SLM
+- LLM
+- Base SLM orchestration
+- Fine-tuned SLM orchestration
+- Fine-tuned SLM orchestration vs LLM

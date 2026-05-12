@@ -79,6 +79,12 @@ mlflow server --host 0.0.0.0 --port 5000
 │   ├── tracking.py        # MLflowTracker class
 │   ├── callbacks.py       # RunnerCallbacks for SSE integration
 │   └── registry.py        # Model registration helpers
+├── training/
+│   ├── config.py          # LoRA/QLoRA training config schema
+│   ├── datasets.py        # SFT JSONL preparation and split CLI
+│   ├── train_lora.py      # Optional LoRA/QLoRA fine-tuning CLI
+│   ├── registry.py        # Fine-tuned adapter registry
+│   └── configs/           # Coding/domain pilot training configs
 ├── infrastructure/
 │   └── terraform/
 │       ├── modules/       # vpc, ec2, s3, ecr, dynamodb, iam, cloudwatch, secrets
@@ -112,6 +118,16 @@ mlflow server --host 0.0.0.0 --port 5000
 | **MMLU / GSM8K / ARC / HellaSwag / TruthfulQA** | Automated accuracy benchmarks for reasoning, math, commonsense, and truthfulness |
 | **HumanEval (project-specific)** | UI-backed human preference benchmark: prepared-prompt LLM Arena plus live user chat comparisons |
 | **Custom Stratified Coding** | Easy/medium/hard coding problem set with versioned prompts, tests, and difficulty labels |
+
+## Fine-Tuning Scope
+
+Fine-tuning is kept as a separate ablation track under `training/`. The primary architecture experiments should keep base models fixed; fine-tuned SLMs are compared separately against base SLMs, orchestration variants, and LLM baselines.
+
+```bash
+pip install -e ".[training]"
+python -m training.datasets prepare-sft --input training/data/raw/coding_pilot.jsonl --output-dir training/data/processed/coding_pilot
+python -m training.train_lora --config training/configs/qlora_coding_pilot.yaml
+```
 
 ## AWS Infrastructure
 
