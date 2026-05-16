@@ -45,13 +45,25 @@ LLMs serve two roles: (1) the monolithic **Setup A baseline**, and (2) the escal
 | **Kimi K2.6 (1T)** | Heavy LLM | Highest-capability frontier anchor in the selected set | `kimi-k2.6-1t` |
 | **Qwen 3.5 397B-A17B** | Heavy LLM | Open-weight flagship for the Qwen family; normalized form of the user's "396B" shorthand | `qwen3.5-397b-a17b` |
 | **GPT OSS 120B** | Heavy LLM | Open-weight OpenAI-family comparison point | `gpt-oss-120b` |
-| **Llama 3.3 70B** | Heavy LLM | Default monolithic baseline and verifier model because it remains practical on an L40S | `llama3.3-70b` |
+| **Llama 3.3 70B** | Heavy LLM | Default monolithic baseline and verifier model because it remains the lightest reproducibly self-hosted heavy baseline in the selected set | `llama3.3-70b` |
 | **Qwen 3.5 27B / GPT OSS 20B / Gemma 4 31B** | Light LLM | Mid-tier models for lower-cost escalation experiments | `qwen3.5-27b`, `gpt-oss-20b`, `gemma4-31b` |
 | **Qwen 3.5 122B-A10B / Gemma 4 26B-A4B / Qwen 3.5 35B-A3B** | MoE | Active-parameter-efficient comparison set for architecture-level efficiency analysis | `qwen3.5-122b-a10b`, `gemma4-26b-a4b`, `qwen3.5-35b-a3b` |
 
 ### Why Llama 3.3 70B Is the Default Baseline
 
-Among the selected heavy models, `llama3.3-70b` is the easiest to self-host reproducibly on the repo's existing GPU target. It therefore remains the default monolithic baseline and speculative verifier, while the rest of the selected heavy/light/MoE pool is exposed through the shared model catalog for routing and benchmark sweeps.
+Among the selected heavy models, `llama3.3-70b` is still the most practical heavy baseline to self-host without jumping directly to the most expensive multi-H100/H200 classes. It therefore remains the default monolithic baseline and speculative verifier, while the rest of the selected heavy/light/MoE pool is exposed through the shared model catalog for routing and benchmark sweeps.
+
+### Infrastructure Consequence
+
+The repo no longer assumes a single generic GPU production host. The selected model pool spans at least three deployment classes:
+
+| Deployment class | Typical AWS host | Models |
+|------------------|------------------|--------|
+| Small/medium single-GPU | `g5.2xlarge`, `g6e.4xlarge` | `qwen3.5-4b`, `gemma4-4b`, `llama3.2-3b`, `gpt-oss-20b`, `qwen3.5-27b`, `gemma4-31b`, `qwen3.5-35b-a3b`, `gemma4-26b-a4b` |
+| Large but still practical self-host | `g6e.12xlarge`, `p5.4xlarge`, `g6e.48xlarge` | `llama3.3-70b`, `gpt-oss-120b`, `qwen3.5-122b-a10b` |
+| Frontier, very expensive | `p5e.48xlarge` class | `qwen3.5-397b-a17b`, `kimi-k2.6-1t` |
+
+This is why prod Terraform was changed to an opt-in `enabled_vllm_models` design with one dedicated host per selected model instead of one shared GPU box.
 
 ---
 

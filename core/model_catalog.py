@@ -12,6 +12,7 @@ class ModelSpec:
     kind: str
     provider: str
     provider_model: str
+    openai_compatible_model: str | None = None
     base_url_env: str | None = None
     base_url_default: str | None = None
     api_key_env: str | None = None
@@ -26,6 +27,7 @@ SELECTED_MODELS: tuple[ModelSpec, ...] = (
         kind="llm",
         provider="openai_compatible",
         provider_model="moonshotai/Kimi-K2.6",
+        openai_compatible_model="moonshotai/Kimi-K2.6",
         base_url_env="VLLM_KIMI_K26_1T_URL",
         base_url_default="http://localhost:8010/v1",
         api_key_env="KIMI_API_KEY",
@@ -38,6 +40,7 @@ SELECTED_MODELS: tuple[ModelSpec, ...] = (
         kind="llm",
         provider="openai_compatible",
         provider_model="Qwen/Qwen3.5-397B-A17B",
+        openai_compatible_model="Qwen/Qwen3.5-397B-A17B",
         base_url_env="VLLM_QWEN35_397B_A17B_URL",
         base_url_default="http://localhost:8011/v1",
     ),
@@ -49,6 +52,7 @@ SELECTED_MODELS: tuple[ModelSpec, ...] = (
         kind="llm",
         provider="openai_compatible",
         provider_model="openai/gpt-oss-120b",
+        openai_compatible_model="openai/gpt-oss-120b",
         base_url_env="VLLM_GPT_OSS_120B_URL",
         base_url_default="http://localhost:8012/v1",
     ),
@@ -60,6 +64,7 @@ SELECTED_MODELS: tuple[ModelSpec, ...] = (
         kind="llm",
         provider="openai_compatible",
         provider_model="meta-llama/Llama-3.3-70B-Instruct",
+        openai_compatible_model="meta-llama/Llama-3.3-70B-Instruct",
         base_url_env="VLLM_LLAMA33_70B_URL",
         base_url_default="http://localhost:8000/v1",
     ),
@@ -71,6 +76,9 @@ SELECTED_MODELS: tuple[ModelSpec, ...] = (
         kind="llm",
         provider="ollama",
         provider_model="qwen3.5:27b",
+        openai_compatible_model="Qwen/Qwen3.5-27B",
+        base_url_env="VLLM_QWEN35_27B_URL",
+        base_url_default="http://localhost:8004/v1",
     ),
     ModelSpec(
         id="gpt-oss-20b",
@@ -80,6 +88,7 @@ SELECTED_MODELS: tuple[ModelSpec, ...] = (
         kind="llm",
         provider="openai_compatible",
         provider_model="openai/gpt-oss-20b",
+        openai_compatible_model="openai/gpt-oss-20b",
         base_url_env="VLLM_GPT_OSS_20B_URL",
         base_url_default="http://localhost:8005/v1",
     ),
@@ -91,6 +100,9 @@ SELECTED_MODELS: tuple[ModelSpec, ...] = (
         kind="llm",
         provider="ollama",
         provider_model="gemma4:31b",
+        openai_compatible_model="nvidia/Gemma-4-31B-IT-NVFP4",
+        base_url_env="VLLM_GEMMA4_31B_URL",
+        base_url_default="http://localhost:8006/v1",
     ),
     ModelSpec(
         id="qwen3.5-122b-a10b",
@@ -100,6 +112,9 @@ SELECTED_MODELS: tuple[ModelSpec, ...] = (
         kind="llm",
         provider="ollama",
         provider_model="qwen3.5:122b",
+        openai_compatible_model="Qwen/Qwen3.5-122B-A10B",
+        base_url_env="VLLM_QWEN35_122B_A10B_URL",
+        base_url_default="http://localhost:8009/v1",
     ),
     ModelSpec(
         id="gemma4-26b-a4b",
@@ -109,6 +124,9 @@ SELECTED_MODELS: tuple[ModelSpec, ...] = (
         kind="llm",
         provider="ollama",
         provider_model="gemma4:26b",
+        openai_compatible_model="nvidia/Gemma-4-26B-A4B-NVFP4",
+        base_url_env="VLLM_GEMMA4_26B_A4B_URL",
+        base_url_default="http://localhost:8008/v1",
     ),
     ModelSpec(
         id="qwen3.5-35b-a3b",
@@ -118,6 +136,9 @@ SELECTED_MODELS: tuple[ModelSpec, ...] = (
         kind="llm",
         provider="ollama",
         provider_model="qwen3.5:35b",
+        openai_compatible_model="Qwen/Qwen3.5-35B-A3B",
+        base_url_env="VLLM_QWEN35_35B_A3B_URL",
+        base_url_default="http://localhost:8007/v1",
     ),
     ModelSpec(
         id="gemma4-4b",
@@ -127,6 +148,9 @@ SELECTED_MODELS: tuple[ModelSpec, ...] = (
         kind="slm",
         provider="ollama",
         provider_model="gemma4:e4b",
+        openai_compatible_model="google/gemma-4-E4B-it",
+        base_url_env="VLLM_GEMMA4_E4B_URL",
+        base_url_default="http://localhost:8002/v1",
     ),
     ModelSpec(
         id="qwen3.5-4b",
@@ -136,6 +160,9 @@ SELECTED_MODELS: tuple[ModelSpec, ...] = (
         kind="slm",
         provider="ollama",
         provider_model="qwen3.5:4b",
+        openai_compatible_model="Qwen/Qwen3.5-4B",
+        base_url_env="VLLM_QWEN35_4B_URL",
+        base_url_default="http://localhost:8001/v1",
     ),
     ModelSpec(
         id="llama3.2-3b",
@@ -145,6 +172,9 @@ SELECTED_MODELS: tuple[ModelSpec, ...] = (
         kind="slm",
         provider="ollama",
         provider_model="llama3.2:3b",
+        openai_compatible_model="meta-llama/Llama-3.2-3B-Instruct",
+        base_url_env="VLLM_LLAMA32_3B_URL",
+        base_url_default="http://localhost:8003/v1",
     ),
 )
 

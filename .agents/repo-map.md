@@ -160,14 +160,15 @@ Ana parçalar:
 Mevcut durum:
 
 - `terraform init -backend=false` ve `terraform validate` dev ortamında başarılı oldu.
+- Prod environment artık `enabled_vllm_models` ile opt-in model-host matrisine sahip.
 - Sadece deprecation warning'leri görüldü.
 
 Bilinen durum:
 
 - Root `versions.tf` backend/provider ayarları environment dizinleriyle aynı Terraform root'u olmayabilir.
-- EC2 user_data içinde ECR repo URL path'i iki kez ekleniyor olabilir.
-- CPU instance runner çalıştırıyor gibi görünüyor; niyet GPU runner ise ayrıştırılmalı.
-- Secret isimleriyle user_data beklentileri uyumlu olmayabilir.
+- Prod GPU serving artık ECR runner image'ı yerine public `vllm/vllm-openai` image'ı ile dedicated model host'lar kurar.
+- API host private vLLM endpoint'lerini `THESIS_FORCE_VLLM=1` altında env üzerinden alır.
+- `infrastructure/vllm/docker-compose.yml`, yerel ve ad-hoc GPU testleri için tek hostta sığan modelleri taşır; frontier modeller burada intentionally yoktur.
 - MLflow URI localhost olarak kalmış; instance içinde MLflow server varsayımı net değil.
 
 ## `mlops/`

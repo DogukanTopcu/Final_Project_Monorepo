@@ -7,8 +7,8 @@ An end-to-end platform for running, tracking, and comparing SLM/LLM experiments 
 ```
 Local Machine                          AWS Cloud
 ┌────────────────────┐                ┌─────────────────────────┐
-│  Next.js Frontend  │───────────────▶│  EC2 (GPU) — runners    │
-│  FastAPI Backend   │                │  EC2 (CPU) — API/MLflow │
+│  Next.js Frontend  │───────────────▶│  EC2 (CPU) — API/MLflow │
+│  FastAPI Backend   │                │  EC2 (GPU) — model hosts│
 │  ExperimentRunner  │                │  S3 — results/artifacts │
 │  MLflow (local)    │                │  ECR — Docker images    │
 │  Docker Compose    │                │  DynamoDB — metadata    │
@@ -40,6 +40,8 @@ The repo is normalized around the following canonical aliases:
 Notes:
 - User shorthand `Qwen 3.5 (396B)` is normalized to the official checkpoint `Qwen/Qwen3.5-397B-A17B`.
 - User shorthand `Gemma 4 (4B)` is normalized to the effective-parameter checkpoint `gemma4:e4b` / `google/gemma-4-E4B-it`.
+- Local development can keep using Ollama for the smaller aliases.
+- Production/AWS can switch the same aliases to OpenAI-compatible vLLM endpoints by setting `THESIS_FORCE_VLLM=1`.
 
 ## Quick Start
 
@@ -112,7 +114,7 @@ mlflow server --host 0.0.0.0 --port 5000
 ├── infrastructure/
 │   └── terraform/
 │       ├── modules/       # vpc, ec2, s3, ecr, dynamodb, iam, cloudwatch, secrets
-│       └── environments/  # dev (t3.medium), prod (g4dn.xlarge + spot)
+│       └── environments/  # dev (t3.micro), prod (CPU API + optional model-specific GPU hosts)
 ├── docker/
 │   ├── Dockerfile.api
 │   ├── Dockerfile.runner
@@ -168,10 +170,30 @@ make tf-destroy # Destroy (with warning)
 
 | | Dev | Prod |
 |---|---|---|
-| EC2 | t3.medium | g4dn.xlarge (GPU, spot) |
+| EC2 | `t3.micro` runner | `t3.large` API host + opt-in GPU model hosts |
 | NAT Gateway | No | Yes |
 | AZs | 1 | 2 |
-| Spot | No | Yes |
+| Spot | No | Disabled by default for serving hosts |
+
+### Prod Model Hosts
+
+Enable only the models you need in `infrastructure/terraform/environments/prod/terraform.tfvars` via `enabled_vllm_models`.
+
+| Model alias | Default prod host |
+|---|---|
+| `qwen3.5-4b` | `g5.2xlarge` |
+| `gemma4-4b` | `g5.2xlarge` |
+| `llama3.2-3b` | `g5.2xlarge` |
+| `gpt-oss-20b` | `g5.2xlarge` |
+| `qwen3.5-27b` | `g6e.4xlarge` |
+| `gemma4-31b` | `g6e.4xlarge` |
+| `qwen3.5-35b-a3b` | `g6e.4xlarge` |
+| `gemma4-26b-a4b` | `g6e.4xlarge` |
+| `llama3.3-70b` | `g6e.12xlarge` |
+| `gpt-oss-120b` | `p5.4xlarge` |
+| `qwen3.5-122b-a10b` | `g6e.48xlarge` |
+| `qwen3.5-397b-a17b` | `p5e.48xlarge` |
+| `kimi-k2.6-1t` | `p5e.48xlarge` |
 
 ## CI/CD Pipeline
 
@@ -201,10 +223,20 @@ THESIS_AWS_REGION=eu-central-1
 THESIS_S3_RESULTS_BUCKET=thesis-results-dev
 THESIS_MLFLOW_TRACKING_URI=http://localhost:5000
 THESIS_OLLAMA_BASE_URL=http://localhost:11434
+THESIS_FORCE_VLLM=0
 VLLM_LLAMA33_70B_URL=http://localhost:8000/v1
 VLLM_QWEN35_4B_URL=http://localhost:8001/v1
 VLLM_GEMMA4_E4B_URL=http://localhost:8002/v1
 VLLM_LLAMA32_3B_URL=http://localhost:8003/v1
+VLLM_QWEN35_27B_URL=http://localhost:8004/v1
+VLLM_GPT_OSS_20B_URL=http://localhost:8005/v1
+VLLM_GEMMA4_31B_URL=http://localhost:8006/v1
+VLLM_QWEN35_35B_A3B_URL=http://localhost:8007/v1
+VLLM_GEMMA4_26B_A4B_URL=http://localhost:8008/v1
+VLLM_QWEN35_122B_A10B_URL=http://localhost:8009/v1
+VLLM_KIMI_K26_1T_URL=http://localhost:8010/v1
+VLLM_QWEN35_397B_A17B_URL=http://localhost:8011/v1
+VLLM_GPT_OSS_120B_URL=http://localhost:8012/v1
 ```
 
 ## Docker Images

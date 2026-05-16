@@ -22,7 +22,7 @@ from typing import Any
 from architectures import get_architecture
 from benchmarks import get_benchmark
 from core.config import load_config, save_config
-from core.models import get_model
+from core.models import assert_model_runnable, get_model
 from core.types import ExperimentConfig, ExperimentResult, SampleResult
 from evaluation.reporter import Reporter
 
@@ -58,6 +58,8 @@ class ExperimentRunner:
             )
 
         # Build models
+        assert_model_runnable(cfg.slm)
+        assert_model_runnable(cfg.llm)
         slm = get_model(cfg.slm)
         llm = get_model(cfg.llm)
 

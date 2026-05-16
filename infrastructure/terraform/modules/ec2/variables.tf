@@ -24,6 +24,16 @@ variable "instance_type" {
   default = "t3.medium"
 }
 
+variable "root_volume_size_gb" {
+  type    = number
+  default = 30
+}
+
+variable "root_volume_type" {
+  type    = string
+  default = "gp3"
+}
+
 variable "ami_id" {
   type    = string
   default = ""
@@ -83,6 +93,16 @@ variable "container_image_uri" {
   description = "Full container image URI including tag"
 }
 
+variable "api_port" {
+  type    = number
+  default = 8000
+}
+
+variable "api_ingress_cidrs" {
+  type    = list(string)
+  default = []
+}
+
 variable "container_name" {
   type    = string
   default = "thesis-runner"
@@ -91,6 +111,16 @@ variable "container_name" {
 variable "port_mappings" {
   type    = list(string)
   default = []
+}
+
+variable "container_runtime_args" {
+  type    = list(string)
+  default = []
+}
+
+variable "container_command" {
+  type    = string
+  default = ""
 }
 
 variable "secret_names" {

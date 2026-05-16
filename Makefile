@@ -42,12 +42,10 @@ ecr-login:
 	aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(ECR_REGISTRY)
 
 push-api: ecr-login
-	docker build -f docker/Dockerfile.api -t $(ECR_REGISTRY)/thesis-api:latest .
-	docker push $(ECR_REGISTRY)/thesis-api:latest
+	docker buildx build --platform linux/amd64 -f docker/Dockerfile.api -t $(ECR_REGISTRY)/thesis-api:latest --push .
 
 push-runner: ecr-login
-	docker build -f docker/Dockerfile.runner -t $(ECR_REGISTRY)/thesis-runner:latest .
-	docker push $(ECR_REGISTRY)/thesis-runner:latest
+	docker buildx build --platform linux/amd64 -f docker/Dockerfile.runner -t $(ECR_REGISTRY)/thesis-runner:latest --push .
 
 # ──────────────────────────────────────────────
 # Convenience

@@ -1,23 +1,14 @@
-version: "3.9"
-
-# vLLM multi-model serving stack for NVIDIA L40S 48GB
-# Each service exposes an OpenAI-compatible API on its own port.
-#
-# Memory allocation (4-bit quantization):
-#   llama33-70b: ~40 GB  → sole occupant of GPU 0
-#   qwen35-4b:   ~4  GB
-#   gemma4-e4b:  ~5  GB
-#   llama32-3b:  ~3  GB
-#
-# Run Setup B/C: start all small-model services. Run Setup A alone: start only llama33-70b.
-
 services:
 
+  # Models that fit on a single GPU for local or ad-hoc server use.
+  # Very large models such as Qwen3.5-397B-A17B and Kimi K2.6 are intentionally
+  # not defined here; use the Terraform prod host matrix for those.
+
   llama33-70b:
-    image: vllm/vllm-openai:v0.4.3
+    image: vllm/vllm-openai:v0.19.1
     runtime: nvidia
     environment:
-      - NVIDIA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=${LLAMA33_VISIBLE_DEVICES:-all}
       - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
     volumes:
       - hf_cache:/root/.cache/huggingface
@@ -26,39 +17,35 @@ services:
     command: >
       --model meta-llama/Llama-3.3-70B-Instruct
       --served-model-name meta-llama/Llama-3.3-70B-Instruct
-      --quantization awq
-      --max-model-len 4096
-      --gpu-memory-utilization 0.85
       --port 8000
+      --tensor-parallel-size ${LLAMA33_TP_SIZE:-1}
+      --max-model-len 32768
+      --gpu-memory-utilization 0.90
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
-              count: 1
+              count: all
               capabilities: [gpu]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/models"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+    profiles: ["heavy"]
 
   qwen35-4b:
-    image: vllm/vllm-openai:v0.4.3
+    image: vllm/vllm-openai:v0.19.1
     runtime: nvidia
     environment:
-      - NVIDIA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=${QWEN35_4B_VISIBLE_DEVICES:-0}
       - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
     volumes:
       - hf_cache:/root/.cache/huggingface
     ports:
-      - "8001:8001"
+      - "8001:8000"
     command: >
       --model Qwen/Qwen3.5-4B
       --served-model-name Qwen/Qwen3.5-4B
-      --max-model-len 4096
-      --gpu-memory-utilization 0.12
-      --port 8001
+      --port 8000
+      --max-model-len 32768
+      --gpu-memory-utilization 0.75
     deploy:
       resources:
         reservations:
@@ -66,24 +53,25 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-    profiles: ["multi-agent", "speculative"]
+    profiles: ["slm", "multi-agent"]
 
   gemma4-e4b:
-    image: vllm/vllm-openai:v0.4.3
+    image: vllm/vllm-openai:v0.19.1
     runtime: nvidia
     environment:
-      - NVIDIA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=${GEMMA4_E4B_VISIBLE_DEVICES:-0}
       - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
     volumes:
       - hf_cache:/root/.cache/huggingface
     ports:
-      - "8002:8002"
+      - "8002:8000"
     command: >
       --model google/gemma-4-E4B-it
       --served-model-name google/gemma-4-E4B-it
-      --max-model-len 4096
-      --gpu-memory-utilization 0.10
-      --port 8002
+      --port 8000
+      --reasoning-parser gemma4
+      --max-model-len 32768
+      --gpu-memory-utilization 0.75
     deploy:
       resources:
         reservations:
@@ -91,24 +79,24 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-    profiles: ["multi-agent"]
+    profiles: ["slm", "multi-agent"]
 
   llama32-3b:
-    image: vllm/vllm-openai:v0.4.3
+    image: vllm/vllm-openai:v0.19.1
     runtime: nvidia
     environment:
-      - NVIDIA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=${LLAMA32_3B_VISIBLE_DEVICES:-0}
       - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
     volumes:
       - hf_cache:/root/.cache/huggingface
     ports:
-      - "8003:8003"
+      - "8003:8000"
     command: >
       --model meta-llama/Llama-3.2-3B-Instruct
       --served-model-name meta-llama/Llama-3.2-3B-Instruct
-      --max-model-len 4096
-      --gpu-memory-utilization 0.10
-      --port 8003
+      --port 8000
+      --max-model-len 32768
+      --gpu-memory-utilization 0.70
     deploy:
       resources:
         reservations:
@@ -116,7 +104,134 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-    profiles: ["multi-agent"]
+    profiles: ["slm", "multi-agent"]
+
+  qwen35-27b:
+    image: vllm/vllm-openai:v0.19.1
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=${QWEN35_27B_VISIBLE_DEVICES:-0}
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    ports:
+      - "8004:8000"
+    command: >
+      --model Qwen/Qwen3.5-27B
+      --served-model-name Qwen/Qwen3.5-27B
+      --port 8000
+      --max-model-len 32768
+      --gpu-memory-utilization 0.88
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles: ["medium"]
+
+  gpt-oss-20b:
+    image: vllm/vllm-openai:v0.19.1
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=${GPT_OSS_20B_VISIBLE_DEVICES:-0}
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    ports:
+      - "8005:8000"
+    command: >
+      --model openai/gpt-oss-20b
+      --served-model-name openai/gpt-oss-20b
+      --port 8000
+      --max-model-len 32768
+      --gpu-memory-utilization 0.88
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles: ["medium"]
+
+  gemma4-31b:
+    image: vllm/vllm-openai:v0.19.1
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=${GEMMA4_31B_VISIBLE_DEVICES:-0}
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    ports:
+      - "8006:8000"
+    command: >
+      --model nvidia/Gemma-4-31B-IT-NVFP4
+      --served-model-name nvidia/Gemma-4-31B-IT-NVFP4
+      --port 8000
+      --reasoning-parser gemma4
+      --max-model-len 32768
+      --gpu-memory-utilization 0.90
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles: ["medium"]
+
+  qwen35-35b-a3b:
+    image: vllm/vllm-openai:v0.19.1
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=${QWEN35_35B_VISIBLE_DEVICES:-0}
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    ports:
+      - "8007:8000"
+    command: >
+      --model Qwen/Qwen3.5-35B-A3B
+      --served-model-name Qwen/Qwen3.5-35B-A3B
+      --port 8000
+      --max-model-len 32768
+      --gpu-memory-utilization 0.90
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles: ["medium"]
+
+  gemma4-26b-a4b:
+    image: vllm/vllm-openai:v0.19.1
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=${GEMMA4_26B_VISIBLE_DEVICES:-0}
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    ports:
+      - "8008:8000"
+    command: >
+      --model nvidia/Gemma-4-26B-A4B-NVFP4
+      --served-model-name nvidia/Gemma-4-26B-A4B-NVFP4
+      --port 8000
+      --reasoning-parser gemma4
+      --max-model-len 32768
+      --gpu-memory-utilization 0.88
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles: ["medium"]
 
 volumes:
   hf_cache:

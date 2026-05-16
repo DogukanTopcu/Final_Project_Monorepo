@@ -25,12 +25,15 @@ resource "aws_security_group" "runner" {
     cidr_blocks = [var.allowed_ssh_cidr]
   }
 
-  ingress {
-    description = "API from VPC"
-    from_port   = 8000
-    to_port     = 8000
-    protocol    = "tcp"
-    cidr_blocks = [var.vpc_cidr]
+  dynamic "ingress" {
+    for_each = length(var.api_ingress_cidrs) > 0 ? [1] : []
+    content {
+      description = "Application access"
+      from_port   = var.api_port
+      to_port     = var.api_port
+      protocol    = "tcp"
+      cidr_blocks = var.api_ingress_cidrs
+    }
   }
 
   egress {
@@ -73,16 +76,28 @@ resource "aws_launch_template" "runner" {
 
   vpc_security_group_ids = [aws_security_group.runner.id]
 
+  block_device_mappings {
+    device_name = "/dev/xvda"
+
+    ebs {
+      volume_size           = var.root_volume_size_gb
+      volume_type           = var.root_volume_type
+      delete_on_termination = true
+    }
+  }
+
   user_data = base64encode(templatefile("${path.module}/user_data.sh", {
-    ecr_repo_url        = var.ecr_repo_url
-    aws_region          = var.aws_region
-    secret_names        = var.secret_names
-    environment         = var.environment
-    is_gpu              = var.is_gpu
-    container_image_uri = var.container_image_uri
-    container_name      = var.container_name
-    port_mappings       = var.port_mappings
-    extra_env           = var.extra_env
+    ecr_repo_url           = var.ecr_repo_url
+    aws_region             = var.aws_region
+    secret_names           = var.secret_names
+    environment            = var.environment
+    is_gpu                 = var.is_gpu
+    container_image_uri    = var.container_image_uri
+    container_name         = var.container_name
+    port_mappings          = var.port_mappings
+    container_runtime_args = var.container_runtime_args
+    container_command      = var.container_command
+    extra_env              = var.extra_env
   }))
 
   dynamic "instance_market_options" {

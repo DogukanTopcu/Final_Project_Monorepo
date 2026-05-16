@@ -7,6 +7,7 @@ import httpx
 from fastapi import APIRouter, Depends
 
 from core.model_catalog import LLM_MODEL_IDS, SLM_MODEL_IDS, get_model_spec
+from core.models import get_model_runtime_status
 from web.backend.dependencies import Settings, get_settings
 from web.backend.schemas import ModelInfo, ModelListResponse, ModelPingResponse
 
@@ -22,11 +23,20 @@ def _build_model_info(model_id: str) -> ModelInfo:
     spec = get_model_spec(model_id)
     if spec is None:
         raise ValueError(f"Unknown model: {model_id}")
+
+    provider = spec.provider
+    if _is_forced_vllm(spec):
+        provider = "openai_compatible"
+
+    runtime = get_model_runtime_status(model_id)
+    status = "available" if runtime.get("available") else "unavailable"
+
     return ModelInfo(
         id=spec.id,
         name=spec.name,
-        provider=_provider_label(spec.provider),
+        provider=_provider_label(provider),
         type=spec.kind,
+        status=status,
     )
 
 
@@ -75,3 +85,9 @@ async def ping_model(model_id: str, settings: Settings = Depends(get_settings)):
         reachable=reachable,
         latency_ms=round(latency_ms, 2) if reachable else None,
     )
+
+
+def _is_forced_vllm(spec) -> bool:
+    if not spec.openai_compatible_model or not spec.base_url_env:
+        return False
+    return os.getenv("THESIS_FORCE_VLLM", "").strip().lower() in {"1", "true", "yes", "on"}

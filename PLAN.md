@@ -15,7 +15,7 @@ Selected canonical checkpoints for this iteration:
 
 | WP | Title | Duration | Deliverable |
 |----|-------|----------|-------------|
-| WP1 | Infrastructure Setup | Week 1 | vLLM serving stack on L40S, environment verified |
+| WP1 | Infrastructure Setup | Week 1 | Local vLLM stack + AWS prod model-host matrix verified |
 | WP2 | Pilot Study | Week 2 | Calibrated confidence thresholds, stability data |
 | WP3 | Full-Scale Experiments | Weeks 3–4 | Raw results JSON for all 3 setups × 3 benchmarks |
 | WP4 | Statistical Analysis | Week 5 | ANOVA tables, Pareto plots, energy report |
@@ -25,37 +25,43 @@ Selected canonical checkpoints for this iteration:
 
 ## WP1: Infrastructure Setup
 
-### 1.1 GPU Server Preparation (L40S 48GB)
+### 1.1 GPU Server Preparation
 
 ```bash
 # Verify GPU
 nvidia-smi --query-gpu=name,memory.total --format=csv
 
-# Install CUDA 12.1+ (required by vLLM 0.4.x)
+# Install CUDA 12.4+ (recommended for current vLLM builds)
 # Install Python 3.11 environment
 conda create -n thesis python=3.11 -y && conda activate thesis
 pip install -e ".[dev]"
 ```
 
-**Memory budget** (4-bit quantization):
-- Llama 3.3 70B (Q4): ~40 GB VRAM → fits L40S (48 GB)
-- Qwen 3.5 4B: ~4 GB VRAM
-- Gemma 4 E4B: ~5 GB VRAM
-- Llama 3.2 3B: ~3 GB VRAM
+**Reference deployment matrix**:
+- `g5.2xlarge`: `qwen3.5-4b`, `gemma4-4b`, `llama3.2-3b`, `gpt-oss-20b`
+- `g6e.4xlarge`: `qwen3.5-27b`, `gemma4-31b`, `qwen3.5-35b-a3b`, `gemma4-26b-a4b`
+- `g6e.12xlarge`: `llama3.3-70b`
+- `p5.4xlarge`: `gpt-oss-120b`
+- `g6e.48xlarge`: `qwen3.5-122b-a10b`
+- `p5e.48xlarge`: `qwen3.5-397b-a17b`, `kimi-k2.6-1t`
+
+Not:
+- Küçük ve orta modeller yerelde veya tek GPU host'ta self-host edilebilir.
+- En büyük heavy modeller için tek generic GPU host yerine model başına dedicated AWS host yaklaşımı kullanılır.
 
 ### 1.2 vLLM Serving Stack
 
-Each model runs as a separate vLLM OpenAI-compatible server. Use docker-compose or systemd:
+Each model runs as a separate OpenAI-compatible vLLM endpoint. Local development can use `infrastructure/vllm/docker-compose.yml`; AWS/prod uses Terraform-managed dedicated hosts selected via `enabled_vllm_models`.
 
 ```bash
-# Setup A — Monolithic 70B (port 8000)
+# Setup A — Monolithic 70B (local example, port 8000)
 python -m vllm.entrypoints.openai.api_server \
   --model meta-llama/Llama-3.3-70B-Instruct \
-  --quantization awq \
-  --max-model-len 4096 \
+  --tensor-parallel-size 4 \
+  --max-model-len 32768 \
   --port 8000
 
-# Setup B — Qwen 3.5 4B (port 8001), Gemma 4 E4B (port 8002), Llama 3.2 3B (port 8003)
+# Setup B — small-model pool
 python -m vllm.entrypoints.openai.api_server \
   --model Qwen/Qwen3.5-4B --port 8001
 python -m vllm.entrypoints.openai.api_server \
@@ -66,28 +72,38 @@ python -m vllm.entrypoints.openai.api_server \
 # Setup C uses a 4B drafter (port 8001) + 70B verifier (port 8000)
 ```
 
-See `infrastructure/vllm/docker-compose.yml` for the full service definitions.
+For AWS/prod, the same aliases are routed to private vLLM hosts by setting `THESIS_FORCE_VLLM=1`.
 
 ### 1.3 Environment Variables
 
 ```bash
 # .env (git-ignored)
+THESIS_FORCE_VLLM=0
 VLLM_LLAMA33_70B_URL=http://localhost:8000/v1
 VLLM_QWEN35_4B_URL=http://localhost:8001/v1
 VLLM_GEMMA4_E4B_URL=http://localhost:8002/v1
 VLLM_LLAMA32_3B_URL=http://localhost:8003/v1
+VLLM_QWEN35_27B_URL=http://localhost:8004/v1
+VLLM_GPT_OSS_20B_URL=http://localhost:8005/v1
+VLLM_GEMMA4_31B_URL=http://localhost:8006/v1
+VLLM_QWEN35_35B_A3B_URL=http://localhost:8007/v1
+VLLM_GEMMA4_26B_A4B_URL=http://localhost:8008/v1
+VLLM_QWEN35_122B_A10B_URL=http://localhost:8009/v1
+VLLM_KIMI_K26_1T_URL=http://localhost:8010/v1
+VLLM_QWEN35_397B_A17B_URL=http://localhost:8011/v1
+VLLM_GPT_OSS_120B_URL=http://localhost:8012/v1
 MLFLOW_TRACKING_URI=http://localhost:5000
 CODECARBON_PROJECT_NAME=thesis_benchmark
 ```
 
 ### 1.4 Verification Checklist
 
-- [ ] `nvidia-smi` shows L40S with 48GB free
-- [ ] All four vLLM servers respond to `/v1/models`
+- [ ] `nvidia-smi` shows the target GPU(s) expected by the selected host matrix
+- [ ] Required vLLM servers respond to `/v1/models`
 - [ ] MLflow UI accessible at port 5000
 - [ ] `pytest tests/ -v` → 13 passed
 - [ ] CodeCarbon writes to `./emissions.csv`
-- [ ] NVML binds to GPU 0 without error
+- [ ] NVML binds to the active GPU devices without error
 
 ---
 
@@ -200,7 +216,7 @@ python experiments/run_experiment.py --config experiments/configs/arch_b.yaml
 python experiments/run_experiment.py --config experiments/configs/arch_c.yaml
 ```
 
-Or in parallel (requires enough VRAM — only C uses both 8B + 70B simultaneously):
+Or in parallel if the selected host matrix provides enough capacity:
 ```bash
 python experiments/run_experiment.py --architecture all
 ```
@@ -212,7 +228,7 @@ python experiments/run_experiment.py --architecture all
 | Correct/incorrect | Ground truth comparison | `SampleResult.correct` |
 | Latency (ms) | Wall clock | `Response.latency_ms` |
 | LLM calls | Architecture counter | `Response.llm_calls` |
-| Token count | vLLM response | `Response.total_tokens` |
+| Token count | vLLM response | `Response.input_tokens`, `Response.output_tokens` |
 | Energy (kWh) | CodeCarbon + NVML | `Response.energy_kwh` |
 | CO2 (g) | CodeCarbon | `Response.co2_g` |
 | Cost (USD) | Token pricing | `Response.cost_usd` |
@@ -385,8 +401,8 @@ Contents: all result JSONs, MLflow export, CodeCarbon emissions.csv, conda envir
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
-| L40S OOM for 70B + 8B simultaneously | Medium | High | Run Setup A and C on separate VRAM windows; don't load both concurrently |
-| vLLM version incompatibility | Low | Medium | Pin `vllm==0.4.3` in requirements |
+| Single-host GPU assumptions drift from selected model pool | High | High | Use `enabled_vllm_models` and dedicated prod host matrix; avoid generic one-GPU prod design |
+| vLLM version incompatibility | Medium | Medium | Keep docs/runtime on current pinned line (`vllm-openai:v0.19.1`) and validate before deploy |
 | HumanEval answer-order or architecture leakage | Medium | High | Randomize answer order and keep architecture labels hidden from evaluators |
 | Custom coding benchmark memorization/data leakage | Medium | Medium | Prefer team-authored or rewritten tasks; track source metadata |
 | CodeCarbon import failure on headless server | Medium | Low | Wrap in try/except; fall back to NVML only |

@@ -63,9 +63,10 @@ Bu dosya, repo extraction sırasında görülen yapılacak işleri merkezi olara
 ## Infrastructure İşleri
 
 - Terraform root/backend yapısı netleştirilmeli.
-- ECR repo URL/path üretimi user_data içinde düzeltilmeli.
-- CPU/GPU runner rolleri ayrıştırılmalı.
-- Secret isimleri ve user_data beklentileri eşleştirilmeli.
+- Frontier model host'ları için gerçek bütçe ve quota planı netleştirilmeli.
+- `qwen3.5-122b-a10b` için varsayılan `g6e.48xlarge` yerleşimi pratik benchmark ile doğrulanmalı; gerekirse `p5` override kullanılmalı.
+- Prod API host'u ile ayrı MLflow host gerekip gerekmediği netleştirilmeli.
+- Hangi modellerin self-host yerine hosted/API gateway üzerinden test edileceği deney bazında yazılı hale getirilmeli.
 - MLflow endpoint stratejisi belirlenmeli: local instance, ayrı service veya managed endpoint.
 
 ## MLOps İşleri

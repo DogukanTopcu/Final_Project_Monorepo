@@ -17,4 +17,4 @@ COPY experiments/ /app/experiments/
 COPY mlops/ /app/mlops/
 
 ENV PYTHONUNBUFFERED=1
-ENTRYPOINT ["python", "-m", "experiments.run_experiment"]
+CMD ["python", "-m", "experiments.run_experiment"]

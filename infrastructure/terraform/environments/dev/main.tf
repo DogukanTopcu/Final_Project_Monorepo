@@ -47,6 +47,7 @@ module "ec2" {
   vpc_cidr             = module.vpc.vpc_cidr
   subnet_id            = module.vpc.public_subnet_ids[0]
   instance_type        = "t3.micro"
+  root_volume_size_gb  = 30
   instance_count       = 1
   use_spot             = false
   is_gpu               = false
@@ -57,6 +58,7 @@ module "ec2" {
   aws_region           = var.aws_region
   container_image_uri  = "${module.ecr.runner_repo_url}:latest"
   container_name       = "thesis-runner"
+  container_command    = "sleep infinity"
   secret_names = [
     module.secrets.kimi_key_name,
     module.secrets.openai_compatible_key_name,

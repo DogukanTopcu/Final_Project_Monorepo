@@ -13,7 +13,9 @@ nvidia-ctk runtime configure --runtime=docker
 systemctl restart docker
 %{ endif }
 
+%{ if ecr_repo_url != "" }
 aws ecr get-login-password --region ${aws_region} | docker login --username AWS --password-stdin ${ecr_repo_url}
+%{ endif }
 
 docker pull ${container_image_uri}
 
@@ -26,6 +28,11 @@ aws secretsmanager get-secret-value \
   --query SecretString \
   --output text | jq -r 'to_entries[] | "\(.key)=\(.value)"' >> /etc/thesis/.env
 %{ endfor ~}
+
+if grep -q '^HF_TOKEN=' /etc/thesis/.env && ! grep -q '^HUGGING_FACE_HUB_TOKEN=' /etc/thesis/.env; then
+  HF_VALUE="$(grep '^HF_TOKEN=' /etc/thesis/.env | tail -n 1 | cut -d= -f2-)"
+  echo "HUGGING_FACE_HUB_TOKEN=$${HF_VALUE}" >> /etc/thesis/.env
+fi
 
 cat >> /etc/thesis/.env <<ENVEOF
 MLFLOW_TRACKING_URI=http://localhost:5000
@@ -42,5 +49,9 @@ docker run -d \
   %{ for port_mapping in port_mappings ~}
   -p ${port_mapping} \
   %{ endfor ~}
+  %{ for runtime_arg in container_runtime_args ~}
+  ${runtime_arg} \
+  %{ endfor ~}
   %{ if is_gpu }--gpus all%{ endif } \
-  ${container_image_uri}
+  ${container_image_uri}%{ if container_command != "" } \
+  ${container_command}%{ endif }

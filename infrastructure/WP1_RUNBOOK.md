@@ -2,6 +2,11 @@
 
 This runbook operationalizes `PLAN.md` WP1 for local/GPU-server execution.
 
+Important runtime split:
+
+- Local/default: smaller aliases may still use Ollama.
+- AWS/prod: set `THESIS_FORCE_VLLM=1` and route aliases to dedicated OpenAI-compatible vLLM endpoints.
+
 ## 1. Prerequisites
 
 - NVIDIA GPU driver installed (`nvidia-smi` must work).
@@ -22,6 +27,11 @@ Create `.env` from `.env.example` and fill at least:
 - `VLLM_LLAMA32_3B_URL`
 - `CODECARBON_PROJECT_NAME`
 
+Build note:
+
+- EC2 hosts in this repo are `linux/amd64`.
+- When pushing API/runner images from Apple Silicon, always use the repo `Makefile` targets so images are published as `linux/amd64`.
+
 ## 3. Python Environment
 
 ```bash
@@ -34,18 +44,30 @@ pip install -e ".[dev]"
 If you run vLLM directly (without docker):
 
 ```bash
-pip install "vllm==0.4.3"
+pip install "vllm==0.19.1"
 ```
 
 ## 4. Start Serving Stack
 
-### Option A: Docker (recommended)
+### Recommended host matrix
+
+| Model alias | Default host |
+|---|---|
+| `qwen3.5-4b`, `gemma4-4b`, `llama3.2-3b`, `gpt-oss-20b` | `g5.2xlarge` |
+| `qwen3.5-27b`, `gemma4-31b`, `qwen3.5-35b-a3b`, `gemma4-26b-a4b` | `g6e.4xlarge` |
+| `llama3.3-70b` | `g6e.12xlarge` |
+| `gpt-oss-120b` | `p5.4xlarge` |
+| `qwen3.5-122b-a10b` | `g6e.48xlarge` |
+| `qwen3.5-397b-a17b` | `p5e.48xlarge` |
+| `kimi-k2.6-1t` | `p5e.48xlarge` |
+
+### Option A: Docker / manual host serving
 
 From repository root:
 
 ```bash
 docker compose -f infrastructure/vllm/docker-compose.yml up -d llama33-70b
-docker compose -f infrastructure/vllm/docker-compose.yml --profile multi-agent up -d qwen35-4b gemma4-e4b llama32-3b
+docker compose -f infrastructure/vllm/docker-compose.yml --profile slm up -d qwen35-4b gemma4-e4b llama32-3b
 ```
 
 ### Option B: Native vLLM launcher
@@ -92,3 +114,10 @@ python -m experiments.run_experiment --architecture all --benchmark mmlu --n_sam
 - MLflow UI is reachable on `http://localhost:5000`.
 - Core test suite executes successfully (`pytest tests/ -v`).
 - Dry run passes config validation without runtime architecture failures.
+- If AWS/prod is used, `terraform output vllm_private_endpoints` should expose the enabled model endpoints.
+
+Disk note:
+
+- `dev` runner should use at least a 30 GB root disk.
+- `dev` runner host is intentionally kept idle with `sleep infinity`; run experiments manually after SSH if you also provide reachable model endpoints.
+- vLLM prod hosts need much larger root volumes because Hugging Face cache and model weights are stored locally.
