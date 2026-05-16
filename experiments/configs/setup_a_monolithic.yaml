@@ -1,4 +1,4 @@
-# Setup A — Monolithic Llama-3-70B-Instruct (baseline)
+# Setup A — Monolithic Llama 3.3 70B (baseline)
 # Serves via vLLM on port 8000
 architecture: monolithic
 benchmark: mmlu
@@ -7,6 +7,6 @@ seed: 42
 output_dir: results
 mlflow_tracking_uri: "http://localhost:5000"
 vllm_url: "http://localhost:8000/v1"
-model_name: "meta-llama/Meta-Llama-3-70B-Instruct"
+model_name: "meta-llama/Llama-3.3-70B-Instruct"
 temperature: 0.0
 max_tokens: 512

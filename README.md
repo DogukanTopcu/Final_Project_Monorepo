@@ -12,10 +12,34 @@ Local Machine                          AWS Cloud
 │  ExperimentRunner  │                │  S3 — results/artifacts │
 │  MLflow (local)    │                │  ECR — Docker images    │
 │  Docker Compose    │                │  DynamoDB — metadata    │
-│  Ollama (SLMs)     │                │  CloudWatch — monitoring│
+│  Ollama + vLLM     │                │  CloudWatch — monitoring│
 └────────────────────┘                │  Secrets Manager        │
                                       └─────────────────────────┘
 ```
+
+## Selected Model Pool
+
+The repo is normalized around the following canonical aliases:
+
+| Tier | Repo alias | Runtime checkpoint |
+|------|------------|--------------------|
+| Heavy LLM | `kimi-k2.6-1t` | `moonshotai/Kimi-K2.6` |
+| Heavy LLM | `qwen3.5-397b-a17b` | `Qwen/Qwen3.5-397B-A17B` |
+| Heavy LLM | `gpt-oss-120b` | `openai/gpt-oss-120b` |
+| Heavy LLM | `llama3.3-70b` | `meta-llama/Llama-3.3-70B-Instruct` |
+| Light LLM | `qwen3.5-27b` | `qwen3.5:27b` |
+| Light LLM | `gpt-oss-20b` | `openai/gpt-oss-20b` |
+| Light LLM | `gemma4-31b` | `gemma4:31b` |
+| MoE | `qwen3.5-122b-a10b` | `qwen3.5:122b` |
+| MoE | `gemma4-26b-a4b` | `gemma4:26b` |
+| MoE | `qwen3.5-35b-a3b` | `qwen3.5:35b` |
+| SLM | `gemma4-4b` | `gemma4:e4b` |
+| SLM | `qwen3.5-4b` | `qwen3.5:4b` |
+| SLM | `llama3.2-3b` | `llama3.2:3b` |
+
+Notes:
+- User shorthand `Qwen 3.5 (396B)` is normalized to the official checkpoint `Qwen/Qwen3.5-397B-A17B`.
+- User shorthand `Gemma 4 (4B)` is normalized to the effective-parameter checkpoint `gemma4:e4b` / `google/gemma-4-E4B-it`.
 
 ## Quick Start
 
@@ -173,12 +197,14 @@ make tf-destroy # Destroy (with warning)
 Create a `.env` file in the project root:
 
 ```env
-THESIS_OPENAI_API_KEY=sk-...
-THESIS_TOGETHER_API_KEY=...
 THESIS_AWS_REGION=eu-west-1
 THESIS_S3_RESULTS_BUCKET=thesis-results-dev
 THESIS_MLFLOW_TRACKING_URI=http://localhost:5000
 THESIS_OLLAMA_BASE_URL=http://localhost:11434
+VLLM_LLAMA33_70B_URL=http://localhost:8000/v1
+VLLM_QWEN35_4B_URL=http://localhost:8001/v1
+VLLM_GEMMA4_E4B_URL=http://localhost:8002/v1
+VLLM_LLAMA32_3B_URL=http://localhost:8003/v1
 ```
 
 ## Docker Images

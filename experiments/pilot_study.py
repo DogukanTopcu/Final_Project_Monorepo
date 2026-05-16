@@ -28,8 +28,8 @@ def run_pilot(
     n_queries: int = 100,
     thresholds: list[float] | None = None,
     output_dir: str = "pilot_results",
-    slm_id: str = "llama3-8b",
-    llm_id: str = "llama3-70b",
+    slm_id: str = "qwen3.5-4b",
+    llm_id: str = "llama3.3-70b",
 ) -> dict:
     if thresholds is None:
         thresholds = [0.70, 0.75, 0.80]
@@ -132,8 +132,8 @@ if __name__ == "__main__":
     parser.add_argument("--n-queries", type=int, default=100)
     parser.add_argument("--thresholds", nargs="+", type=float, default=[0.70, 0.75, 0.80])
     parser.add_argument("--output", default="pilot_results")
-    parser.add_argument("--slm", default="llama3-8b")
-    parser.add_argument("--llm", default="llama3-70b")
+    parser.add_argument("--slm", default="qwen3.5-4b")
+    parser.add_argument("--llm", default="llama3.3-70b")
     args = parser.parse_args()
 
     run_pilot(

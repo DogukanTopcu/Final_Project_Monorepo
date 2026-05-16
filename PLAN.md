@@ -3,6 +3,12 @@
 
 > **Goal**: Systematically compare three inference architectures (Monolithic LLM, Multi-Agent SLMs, Hybrid Speculative Decoding) across accuracy, latency, energy, cost, and human preference. HumanEval in this project means UI-backed human evaluation, not the OpenAI HumanEval code-generation dataset.
 
+Selected canonical checkpoints for this iteration:
+- Heavy LLM baseline: `llama3.3-70b` → `meta-llama/Llama-3.3-70B-Instruct`
+- Small-model pool: `qwen3.5-4b`, `gemma4-4b`, `llama3.2-3b`
+- Extended comparison pool: `kimi-k2.6-1t`, `qwen3.5-397b-a17b`, `gpt-oss-120b`, `qwen3.5-27b`, `gpt-oss-20b`, `gemma4-31b`, `qwen3.5-122b-a10b`, `gemma4-26b-a4b`, `qwen3.5-35b-a3b`
+- Normalization note: user shorthand `Qwen 3.5 (396B)` is stored as the official `Qwen3.5-397B-A17B`.
+
 ---
 
 ## Work Package Overview
@@ -32,10 +38,10 @@ pip install -e ".[dev]"
 ```
 
 **Memory budget** (4-bit quantization):
-- Llama-3-70B-Instruct (Q4): ~40 GB VRAM → fits L40S (48 GB)
-- Llama-3-8B: ~5 GB VRAM
-- CodeLlama-7B: ~4.5 GB VRAM
-- Mistral-7B-v0.3: ~4.5 GB VRAM
+- Llama 3.3 70B (Q4): ~40 GB VRAM → fits L40S (48 GB)
+- Qwen 3.5 4B: ~4 GB VRAM
+- Gemma 4 E4B: ~5 GB VRAM
+- Llama 3.2 3B: ~3 GB VRAM
 
 ### 1.2 vLLM Serving Stack
 
@@ -44,20 +50,20 @@ Each model runs as a separate vLLM OpenAI-compatible server. Use docker-compose 
 ```bash
 # Setup A — Monolithic 70B (port 8000)
 python -m vllm.entrypoints.openai.api_server \
-  --model meta-llama/Meta-Llama-3-70B-Instruct \
+  --model meta-llama/Llama-3.3-70B-Instruct \
   --quantization awq \
   --max-model-len 4096 \
   --port 8000
 
-# Setup B — Llama-3-8B (port 8001), CodeLlama-7B (port 8002), Mistral-7B (port 8003)
+# Setup B — Qwen 3.5 4B (port 8001), Gemma 4 E4B (port 8002), Llama 3.2 3B (port 8003)
 python -m vllm.entrypoints.openai.api_server \
-  --model meta-llama/Meta-Llama-3-8B-Instruct --port 8001
+  --model Qwen/Qwen3.5-4B --port 8001
 python -m vllm.entrypoints.openai.api_server \
-  --model codellama/CodeLlama-7b-Instruct-hf --port 8002
+  --model google/gemma-4-E4B-it --port 8002
 python -m vllm.entrypoints.openai.api_server \
-  --model mistralai/Mistral-7B-Instruct-v0.3 --port 8003
+  --model meta-llama/Llama-3.2-3B-Instruct --port 8003
 
-# Setup C uses 8B drafter (port 8001) + 70B verifier (port 8000)
+# Setup C uses a 4B drafter (port 8001) + 70B verifier (port 8000)
 ```
 
 See `infrastructure/vllm/docker-compose.yml` for the full service definitions.
@@ -66,10 +72,10 @@ See `infrastructure/vllm/docker-compose.yml` for the full service definitions.
 
 ```bash
 # .env (git-ignored)
-VLLM_LLAMA70B_URL=http://localhost:8000/v1
-VLLM_LLAMA8B_URL=http://localhost:8001/v1
-VLLM_CODELLAMA_URL=http://localhost:8002/v1
-VLLM_MISTRAL_URL=http://localhost:8003/v1
+VLLM_LLAMA33_70B_URL=http://localhost:8000/v1
+VLLM_QWEN35_4B_URL=http://localhost:8001/v1
+VLLM_GEMMA4_E4B_URL=http://localhost:8002/v1
+VLLM_LLAMA32_3B_URL=http://localhost:8003/v1
 MLFLOW_TRACKING_URI=http://localhost:5000
 CODECARBON_PROJECT_NAME=thesis_benchmark
 ```
@@ -111,7 +117,7 @@ python experiments/pilot_study.py \
 
 ### 2.3 Decision Criteria
 
-Select threshold that maximizes EATS score subject to accuracy ≥ 85% of Llama-3-70B baseline on the 100-query pilot.
+Select threshold that maximizes EATS score subject to accuracy ≥ 85% of the Llama 3.3 70B baseline on the 100-query pilot.
 
 | Threshold | Expected LLM call ratio | Decision |
 |-----------|------------------------|----------|
@@ -333,7 +339,7 @@ Contents: all result JSONs, MLflow export, CodeCarbon emissions.csv, conda envir
 - [x] `architectures/routing.py` — confidence-based routing (SLM → LLM)
 - [x] `architectures/multi_agent.py` — proponent/opponent/arbitrator
 - [x] `architectures/ensemble.py` — majority vote ensemble
-- [ ] `architectures/monolithic.py` — **Setup A**: Llama-3-70B single-pass via vLLM
+- [ ] `architectures/monolithic.py` — **Setup A**: Llama 3.3 70B single-pass via vLLM
 - [ ] `architectures/multi_agent_crew.py` — **Setup B**: CrewAI+LangGraph multi-agent
 - [ ] `architectures/speculative_decoding.py` — **Setup C**: token-level draft-verify
 
@@ -364,8 +370,8 @@ Contents: all result JSONs, MLflow export, CodeCarbon emissions.csv, conda envir
 ### Infrastructure
 
 - [x] `infrastructure/terraform/` — AWS VPC/EC2/S3/ECR/DynamoDB
-- [ ] `infrastructure/vllm/docker-compose.yml` — vLLM multi-model serving
-- [ ] `infrastructure/vllm/serve_model.sh` — launch helper scripts
+- [x] `infrastructure/vllm/docker-compose.yml` — vLLM multi-model serving
+- [x] `infrastructure/vllm/serve_model.sh` — launch helper scripts
 
 ### Analysis
 

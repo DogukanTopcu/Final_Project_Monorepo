@@ -1,6 +1,6 @@
 """Setup C — Hybrid Speculative Decoding (Draft-Verification).
 
-A Llama-3-8B *drafter* generates a candidate answer. A Llama-3-70B *verifier*
+A Qwen 3.5 4B *drafter* generates a candidate answer. A Llama 3.3 70B *verifier*
 inspects the draft token-by-token and accepts or rolls back based on a
 confidence threshold (default 0.75).
 
@@ -30,7 +30,8 @@ class _DraftResult:
     text: str
     tokens: list[str]
     logprobs: list[float]
-    total_tokens: int
+    prompt_tokens: int
+    completion_tokens: int
 
 
 def _vllm_generate(
@@ -55,7 +56,8 @@ def _vllm_generate(
     choice = data["choices"][0]
     text = choice["message"]["content"].strip()
     usage = data.get("usage", {})
-    total_tokens = usage.get("total_tokens", 0)
+    prompt_tokens = usage.get("prompt_tokens", 0)
+    completion_tokens = usage.get("completion_tokens", 0)
 
     # Extract per-token log-probs (vLLM returns content[i].logprob)
     lp_list: list[float] = []
@@ -67,23 +69,29 @@ def _vllm_generate(
     except Exception:
         pass
 
-    return _DraftResult(text=text, tokens=token_list, logprobs=lp_list, total_tokens=total_tokens)
+    return _DraftResult(
+        text=text,
+        tokens=token_list,
+        logprobs=lp_list,
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+    )
 
 
 class SpeculativeDecodingArchitecture:
-    """Llama-3-8B drafter + Llama-3-70B verifier with token-level rollback."""
+    """Qwen 3.5 4B drafter + Llama 3.3 70B verifier with token-level rollback."""
 
     def __init__(
         self,
         drafter_url: str | None = None,
         verifier_url: str | None = None,
-        drafter_model: str = "meta-llama/Meta-Llama-3-8B-Instruct",
-        verifier_model: str = "meta-llama/Meta-Llama-3-70B-Instruct",
+        drafter_model: str = "Qwen/Qwen3.5-4B",
+        verifier_model: str = "meta-llama/Llama-3.3-70B-Instruct",
         confidence_threshold: float = 0.75,
         max_tokens: int = 256,
     ) -> None:
-        self.drafter_url = (drafter_url or os.environ.get("VLLM_LLAMA8B_URL", "http://localhost:8001/v1"))
-        self.verifier_url = (verifier_url or os.environ.get("VLLM_LLAMA70B_URL", "http://localhost:8000/v1"))
+        self.drafter_url = (drafter_url or os.environ.get("VLLM_QWEN35_4B_URL", "http://localhost:8001/v1"))
+        self.verifier_url = (verifier_url or os.environ.get("VLLM_LLAMA33_70B_URL", "http://localhost:8000/v1"))
         self.drafter_model = drafter_model
         self.verifier_model = verifier_model
         self.confidence_threshold = confidence_threshold
@@ -107,7 +115,8 @@ class SpeculativeDecodingArchitecture:
 
         # Phase 2: verify
         accepted, llm_calls, verifier_tokens = self._verify(prompt, draft)
-        total_tokens = draft.total_tokens + verifier_tokens
+        total_in = draft.prompt_tokens
+        total_out = draft.completion_tokens + verifier_tokens
         latency_ms = (time.perf_counter() - t0) * 1000
 
         if accepted:
@@ -121,12 +130,13 @@ class SpeculativeDecodingArchitecture:
                 max_tokens=self.max_tokens,
             )
             final_text = rewrite.text
-            total_tokens += rewrite.total_tokens
+            total_in += rewrite.prompt_tokens
+            total_out += rewrite.completion_tokens
             llm_calls += 1
             latency_ms = (time.perf_counter() - t0) * 1000
 
         predicted = self._parse_answer(final_text, query)
-        cost_usd = self._estimate_cost(draft.total_tokens, verifier_tokens)
+        cost_usd = self._estimate_cost(draft.completion_tokens, verifier_tokens)
 
         return Response(
             query_id=query.id,
@@ -135,7 +145,8 @@ class SpeculativeDecodingArchitecture:
             model_id=self.drafter_model if accepted else self.verifier_model,
             llm_calls=llm_calls,
             latency_ms=latency_ms,
-            total_tokens=total_tokens,
+            input_tokens=total_in,
+            output_tokens=total_out,
             cost_usd=cost_usd,
             confidence=self._mean_confidence(draft.logprobs),
         )
@@ -181,7 +192,7 @@ class SpeculativeDecodingArchitecture:
         except ValueError:
             score = 0.5
         accepted = score >= self.confidence_threshold
-        return accepted, 1, result.total_tokens
+        return accepted, 1, result.completion_tokens
 
     def _mean_confidence(self, logprobs: list[float]) -> float:
         if not logprobs:
@@ -201,5 +212,5 @@ class SpeculativeDecodingArchitecture:
         return parse_open_answer(text)
 
     def _estimate_cost(self, draft_tokens: int, verifier_tokens: int) -> float:
-        # Drafter (8B): ~$0.20/1M tokens; Verifier (70B): ~$0.90/1M tokens
-        return (draft_tokens * 0.20 + verifier_tokens * 0.90) / 1_000_000
+        # Drafter (4B): ~$0.10/1M tokens; Verifier (70B): ~$0.90/1M tokens
+        return (draft_tokens * 0.10 + verifier_tokens * 0.90) / 1_000_000

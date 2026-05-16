@@ -3,8 +3,8 @@
 architecture: all
 benchmark: mmlu
 n_samples: 200
-slm: phi3-mini
-llm: gpt-4o-mini
+slm: qwen3.5-4b
+llm: llama3.3-70b
 seed: 42
 output_dir: results/nightly
 mlflow_tracking_uri: "http://localhost:5000"

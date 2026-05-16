@@ -16,7 +16,9 @@ class Architecture(str, Enum):
 class Benchmark(str, Enum):
     MMLU = "mmlu"
     ARC = "arc"
-    EATS = "eats"
+    HELLASWAG = "hellaswag"
+    GSM8K = "gsm8k"
+    TRUTHFULQA = "truthfulqa"
 
 
 class ExperimentStatus(str, Enum):
@@ -31,8 +33,8 @@ class ExperimentCreate(BaseModel):
     architecture: Architecture
     benchmark: Benchmark
     n_samples: int = Field(default=100, ge=1, le=10000)
-    slm: str = "phi3-mini"
-    llm: str = "gpt-4o-mini"
+    slm: str = "qwen3.5-4b"
+    llm: str = "llama3.3-70b"
     config_overrides: dict[str, Any] = Field(default_factory=dict)
 
 

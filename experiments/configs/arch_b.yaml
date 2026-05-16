@@ -3,8 +3,8 @@
 architecture: multi_agent
 benchmark: mmlu
 n_samples: 100
-slm: qwen2.5-1.5b
-llm: gpt-4o-mini
+slm: gemma4-4b
+llm: qwen3.5-35b-a3b
 arbitrator: slm         # set to "llm" to use LLM as arbitrator
 n_debate_rounds: 1
 seed: 42

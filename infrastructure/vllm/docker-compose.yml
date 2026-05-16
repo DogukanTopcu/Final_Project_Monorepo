@@ -4,16 +4,16 @@ version: "3.9"
 # Each service exposes an OpenAI-compatible API on its own port.
 #
 # Memory allocation (4-bit quantization):
-#   llama-70b:   ~40 GB  → sole occupant of GPU 0
-#   llama-8b:    ~5  GB  → GPU 0 (shared with other small models)
-#   codellama-7b: ~4.5 GB
-#   mistral-7b:  ~4.5 GB
+#   llama33-70b: ~40 GB  → sole occupant of GPU 0
+#   qwen35-4b:   ~4  GB
+#   gemma4-e4b:  ~5  GB
+#   llama32-3b:  ~3  GB
 #
-# Run Setup B/C: start all services. Run Setup A alone: start only llama-70b.
+# Run Setup B/C: start all small-model services. Run Setup A alone: start only llama33-70b.
 
 services:
 
-  llama-70b:
+  llama33-70b:
     image: vllm/vllm-openai:v0.4.3
     runtime: nvidia
     environment:
@@ -24,7 +24,8 @@ services:
     ports:
       - "8000:8000"
     command: >
-      --model meta-llama/Meta-Llama-3-70B-Instruct
+      --model meta-llama/Llama-3.3-70B-Instruct
+      --served-model-name meta-llama/Llama-3.3-70B-Instruct
       --quantization awq
       --max-model-len 4096
       --gpu-memory-utilization 0.85
@@ -42,7 +43,7 @@ services:
       timeout: 10s
       retries: 5
 
-  llama-8b:
+  qwen35-4b:
     image: vllm/vllm-openai:v0.4.3
     runtime: nvidia
     environment:
@@ -53,7 +54,8 @@ services:
     ports:
       - "8001:8001"
     command: >
-      --model meta-llama/Meta-Llama-3-8B-Instruct
+      --model Qwen/Qwen3.5-4B
+      --served-model-name Qwen/Qwen3.5-4B
       --max-model-len 4096
       --gpu-memory-utilization 0.12
       --port 8001
@@ -66,7 +68,7 @@ services:
               capabilities: [gpu]
     profiles: ["multi-agent", "speculative"]
 
-  codellama-7b:
+  gemma4-e4b:
     image: vllm/vllm-openai:v0.4.3
     runtime: nvidia
     environment:
@@ -77,7 +79,8 @@ services:
     ports:
       - "8002:8002"
     command: >
-      --model codellama/CodeLlama-7b-Instruct-hf
+      --model google/gemma-4-E4B-it
+      --served-model-name google/gemma-4-E4B-it
       --max-model-len 4096
       --gpu-memory-utilization 0.10
       --port 8002
@@ -90,7 +93,7 @@ services:
               capabilities: [gpu]
     profiles: ["multi-agent"]
 
-  mistral-7b:
+  llama32-3b:
     image: vllm/vllm-openai:v0.4.3
     runtime: nvidia
     environment:
@@ -101,7 +104,8 @@ services:
     ports:
       - "8003:8003"
     command: >
-      --model mistralai/Mistral-7B-Instruct-v0.3
+      --model meta-llama/Llama-3.2-3B-Instruct
+      --served-model-name meta-llama/Llama-3.2-3B-Instruct
       --max-model-len 4096
       --gpu-memory-utilization 0.10
       --port 8003

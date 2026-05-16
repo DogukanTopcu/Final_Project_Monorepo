@@ -15,6 +15,7 @@ Bu repo üzerinde çalışan agent'lar aşağıdaki kuralları takip etmelidir.
 - `custom_stratified.py` işleri easy/medium/hard kodlama dataset'i olarak ele alınmalı.
 - `eats` bir benchmark değil, metriktir.
 - Architecture katmanının görevi, aynı `Query` girdisine farklı stratejilerle cevap üretip ortak `Response` döndürmektir.
+- Model isimleri geçerken önce repo alias'ını (`qwen3.5-4b`, `llama3.3-70b` gibi), gerektiğinde de buna karşılık gelen resmi checkpoint'i kullan.
 
 ## Kod Değişikliği Kuralları
 
@@ -56,4 +57,3 @@ Not: Compose şu an `.env` yoksa hata verebilir. Bu durum bilinen gap'tir.
 - Kullanıcı repo extraction sürecinde kısa, her noktaya değinen açıklamalar istiyor.
 - Açıklamalarda "planlanan amaç" ile "şu an çalışan durum" ayrı tutulmalı.
 - Eksikler açıkça söylenmeli ama gereksiz uzun listeye boğulmamalı.
-

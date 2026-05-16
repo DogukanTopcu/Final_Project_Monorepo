@@ -1,31 +1,37 @@
 from __future__ import annotations
 
+import os
 import time
 
 import httpx
 from fastapi import APIRouter, Depends
 
+from core.model_catalog import LLM_MODEL_IDS, SLM_MODEL_IDS, get_model_spec
 from web.backend.dependencies import Settings, get_settings
 from web.backend.schemas import ModelInfo, ModelListResponse, ModelPingResponse
 
 router = APIRouter(tags=["models"])
 
-SLM_MODELS = [
-    ModelInfo(id="phi3-mini", name="Phi-3 Mini", provider="ollama", type="slm"),
-    ModelInfo(id="qwen2-1.5b", name="Qwen2 1.5B", provider="ollama", type="slm"),
-    ModelInfo(id="llama3.2-3b", name="Llama 3.2 3B", provider="ollama", type="slm"),
-]
+def _provider_label(provider: str) -> str:
+    if provider == "openai_compatible":
+        return "vllm"
+    return provider
 
-LLM_MODELS = [
-    ModelInfo(id="gpt-4o-mini", name="GPT-4o Mini", provider="openai", type="llm"),
-    ModelInfo(id="gpt-4o", name="GPT-4o", provider="openai", type="llm"),
-    ModelInfo(
-        id="llama-3.1-70b",
-        name="Llama 3.1 70B",
-        provider="together",
-        type="llm",
-    ),
-]
+
+def _build_model_info(model_id: str) -> ModelInfo:
+    spec = get_model_spec(model_id)
+    if spec is None:
+        raise ValueError(f"Unknown model: {model_id}")
+    return ModelInfo(
+        id=spec.id,
+        name=spec.name,
+        provider=_provider_label(spec.provider),
+        type=spec.kind,
+    )
+
+
+SLM_MODELS = [_build_model_info(model_id) for model_id in SLM_MODEL_IDS]
+LLM_MODELS = [_build_model_info(model_id) for model_id in LLM_MODEL_IDS]
 
 
 @router.get("/models", response_model=ModelListResponse)
@@ -50,18 +56,14 @@ async def ping_model(model_id: str, settings: Settings = Depends(get_settings)):
             if model.provider == "ollama":
                 resp = await client.get(f"{settings.ollama_base_url}/api/tags")
                 reachable = resp.status_code == 200
-            elif model.provider == "openai":
-                resp = await client.get(
-                    "https://api.openai.com/v1/models",
-                    headers={"Authorization": f"Bearer {settings.openai_api_key}"},
-                )
-                reachable = resp.status_code == 200
-            elif model.provider == "together":
-                resp = await client.get(
-                    "https://api.together.xyz/v1/models",
-                    headers={"Authorization": f"Bearer {settings.together_api_key}"},
-                )
-                reachable = resp.status_code == 200
+            elif model.provider == "vllm":
+                spec = get_model_spec(model.id)
+                if spec is None:
+                    reachable = False
+                else:
+                    base_url = os.getenv(spec.base_url_env or "", spec.base_url_default or "")
+                    resp = await client.get(f"{base_url.rstrip('/')}/models")
+                    reachable = resp.status_code == 200
             else:
                 reachable = False
     except Exception:

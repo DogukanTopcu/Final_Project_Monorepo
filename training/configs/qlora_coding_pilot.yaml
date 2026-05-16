@@ -1,6 +1,6 @@
-run_name: qlora-coding-pilot-phi3-mini
-base_model: microsoft/Phi-3-mini-4k-instruct
-output_dir: training/adapters/qlora-coding-pilot-phi3-mini
+run_name: qlora-coding-pilot-qwen35-4b
+base_model: Qwen/Qwen3.5-4B
+output_dir: training/adapters/qlora-coding-pilot-qwen35-4b
 adapter_registry_path: training/adapters/registry.json
 
 dataset:
@@ -54,5 +54,4 @@ metadata:
   task: sft
   source_dataset: custom_stratified_coding_pilot
   intended_use: ablation
-  notes: Fine-tuned SLM ablation for easy/medium/hard coding benchmark.
-
+  notes: Fine-tuned Qwen 3.5 4B ablation for the easy/medium/hard coding benchmark.

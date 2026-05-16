@@ -1,5 +1,5 @@
 export type Architecture = "routing" | "multi_agent" | "ensemble";
-export type Benchmark = "mmlu" | "arc" | "eats";
+export type Benchmark = "mmlu" | "arc" | "hellaswag" | "gsm8k" | "truthfulqa";
 export type ExperimentStatus =
   | "queued"
   | "running"

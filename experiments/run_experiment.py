@@ -30,8 +30,8 @@ def parse_args() -> argparse.Namespace:
         default="mmlu",
     )
     p.add_argument("--n_samples", type=int, default=100)
-    p.add_argument("--slm", default="phi3-mini")
-    p.add_argument("--llm", default="gpt-4o-mini")
+    p.add_argument("--slm", default="qwen3.5-4b")
+    p.add_argument("--llm", default="llama3.3-70b")
     p.add_argument("--confidence_threshold", type=float, default=0.7)
     p.add_argument("--arbitrator", choices=["slm", "llm"], default="slm")
     p.add_argument("--n_models", type=int, default=3)

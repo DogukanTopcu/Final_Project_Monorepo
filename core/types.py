@@ -33,8 +33,8 @@ class ExperimentConfig:
     architecture: str              # "routing" | "multi_agent" | "ensemble"
     benchmark: str                 # "mmlu" | "arc" | "hellaswag" | "gsm8k" | "truthfulqa"
     n_samples: int = 100
-    slm: str = "phi3-mini"
-    llm: str = "gpt-4o-mini"
+    slm: str = "qwen3.5-4b"
+    llm: str = "llama3.3-70b"
     # Arch A params
     confidence_threshold: float = 0.7
     # Arch B params

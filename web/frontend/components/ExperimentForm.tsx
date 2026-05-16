@@ -18,8 +18,8 @@ export function ExperimentForm() {
   const [architecture, setArchitecture] = useState<Architecture>("routing");
   const [benchmark, setBenchmark] = useState<Benchmark>("mmlu");
   const [nSamples, setNSamples] = useState(100);
-  const [slm, setSlm] = useState("phi3-mini");
-  const [llm, setLlm] = useState("gpt-4o-mini");
+  const [slm, setSlm] = useState("qwen3.5-4b");
+  const [llm, setLlm] = useState("llama3.3-70b");
   const [confidenceThreshold, setConfidenceThreshold] = useState(0.7);
   const [nModels, setNModels] = useState(3);
   const [dryRun, setDryRun] = useState(false);
@@ -75,7 +75,9 @@ export function ExperimentForm() {
               <>
                 <option value="mmlu">MMLU</option>
                 <option value="arc">ARC</option>
-                <option value="eats">EATS</option>
+                <option value="hellaswag">HellaSwag</option>
+                <option value="gsm8k">GSM8K</option>
+                <option value="truthfulqa">TruthfulQA</option>
               </>
             )}
           </Select>
@@ -89,7 +91,7 @@ export function ExperimentForm() {
               <option key={m.id} value={m.id}>
                 {m.name} ({m.provider})
               </option>
-            )) ?? <option value="phi3-mini">Phi-3 Mini</option>}
+            )) ?? <option value="qwen3.5-4b">Qwen 3.5 (4B)</option>}
           </Select>
 
           <Select
@@ -101,7 +103,7 @@ export function ExperimentForm() {
               <option key={m.id} value={m.id}>
                 {m.name} ({m.provider})
               </option>
-            )) ?? <option value="gpt-4o-mini">GPT-4o Mini</option>}
+            )) ?? <option value="llama3.3-70b">Llama 3.3 (70B)</option>}
           </Select>
 
           <Slider

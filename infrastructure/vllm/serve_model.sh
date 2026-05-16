@@ -21,22 +21,22 @@ _serve() {
 
 case "$SETUP" in
   monolithic)
-    _serve "meta-llama/Meta-Llama-3-70B-Instruct" 8000 "--quantization awq --gpu-memory-utilization 0.85"
+    _serve "meta-llama/Llama-3.3-70B-Instruct" 8000 "--quantization awq --served-model-name meta-llama/Llama-3.3-70B-Instruct --gpu-memory-utilization 0.85"
     ;;
   multi_agent)
-    _serve "meta-llama/Meta-Llama-3-8B-Instruct" 8001 "--gpu-memory-utilization 0.12"
-    _serve "codellama/CodeLlama-7b-Instruct-hf"  8002 "--gpu-memory-utilization 0.10"
-    _serve "mistralai/Mistral-7B-Instruct-v0.3"  8003 "--gpu-memory-utilization 0.10"
+    _serve "Qwen/Qwen3.5-4B" 8001 "--served-model-name Qwen/Qwen3.5-4B --gpu-memory-utilization 0.12"
+    _serve "google/gemma-4-E4B-it" 8002 "--served-model-name google/gemma-4-E4B-it --gpu-memory-utilization 0.10"
+    _serve "meta-llama/Llama-3.2-3B-Instruct" 8003 "--served-model-name meta-llama/Llama-3.2-3B-Instruct --gpu-memory-utilization 0.10"
     ;;
   speculative)
-    _serve "meta-llama/Meta-Llama-3-70B-Instruct" 8000 "--quantization awq --gpu-memory-utilization 0.70"
-    _serve "meta-llama/Meta-Llama-3-8B-Instruct"  8001 "--gpu-memory-utilization 0.12"
+    _serve "meta-llama/Llama-3.3-70B-Instruct" 8000 "--quantization awq --served-model-name meta-llama/Llama-3.3-70B-Instruct --gpu-memory-utilization 0.70"
+    _serve "Qwen/Qwen3.5-4B" 8001 "--served-model-name Qwen/Qwen3.5-4B --gpu-memory-utilization 0.12"
     ;;
   all)
-    _serve "meta-llama/Meta-Llama-3-70B-Instruct" 8000 "--quantization awq --gpu-memory-utilization 0.70"
-    _serve "meta-llama/Meta-Llama-3-8B-Instruct"  8001 "--gpu-memory-utilization 0.12"
-    _serve "codellama/CodeLlama-7b-Instruct-hf"   8002 "--gpu-memory-utilization 0.10"
-    _serve "mistralai/Mistral-7B-Instruct-v0.3"   8003 "--gpu-memory-utilization 0.10"
+    _serve "meta-llama/Llama-3.3-70B-Instruct" 8000 "--quantization awq --served-model-name meta-llama/Llama-3.3-70B-Instruct --gpu-memory-utilization 0.70"
+    _serve "Qwen/Qwen3.5-4B" 8001 "--served-model-name Qwen/Qwen3.5-4B --gpu-memory-utilization 0.12"
+    _serve "google/gemma-4-E4B-it" 8002 "--served-model-name google/gemma-4-E4B-it --gpu-memory-utilization 0.10"
+    _serve "meta-llama/Llama-3.2-3B-Instruct" 8003 "--served-model-name meta-llama/Llama-3.2-3B-Instruct --gpu-memory-utilization 0.10"
     ;;
   *)
     echo "Unknown setup: $SETUP" >&2

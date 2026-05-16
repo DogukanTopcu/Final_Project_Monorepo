@@ -12,6 +12,6 @@ Kritik notlar:
 - Custom Stratified benchmark, easy/medium/hard kodlama problemleri dataset'i olarak tasarlanmalıdır.
 - `eats` benchmark değil metriktir.
 - Architecture katmanı aynı Query girdisine farklı stratejilerle cevap üretip ortak Response döndürmelidir.
+- Repo model havuzu `core/model_catalog.py` içindeki seçilmiş alias'lara göre normalize edilmiştir; `Qwen 3.5 (396B)` ifadesi repo içinde `qwen3.5-397b-a17b` olarak geçer.
 - Kod değiştirirken mevcut pattern'i takip et, ilgisiz refactor yapma, kullanıcı/başka agent değişikliklerini geri alma.
 ```
-

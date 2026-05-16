@@ -1,7 +1,8 @@
-"""Setup A — Monolithic Llama-3-70B-Instruct (single-pass baseline).
+"""Setup A — Monolithic Llama 3.3 70B (single-pass baseline).
 
 Calls a locally-served vLLM endpoint (OpenAI-compatible). Every query goes
-directly to the 70B model; there is no routing or agent layer. This establishes
+directly to the selected heavy baseline model; there is no routing or agent
+layer. This establishes
 the accuracy and cost ceiling against which Setups B and C are compared.
 """
 from __future__ import annotations
@@ -15,16 +16,16 @@ from core.types import Query, Response
 
 
 class MonolithicArchitecture:
-    """Single-pass Llama-3-70B via vLLM OpenAI-compatible endpoint."""
+    """Single-pass Llama 3.3 70B via a vLLM OpenAI-compatible endpoint."""
 
     def __init__(
         self,
         base_url: str | None = None,
-        model_name: str = "meta-llama/Meta-Llama-3-70B-Instruct",
+        model_name: str = "meta-llama/Llama-3.3-70B-Instruct",
         temperature: float = 0.0,
         max_tokens: int = 512,
     ) -> None:
-        self.base_url = (base_url or os.environ.get("VLLM_LLAMA70B_URL", "http://localhost:8000/v1")).rstrip("/")
+        self.base_url = (base_url or os.environ.get("VLLM_LLAMA33_70B_URL", "http://localhost:8000/v1")).rstrip("/")
         self.model_name = model_name
         self.temperature = temperature
         self.max_tokens = max_tokens
@@ -52,7 +53,6 @@ class MonolithicArchitecture:
         choice = data["choices"][0]
         text = choice["message"]["content"].strip()
         usage = data.get("usage", {})
-        total_tokens = usage.get("total_tokens", 0)
         prompt_tokens = usage.get("prompt_tokens", 0)
         completion_tokens = usage.get("completion_tokens", 0)
 
@@ -67,7 +67,8 @@ class MonolithicArchitecture:
             model_id=self.model_name,
             llm_calls=1,
             latency_ms=latency_ms,
-            total_tokens=total_tokens,
+            input_tokens=prompt_tokens,
+            output_tokens=completion_tokens,
             cost_usd=cost_usd,
             confidence=confidence,
         )
@@ -101,6 +102,6 @@ class MonolithicArchitecture:
 
     def _estimate_cost(self, prompt_tokens: int, completion_tokens: int) -> float:
         # Self-hosted vLLM: cost is essentially compute time; approximate
-        # using Together AI pricing for Llama-3-70B as a reference
+        # using Llama 3.3 70B-level hosted pricing as a reference
         # $0.90 per 1M input tokens, $0.90 per 1M output tokens
         return (prompt_tokens * 0.90 + completion_tokens * 0.90) / 1_000_000

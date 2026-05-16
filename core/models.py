@@ -9,18 +9,19 @@ from __future__ import annotations
 
 import math
 import os
-import time
 from abc import ABC, abstractmethod
 
 import requests
 
+from core.model_catalog import get_model_spec
+
 # Per-token costs in USD (approximate, May 2026)
-_OPENAI_COSTS: dict[str, tuple[float, float]] = {
-    "gpt-4o":      (2.50 / 1_000_000, 10.00 / 1_000_000),
-    "gpt-4o-mini": (0.15 / 1_000_000,  0.60 / 1_000_000),
-}
-_TOGETHER_COSTS: dict[str, tuple[float, float]] = {
-    "meta-llama/Llama-3-70b-chat-hf": (0.90 / 1_000_000, 0.90 / 1_000_000),
+_APPROX_MODEL_COSTS: dict[str, tuple[float, float]] = {
+    "moonshotai/Kimi-K2.6": (3.00 / 1_000_000, 12.00 / 1_000_000),
+    "Qwen/Qwen3.5-397B-A17B": (2.20 / 1_000_000, 8.80 / 1_000_000),
+    "openai/gpt-oss-120b": (1.80 / 1_000_000, 7.20 / 1_000_000),
+    "meta-llama/Llama-3.3-70B-Instruct": (0.90 / 1_000_000, 0.90 / 1_000_000),
+    "openai/gpt-oss-20b": (0.40 / 1_000_000, 1.60 / 1_000_000),
 }
 
 
@@ -37,7 +38,7 @@ class ModelProvider(ABC):
 
 
 class OllamaModel(ModelProvider):
-    """Local Ollama SLM — Phi-3 Mini, Qwen2.5, Llama 3.2, etc."""
+    """Local Ollama model for the selected Qwen, Gemma, and Llama checkpoints."""
 
     def __init__(
         self,
@@ -87,16 +88,16 @@ class OllamaModel(ModelProvider):
 
 
 class OpenAIModel(ModelProvider):
-    """OpenAI API — GPT-4o, GPT-4o mini."""
+    """Generic OpenAI API wrapper kept for optional direct API experiments."""
 
     def __init__(
         self,
-        model_id: str = "gpt-4o-mini",
+        model_id: str = "model",
         api_key: str | None = None,
         temperature: float = 0.0,
     ) -> None:
         super().__init__(model_id)
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY", "")
+        self.api_key = api_key or os.getenv("OPENAI_COMPATIBLE_API_KEY", "")
         self.temperature = temperature
 
     def generate(self, prompt: str, **kwargs) -> tuple[str, float, int, int, float]:
@@ -118,7 +119,7 @@ class OpenAIModel(ModelProvider):
         in_tok = usage.prompt_tokens
         out_tok = usage.completion_tokens
 
-        in_cost, out_cost = _OPENAI_COSTS.get(self.model_id, (0.0, 0.0))
+        in_cost, out_cost = _APPROX_MODEL_COSTS.get(self.model_id, (0.0, 0.0))
         cost = in_tok * in_cost + out_tok * out_cost
 
         confidence = self._logprob_confidence(choice)
@@ -141,16 +142,16 @@ class OpenAIModel(ModelProvider):
 
 
 class TogetherModel(ModelProvider):
-    """Together AI — Llama 3 70B and others."""
+    """Generic Together-compatible wrapper kept for optional hosted inference."""
 
     def __init__(
         self,
-        model_id: str = "meta-llama/Llama-3-70b-chat-hf",
+        model_id: str = "model",
         api_key: str | None = None,
         temperature: float = 0.0,
     ) -> None:
         super().__init__(model_id)
-        self.api_key = api_key or os.getenv("TOGETHER_API_KEY", "")
+        self.api_key = api_key or os.getenv("OPENAI_COMPATIBLE_API_KEY", "")
         self.temperature = temperature
 
     def generate(self, prompt: str, **kwargs) -> tuple[str, float, int, int, float]:
@@ -172,34 +173,85 @@ class TogetherModel(ModelProvider):
         text = data["choices"][0]["message"]["content"].strip()
         in_tok = data.get("usage", {}).get("prompt_tokens", 0)
         out_tok = data.get("usage", {}).get("completion_tokens", 0)
-        in_cost, out_cost = _TOGETHER_COSTS.get(self.model_id, (0.0, 0.0))
+        in_cost, out_cost = _APPROX_MODEL_COSTS.get(self.model_id, (0.0, 0.0))
         cost = in_tok * in_cost + out_tok * out_cost
 
         return text, 0.8, in_tok, out_tok, cost
 
 
-_OLLAMA_MAP = {
-    "phi3-mini":    "phi3:mini",
-    "qwen2.5-1.5b": "qwen2.5:1.5b",
-    "qwen2.5-7b":   "qwen2.5:7b",
-    "llama3.2-3b":  "llama3.2:3b",
-}
+class OpenAICompatibleModel(ModelProvider):
+    """OpenAI-compatible HTTP endpoint wrapper for vLLM and hosted gateways."""
 
-_OPENAI_MAP = {
-    "gpt-4o-mini": "gpt-4o-mini",
-    "gpt-4o":      "gpt-4o",
-}
+    def __init__(
+        self,
+        model_id: str,
+        base_url: str,
+        api_key: str | None = None,
+        temperature: float = 0.0,
+    ) -> None:
+        super().__init__(model_id)
+        self.base_url = base_url.rstrip("/")
+        self.api_key = api_key or ""
+        self.temperature = temperature
 
-_TOGETHER_MAP = {
-    "llama3-70b": "meta-llama/Llama-3-70b-chat-hf",
-}
+    def generate(self, prompt: str, **kwargs) -> tuple[str, float, int, int, float]:
+        payload = {
+            "model": self.model_id,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": kwargs.get("temperature", self.temperature),
+            "max_tokens": kwargs.get("max_tokens", 512),
+            "logprobs": True,
+            "top_logprobs": 1,
+        }
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+
+        resp = requests.post(
+            f"{self.base_url}/chat/completions",
+            json=payload,
+            headers=headers,
+            timeout=120,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+        choice = data["choices"][0]
+        text = choice["message"]["content"].strip()
+        usage = data.get("usage", {})
+        in_tok = usage.get("prompt_tokens", 0)
+        out_tok = usage.get("completion_tokens", 0)
+        in_cost, out_cost = _APPROX_MODEL_COSTS.get(self.model_id, (0.0, 0.0))
+        cost = in_tok * in_cost + out_tok * out_cost
+
+        confidence = self._logprob_confidence(choice)
+        return text, confidence, in_tok, out_tok, cost
+
+    @staticmethod
+    def _logprob_confidence(choice: dict) -> float:
+        try:
+            content = (choice.get("logprobs") or {}).get("content") or []
+            log_probs = [token["logprob"] for token in content[:10] if token.get("logprob") is not None]
+            if not log_probs:
+                return 0.5
+            return float(math.exp(sum(log_probs) / len(log_probs)))
+        except Exception:
+            return 0.5
 
 
 def get_model(model_id: str) -> ModelProvider:
-    """Factory — resolve friendly name to a ModelProvider instance."""
-    if model_id in _OPENAI_MAP:
-        return OpenAIModel(model_id=_OPENAI_MAP[model_id])
-    if model_id in _TOGETHER_MAP:
-        return TogetherModel(model_id=_TOGETHER_MAP[model_id])
-    ollama_name = _OLLAMA_MAP.get(model_id, model_id)
-    return OllamaModel(model_id=ollama_name)
+    """Factory — resolve selected-model aliases to the right runtime provider."""
+    spec = get_model_spec(model_id)
+    if spec is not None:
+        if spec.provider == "ollama":
+            return OllamaModel(model_id=spec.provider_model)
+        if spec.provider == "openai_compatible":
+            base_url = os.getenv(spec.base_url_env or "", spec.base_url_default or "http://localhost:8000/v1")
+            api_key = os.getenv(spec.api_key_env or "", "")
+            return OpenAICompatibleModel(
+                model_id=spec.provider_model,
+                base_url=base_url,
+                api_key=api_key,
+            )
+
+    return OllamaModel(model_id=model_id)

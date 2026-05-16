@@ -27,12 +27,28 @@ BENCHMARKS = [
         "suggested_sizes": [50, 100, 200, 500],
     },
     {
-        "id": "eats",
-        "name": "EATS",
-        "description": "Efficiency-Accuracy Trade-off Score",
-        "categories": ["composite"],
-        "total_samples": 5000,
+        "id": "hellaswag",
+        "name": "HellaSwag",
+        "description": "Commonsense sentence completion benchmark",
+        "categories": ["commonsense", "nli"],
+        "total_samples": 10042,
         "suggested_sizes": [50, 100, 200],
+    },
+    {
+        "id": "gsm8k",
+        "name": "GSM8K",
+        "description": "Grade-school math word problems",
+        "categories": ["math", "reasoning"],
+        "total_samples": 1319,
+        "suggested_sizes": [50, 100, 200, 500],
+    },
+    {
+        "id": "truthfulqa",
+        "name": "TruthfulQA",
+        "description": "Hallucination resistance and truthfulness benchmark",
+        "categories": ["truthfulness", "safety"],
+        "total_samples": 817,
+        "suggested_sizes": [50, 100, 200, 500],
     },
 ]
 

@@ -2,7 +2,7 @@
 Architecture B — Proponent-Opponent-Arbitrator (Multi-Agent)
 =============================================================
 Implements the adversarial debate structure from:
-  S43 (Erak et al.): Qwen2.5 0.5B/1.5B POA surpasses vanilla LLM baselines
+  S43 (Erak et al.): POA-style small-model debate surpasses vanilla LLM baselines
   S29 (assistant-checker collaboration with memory + feedback loops)
 
 Roles:
@@ -11,8 +11,9 @@ Roles:
   - Arbitrator : SLM or LLM (controlled by `arbitrator` param) — given both
                  perspectives, produces the final answer
 
-Paper finding: 1.8× inference-time overhead vs single-model baseline (S43).
-LLM is only called if arbitrator="llm", so llm_calls ∈ {0, 1}.
+This implementation is configured to run with the selected 2026 model pool
+(for example Gemma 4 E4B or Qwen 3.5 4B as the SLM, and any selected non-SLM
+checkpoint as the arbitrator).
 """
 from __future__ import annotations
 

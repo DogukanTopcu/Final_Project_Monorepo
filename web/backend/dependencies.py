@@ -16,8 +16,6 @@ class Settings(BaseSettings):
     dynamodb_table: str = "thesis-experiments"
     mlflow_tracking_uri: str = "http://localhost:5000"
     ollama_base_url: str = "http://localhost:11434"
-    openai_api_key: str = ""
-    together_api_key: str = ""
     environment: str = "dev"
     cors_origins: list[str] = ["http://localhost:3000"]
 

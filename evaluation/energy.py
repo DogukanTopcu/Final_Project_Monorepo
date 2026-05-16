@@ -129,18 +129,27 @@ class EnergyTracker:
 # ------------------------------------------------------------------
 
 _MODEL_PARAMS: dict[str, float] = {
-    "meta-llama/Meta-Llama-3-70B-Instruct": 70e9,
-    "meta-llama/Meta-Llama-3-8B-Instruct": 8e9,
-    "codellama/CodeLlama-7b-Instruct-hf": 7e9,
-    "mistralai/Mistral-7B-Instruct-v0.3": 7.3e9,
+    "moonshotai/Kimi-K2.6": 1_000e9,
+    "Qwen/Qwen3.5-397B-A17B": 397e9,
+    "openai/gpt-oss-120b": 120e9,
+    "meta-llama/Llama-3.3-70B-Instruct": 70e9,
+    "Qwen/Qwen3.5-27B": 27e9,
+    "openai/gpt-oss-20b": 20e9,
+    "google/gemma-4-31B-it": 31e9,
+    "Qwen/Qwen3.5-122B-A10B": 10e9,
+    "google/gemma-4-26B-A4B-it": 3.8e9,
+    "Qwen/Qwen3.5-35B-A3B": 3e9,
+    "google/gemma-4-E4B-it": 4.5e9,
+    "Qwen/Qwen3.5-4B": 4e9,
+    "meta-llama/Llama-3.2-3B-Instruct": 3e9,
 }
 
 
 def active_parameters_per_token(model_id: str, total_tokens: int) -> float:
     """AP/T = total active parameters / tokens generated.
 
-    For dense models this equals model_params. For MoE it would be
-    active_expert_params, but all models here are dense.
+    For dense models this equals model_params. For MoE selections we store
+    active parameter counts so AP/T remains comparable across tiers.
     """
     params = _MODEL_PARAMS.get(model_id, 0.0)
     if total_tokens <= 0 or params == 0.0:

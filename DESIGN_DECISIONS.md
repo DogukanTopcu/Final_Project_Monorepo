@@ -18,38 +18,40 @@
 
 ## 2. Small Language Models (SLM)
 
-All three SLMs are open-weight, ≤ 7B parameters, and publicly available on HuggingFace. The combination was chosen to span three different architectural families and two different parameter scales.
+All three SLMs are open-weight, locally runnable, and publicly available through Hugging Face and/or Ollama. The combination spans three different families while staying inside the "small" deployment class used by the thesis.
 
 ### Selection Table
 
-| Model | Params | Family | Why Selected | SLR Reference |
-|-------|--------|--------|-------------|---------------|
-| **Phi-3 Mini** | 3.8B | Microsoft | Strongest ≤ 4B general reasoning model in literature; S52 documents human-expert-level performance on conceptual biomedical tasks | S52 (Mehandru et al., BioAgents); Microsoft technical report |
-| **Qwen2.5-1.5B** | 1.5B | Alibaba | Used directly in the Proponent-Opponent-Arbitrator architecture (S43); 0.5B version surpassed single-agent LLM baselines — establishes lower-bound efficiency data point | S43 (Erak et al.) |
-| **Qwen2.5-7B** | 7B | Alibaba | Same model family as Qwen2.5-1.5B; running both isolates the effect of parameter scale within a controlled family | S43; Qwen2.5 technical report |
-| **Llama 3.2 3B** | 3B | Meta | Reference point outside Qwen/Phi families; Llama lineage appears across S3, S9, S59 as the de-facto open-weight reference model | S3, S9, S59 (general Llama references) |
+| Model | Params | Family | Why Selected | Repo alias |
+|-------|--------|--------|-------------|------------|
+| **Gemma 4 E4B** | 4.5B effective | Google | Strong compact reasoning/coding checkpoint; good cross-family control against Qwen | `gemma4-4b` |
+| **Qwen 3.5 4B** | 4B | Qwen | Default routing/ensemble SLM baseline; same family as the 27B/35B/122B/397B comparison set | `qwen3.5-4b` |
+| **Llama 3.2 3B** | 3B | Meta | Lightweight open-weight control from a third family; useful for multi-agent diversity | `llama3.2-3b` |
 
 ### Why This Combination
 
-Using the same model family at two scales (Qwen2.5-1.5B and 7B) lets us answer: *does parameter count matter once orchestration is held constant?* This directly tests the SLR's Cross-RQ Synthesis claim that *"orchestration, not model size, drives performance."* Phi-3 Mini and Llama 3.2 3B act as cross-family controls.
+Using Qwen 3.5 at both SLM and larger LLM/MoE scales lets us answer: *does orchestration still dominate when the same family is available from 4B all the way to 397B-A17B?* Gemma 4 E4B and Llama 3.2 3B act as cross-family controls.
 
 ---
 
 ## 3. Large Language Models (LLM — Baseline)
 
-LLMs serve two roles: (1) the monolithic **Setup A baseline**, and (2) the **escalation target** in routing and speculative architectures. All accessed via API — no local inference required for LLMs.
+LLMs serve two roles: (1) the monolithic **Setup A baseline**, and (2) the escalation target in routing and speculative architectures. The repo now centers on open-weight or OpenAI-compatible checkpoints so they can be self-hosted with vLLM when needed.
 
 ### Selection Table
 
-| Model | Provider | Why Selected | SLR Reference |
-|-------|----------|-------------|---------------|
-| **GPT-4o** | OpenAI API | Upper-bound accuracy ceiling; most widely cited LLM baseline in SLR | S17 (TeleOracle: 80.80% on domain benchmark) |
-| **GPT-4o mini** | OpenAI API | Cost-efficient LLM baseline at same provider; S17 reports 82.05% — outperforming full GPT-4o in that domain | S17 (Alabbasi et al., TeleOracle) |
-| **Llama 3 70B** | Together AI / self-hosted | Open-weight LLM; S13 uses a 70B-class model as the cloud component of an edge-cloud hybrid system; enables cost-free LLM baseline when self-hosted on L40S | S13 (Hao et al., Hybrid SLM-LLM for Edge-Cloud) |
+| Model | Deployment class | Why Selected | Repo alias |
+|-------|------------------|-------------|------------|
+| **Kimi K2.6 (1T)** | Heavy LLM | Highest-capability frontier anchor in the selected set | `kimi-k2.6-1t` |
+| **Qwen 3.5 397B-A17B** | Heavy LLM | Open-weight flagship for the Qwen family; normalized form of the user's "396B" shorthand | `qwen3.5-397b-a17b` |
+| **GPT OSS 120B** | Heavy LLM | Open-weight OpenAI-family comparison point | `gpt-oss-120b` |
+| **Llama 3.3 70B** | Heavy LLM | Default monolithic baseline and verifier model because it remains practical on an L40S | `llama3.3-70b` |
+| **Qwen 3.5 27B / GPT OSS 20B / Gemma 4 31B** | Light LLM | Mid-tier models for lower-cost escalation experiments | `qwen3.5-27b`, `gpt-oss-20b`, `gemma4-31b` |
+| **Qwen 3.5 122B-A10B / Gemma 4 26B-A4B / Qwen 3.5 35B-A3B** | MoE | Active-parameter-efficient comparison set for architecture-level efficiency analysis | `qwen3.5-122b-a10b`, `gemma4-26b-a4b`, `qwen3.5-35b-a3b` |
 
-### GPT-4o vs GPT-4o mini — Why Both
+### Why Llama 3.3 70B Is the Default Baseline
 
-S17 is the single most directly comparable study in the SLR. It reports both scores on the same benchmark with the same evaluation protocol. Including both means we can calibrate our own accuracy scores against a published external reference — if our GPT-4o mini score is within ~2% of S17's 82.05%, we have evidence our evaluation pipeline is well-calibrated.
+Among the selected heavy models, `llama3.3-70b` is the easiest to self-host reproducibly on the repo's existing GPU target. It therefore remains the default monolithic baseline and speculative verifier, while the rest of the selected heavy/light/MoE pool is exposed through the shared model catalog for routing and benchmark sweeps.
 
 ---
 
@@ -94,7 +96,7 @@ Query → Proponent SLM  →  initial answer
 | Attribute | Value |
 |-----------|-------|
 | Agent count | 3 (proponent, opponent, arbitrator) |
-| Models used | Qwen2.5-1.5B (proponent), Qwen2.5-7B (opponent), configurable arbitrator |
+| Models used | Selected SLM pool by role; default crew setup uses Qwen 3.5 4B, Gemma 4 E4B, and Llama 3.2 3B |
 | LLM call ratio | 0% if arbitrator=SLM; 1 call/query if arbitrator=LLM |
 | Strength | Debate mechanism catches errors that a single SLM would miss |
 | Weakness | 3× inference cost vs single-pass; latency is additive |
@@ -200,7 +202,7 @@ Recommended record format:
 The SLR's RQ2 analysis finds:
 > *"cost and energy remain far less reported than accuracy — only 34% of studies include latency and 18% include energy metrics."*
 
-Standard benchmarks (MMLU accuracy, pass@1) only measure *output quality*, not *architectural efficiency*. A system that gets 80% MMLU accuracy by calling GPT-4o on every query is not comparable to one that achieves 78% by routing only 15% of queries to an LLM — yet standard metrics treat them equivalently.
+Standard benchmarks (MMLU accuracy, pass@1) only measure *output quality*, not *architectural efficiency*. A system that gets 80% MMLU accuracy by calling a heavy model like Kimi K2.6 or Qwen 3.5 397B on every query is not comparable to one that achieves 78% by routing only 15% of queries to an LLM — yet standard metrics treat them equivalently.
 
 ### EATS Formula
 
@@ -256,13 +258,13 @@ Higher EATS = better efficiency per unit of accuracy. This metric directly fills
 
 Fine-tuning is now treated as a separate ablation track under `training/`. This keeps the main experiment clean while still allowing the thesis to test whether domain-specialized SLM orchestration can beat a larger LLM on quality/cost/latency/energy tradeoffs.
 
-**Exception trigger:** If the pilot study (100 queries) shows that Architecture A's SLM escalates > 40% of queries to the LLM (indicating poor confidence calibration), apply QLoRA to Phi-3 Mini with an instruction-following dataset to improve calibration. This should be reported as a separate ablation, not the primary experiment.
+**Exception trigger:** If the pilot study (100 queries) shows that Architecture A's SLM escalates > 40% of queries to the LLM (indicating poor confidence calibration), apply QLoRA to Qwen 3.5 4B with an instruction-following dataset to improve calibration. This should be reported as a separate ablation, not the primary experiment.
 
 ### If Fine-Tuning Is Needed
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| Model | Phi-3 Mini (3.8B) | Best efficiency-accuracy trade-off point for routing calibration |
+| Model | Qwen 3.5 4B | Default routing SLM and the cleanest calibration target in the selected pool |
 | Method | QLoRA (4-bit + LoRA r=16) | Cloud-compatible; minimizes VRAM; well-documented |
 | Dataset | OpenHermes 2.5 | General instruction-following; improves confidence expression without domain bias |
 | Objective | Reduce LLM escalation rate | Target: < 20% escalation on pilot set |
@@ -311,13 +313,13 @@ Fine-tuning is now treated as a separate ablation track under `training/`. This 
 | S4 | Wilhelm et al. — energy-per-token analysis | Energy metrics justification |
 | S9 | Llama distillation study | Fine-tuning reference |
 | S10 | Alabbasi et al. — Customer Reviews instance selection | Architecture A evidence |
-| S13 | Hao et al. — Hybrid SLM-LLM Edge-Cloud | Llama 70B LLM baseline justification |
-| S17 | Alabbasi et al. — TeleOracle | GPT-4o / GPT-4o mini baseline calibration |
+| S13 | Hao et al. — Hybrid SLM-LLM Edge-Cloud | 70B-class monolithic baseline justification |
+| S17 | Alabbasi et al. — TeleOracle | Large-model calibration precedent |
 | S29 | Abstract reasoning routing study | ARC benchmark justification |
 | S33 | Uncertainty estimation study | TruthfulQA benchmark justification |
 | S43 | Erak et al. — Proponent-Opponent-Arbitrator | Architecture B design + Qwen selection |
 | S49 | She et al. — Token Level Routing | Architecture A evidence (>80% cost reduction) |
 | S51 | TextNeX ensemble study | Architecture C evidence |
-| S52 | Mehandru et al. — BioAgents | Phi-3 Mini selection |
+| S52 | Mehandru et al. — BioAgents | Compact-model selection precedent |
 | S55 | Cielen et al. — ensemble vs LLM | Architecture C evidence |
 | S59 | Mixed distillation study | Fine-tuning reference |

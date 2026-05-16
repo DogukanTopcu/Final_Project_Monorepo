@@ -92,9 +92,9 @@ Manuel adapter kaydet:
 
 ```bash
 python -m training.registry register \
-  --name qlora-coding-pilot-phi3-mini \
-  --base-model microsoft/Phi-3-mini-4k-instruct \
-  --adapter-path training/adapters/qlora-coding-pilot-phi3-mini \
+  --name qlora-coding-pilot-qwen35-4b \
+  --base-model Qwen/Qwen3.5-4B \
+  --adapter-path training/adapters/qlora-coding-pilot-qwen35-4b \
   --domain coding
 ```
 
@@ -106,4 +106,3 @@ Fine-tune sonucu ana benchmark ile karıştırılmamalıdır. Raporlama ayrı ab
 - Fine-tuned adapter aynı benchmark'ta ölçülür.
 - Aynı architecture, base ve fine-tuned SLM ile tekrar çalıştırılır.
 - Sonuçlar accuracy, latency, cost, token, EATS ve insan tercihi ile karşılaştırılır.
-

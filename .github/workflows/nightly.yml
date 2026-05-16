@@ -31,8 +31,6 @@ jobs:
 
       - name: Run nightly benchmarks
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
           MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
         run: |
           DATE=$(date +%Y%m%d)
@@ -40,8 +38,8 @@ jobs:
             --architecture all \
             --benchmark mmlu \
             --n_samples 200 \
-            --slm phi3-mini \
-            --llm gpt-4o-mini \
+            --slm qwen3.5-4b \
+            --llm llama3.3-70b \
             --output s3://thesis-results-dev/nightly/${DATE}/
 
       - name: Upload results summary

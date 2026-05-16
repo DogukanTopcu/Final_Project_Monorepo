@@ -1,9 +1,9 @@
 {
   "adapters": {
-    "qlora-coding-pilot-phi3-mini": {
-      "name": "qlora-coding-pilot-phi3-mini",
-      "base_model": "microsoft/Phi-3-mini-4k-instruct",
-      "adapter_path": "training/adapters/qlora-coding-pilot-phi3-mini",
+    "qlora-coding-pilot-qwen35-4b": {
+      "name": "qlora-coding-pilot-qwen35-4b",
+      "base_model": "Qwen/Qwen3.5-4B",
+      "adapter_path": "training/adapters/qlora-coding-pilot-qwen35-4b",
       "domain": "coding",
       "task": "sft",
       "source_dataset": "custom_stratified_coding_pilot",
@@ -14,4 +14,3 @@
     }
   }
 }
-

@@ -1,9 +1,9 @@
 """Setup B — Multi-Agent SLM Pipeline (CrewAI + LangGraph routing).
 
 Three specialist SLMs collaborate:
-  - Reasoning agent: Llama-3-8B-Instruct  (port 8001)
-  - Code agent:      CodeLlama-7B-Instruct (port 8002)
-  - Factual agent:   Mistral-7B-v0.3       (port 8003)
+  - Reasoning agent: Qwen 3.5 4B   (port 8001)
+  - Code agent:      Gemma 4 E4B   (port 8002)
+  - Factual agent:   Llama 3.2 3B  (port 8003)
 
 LangGraph routes each query to the best-fit agent based on domain
 classification, then optionally cross-checks via a second agent.
@@ -51,8 +51,12 @@ class VLLMAgent:
         resp.raise_for_status()
         data = resp.json()
         text = data["choices"][0]["message"]["content"].strip()
-        tokens = data.get("usage", {}).get("total_tokens", 0)
-        return text, tokens
+        usage = data.get("usage", {})
+        return (
+            text,
+            usage.get("prompt_tokens", 0),
+            usage.get("completion_tokens", 0),
+        )
 
 
 def _classify_domain(query: Query) -> Domain:
@@ -86,23 +90,26 @@ class MultiAgentCrewArchitecture:
 
     def __init__(
         self,
-        llama8b_url: str | None = None,
-        codellama_url: str | None = None,
-        mistral_url: str | None = None,
+        qwen4b_url: str | None = None,
+        gemma4e4b_url: str | None = None,
+        llama32_3b_url: str | None = None,
+        legacy_reasoning_url: str | None = None,
+        legacy_code_url: str | None = None,
+        legacy_factual_url: str | None = None,
         cross_check: bool = False,
     ) -> None:
         self.agents: dict[Domain, VLLMAgent] = {
             Domain.REASONING: VLLMAgent(
-                llama8b_url or os.environ.get("VLLM_LLAMA8B_URL", "http://localhost:8001/v1"),
-                "meta-llama/Meta-Llama-3-8B-Instruct",
+                qwen4b_url or legacy_reasoning_url or os.environ.get("VLLM_QWEN35_4B_URL", "http://localhost:8001/v1"),
+                "Qwen/Qwen3.5-4B",
             ),
             Domain.CODE: VLLMAgent(
-                codellama_url or os.environ.get("VLLM_CODELLAMA_URL", "http://localhost:8002/v1"),
-                "codellama/CodeLlama-7b-Instruct-hf",
+                gemma4e4b_url or legacy_code_url or os.environ.get("VLLM_GEMMA4_E4B_URL", "http://localhost:8002/v1"),
+                "google/gemma-4-E4B-it",
             ),
             Domain.FACTUAL: VLLMAgent(
-                mistral_url or os.environ.get("VLLM_MISTRAL_URL", "http://localhost:8003/v1"),
-                "mistralai/Mistral-7B-Instruct-v0.3",
+                llama32_3b_url or legacy_factual_url or os.environ.get("VLLM_LLAMA32_3B_URL", "http://localhost:8003/v1"),
+                "meta-llama/Llama-3.2-3B-Instruct",
             ),
         }
         self.cross_check = cross_check
@@ -123,8 +130,9 @@ class MultiAgentCrewArchitecture:
         system = self._systems[domain]
         prompt = self._build_prompt(query)
 
-        text, tokens = agent.chat(system, prompt)
-        total_tokens = tokens
+        text, prompt_tokens, completion_tokens = agent.chat(system, prompt)
+        total_in = prompt_tokens
+        total_out = completion_tokens
         llm_calls = 0  # all are SLMs
 
         if self.cross_check:
@@ -136,8 +144,9 @@ class MultiAgentCrewArchitecture:
                 f"Question: {query.text}\nAnswer: {text}\n"
                 "Reply with 'Confirmed: <answer>' or 'Correction: <new answer>'."
             )
-            cross_text, cross_tokens = second_agent.chat(self._systems[second_domain], cross_prompt)
-            total_tokens += cross_tokens
+            cross_text, cross_in, cross_out = second_agent.chat(self._systems[second_domain], cross_prompt)
+            total_in += cross_in
+            total_out += cross_out
             if cross_text.lower().startswith("correction:"):
                 text = cross_text.split(":", 1)[1].strip()
 
@@ -151,7 +160,8 @@ class MultiAgentCrewArchitecture:
             model_id=agent.model_name,
             llm_calls=llm_calls,
             latency_ms=latency_ms,
-            total_tokens=total_tokens,
+            input_tokens=total_in,
+            output_tokens=total_out,
             cost_usd=0.0,
             confidence=0.8,
         )

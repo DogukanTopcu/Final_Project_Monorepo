@@ -67,7 +67,8 @@ Amaç: Repo genelinde paylaşılan tipler, model provider'ları, prompt yardımc
 Ana dosyalar:
 
 - `types.py`: `Query`, `Response`, `ExperimentConfig`, `SampleResult`, `ExperimentResult`
-- `models.py`: `ModelProvider`, Ollama/OpenAI/Together wrapper'ları, `get_model`
+- `model_catalog.py`: Repo geneline yayılmış canonical model alias listesi ve provider eşlemeleri
+- `models.py`: `ModelProvider`, Ollama/OpenAI-compatible wrapper'ları, `get_model`
 - `prompt.py`: MCQ/open prompt builder ve parser
 - `config.py`: YAML config load/save
 
@@ -76,7 +77,7 @@ Bilinen durum:
 - `Response`, bazı planlanan metrik alanlarını henüz taşımaz.
 - `ExperimentConfig`, vLLM, HumanEval UI ve custom coding ihtiyaçlarına göre dar kalabilir.
 - `config.py`, bilinmeyen YAML alanlarını düşürebilir.
-- Frontend/model isimleri ile core model isimleri arasında uyuşmazlıklar olabilir.
+- Frontend/model isimleri ile core model isimleri `core/model_catalog.py` üzerinden hizalanmalıdır.
 
 ## `docker/`
 

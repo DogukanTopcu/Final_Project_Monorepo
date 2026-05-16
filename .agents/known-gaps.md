@@ -33,6 +33,7 @@ Bu dosya, repo extraction sırasında görülen yapılacak işleri merkezi olara
 - `ExperimentConfig`, UI preference, vLLM endpoint, model role ve custom dataset alanlarını desteklemeli.
 - `config.py`, bilinmeyen YAML alanlarını sessizce düşürmemeli veya explicit validation yapmalı.
 - Model isimleri frontend/API/core arasında normalize edilmeli.
+- Yeni model havuzunda resmi checkpoint adları ile repo alias'ları (`qwen3.5-397b-a17b`, `gemma4-4b` gibi) karıştırılmamalı.
 - Prompt parser'ları benchmark bazlı daha sağlam hale getirilmeli.
 
 ## Evaluation and Analysis İşleri
