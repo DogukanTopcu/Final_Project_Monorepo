@@ -6,9 +6,10 @@ module "vpc" {
 }
 
 module "s3" {
-  source      = "../../modules/s3"
-  project     = var.project
-  environment = var.environment
+  source                   = "../../modules/s3"
+  project                  = var.project
+  environment              = var.environment
+  create_backend_resources = false
 }
 
 module "ecr" {
@@ -18,9 +19,10 @@ module "ecr" {
 }
 
 module "dynamodb" {
-  source      = "../../modules/dynamodb"
-  project     = var.project
-  environment = var.environment
+  source                    = "../../modules/dynamodb"
+  project                   = var.project
+  environment               = var.environment
+  create_backend_lock_table = false
 }
 
 module "secrets" {
@@ -54,6 +56,13 @@ module "ec2_gpu" {
   instance_profile_arn = module.iam.ec2_runner_instance_profile_arn
   ecr_repo_url         = module.ecr.runner_repo_url
   aws_region           = var.aws_region
+  container_image_uri  = "${module.ecr.runner_repo_url}:latest"
+  container_name       = "thesis-runner"
+  secret_names = [
+    module.secrets.kimi_key_name,
+    module.secrets.openai_compatible_key_name,
+    module.secrets.hf_token_name,
+  ]
 }
 
 module "ec2_cpu" {
@@ -72,6 +81,14 @@ module "ec2_cpu" {
   instance_profile_arn = module.iam.ec2_runner_instance_profile_arn
   ecr_repo_url         = module.ecr.api_repo_url
   aws_region           = var.aws_region
+  container_image_uri  = "${module.ecr.api_repo_url}:latest"
+  container_name       = "thesis-api"
+  port_mappings        = ["8000:8000"]
+  secret_names = [
+    module.secrets.kimi_key_name,
+    module.secrets.openai_compatible_key_name,
+    module.secrets.hf_token_name,
+  ]
 }
 
 module "cloudwatch" {

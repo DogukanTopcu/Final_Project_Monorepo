@@ -74,11 +74,15 @@ resource "aws_launch_template" "runner" {
   vpc_security_group_ids = [aws_security_group.runner.id]
 
   user_data = base64encode(templatefile("${path.module}/user_data.sh", {
-    ecr_repo_url  = var.ecr_repo_url
-    aws_region    = var.aws_region
-    secret_name   = var.secret_name
-    environment   = var.environment
-    is_gpu        = var.is_gpu
+    ecr_repo_url        = var.ecr_repo_url
+    aws_region          = var.aws_region
+    secret_names        = var.secret_names
+    environment         = var.environment
+    is_gpu              = var.is_gpu
+    container_image_uri = var.container_image_uri
+    container_name      = var.container_name
+    port_mappings       = var.port_mappings
+    extra_env           = var.extra_env
   }))
 
   dynamic "instance_market_options" {

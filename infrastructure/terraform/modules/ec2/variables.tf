@@ -57,6 +57,11 @@ variable "public_key_path" {
 variable "allowed_ssh_cidr" {
   type        = string
   description = "CIDR allowed to SSH — never 0.0.0.0/0"
+
+  validation {
+    condition     = var.allowed_ssh_cidr != "0.0.0.0/32"
+    error_message = "allowed_ssh_cidr must be your real public IP in CIDR form, not 0.0.0.0/32."
+  }
 }
 
 variable "instance_profile_arn" {
@@ -73,7 +78,27 @@ variable "aws_region" {
   default = "eu-central-1"
 }
 
-variable "secret_name" {
+variable "container_image_uri" {
+  type        = string
+  description = "Full container image URI including tag"
+}
+
+variable "container_name" {
   type    = string
-  default = "thesis/api-keys"
+  default = "thesis-runner"
+}
+
+variable "port_mappings" {
+  type    = list(string)
+  default = []
+}
+
+variable "secret_names" {
+  type    = list(string)
+  default = []
+}
+
+variable "extra_env" {
+  type    = map(string)
+  default = {}
 }

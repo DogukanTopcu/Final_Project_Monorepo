@@ -6,3 +6,8 @@ variable "project" {
 variable "environment" {
   type = string
 }
+
+variable "create_backend_resources" {
+  type    = bool
+  default = false
+}

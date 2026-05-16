@@ -101,7 +101,7 @@ resource "aws_cloudwatch_dashboard" "overview" {
         width  = 12
         height = 6
         properties = {
-          title   = "CPU/Memory - Instance ${i}"
+          title = "CPU/Memory - Instance ${i}"
           metrics = [
             ["AWS/EC2", "CPUUtilization", "InstanceId", id],
           ]
@@ -117,7 +117,7 @@ resource "aws_cloudwatch_dashboard" "overview" {
         width  = 12
         height = 6
         properties = {
-          title   = "S3 Storage"
+          title = "S3 Storage"
           metrics = [
             ["AWS/S3", "BucketSizeBytes", "BucketName", var.results_bucket, "StorageType", "StandardStorage"],
           ]
@@ -125,23 +125,23 @@ resource "aws_cloudwatch_dashboard" "overview" {
           stat   = "Average"
           region = var.aws_region
         }
-      },
-      {
-        type   = "metric"
-        x      = 12
-        y      = 12
-        width  = 12
-        height = 6
-        properties = {
-          title   = "DynamoDB Read/Write"
-          metrics = [
-            ["AWS/DynamoDB", "ConsumedReadCapacityUnits", "TableName", var.dynamodb_table],
-            ["AWS/DynamoDB", "ConsumedWriteCapacityUnits", "TableName", var.dynamodb_table],
-          ]
-          period = 300
-          stat   = "Sum"
-          region = var.aws_region
-        }
+        },
+        {
+          type   = "metric"
+          x      = 12
+          y      = 12
+          width  = 12
+          height = 6
+          properties = {
+            title = "DynamoDB Read/Write"
+            metrics = [
+              ["AWS/DynamoDB", "ConsumedReadCapacityUnits", "TableName", var.dynamodb_table],
+              ["AWS/DynamoDB", "ConsumedWriteCapacityUnits", "TableName", var.dynamodb_table],
+            ]
+            period = 300
+            stat   = "Sum"
+            region = var.aws_region
+          }
       }]
     )
   })

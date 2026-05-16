@@ -6,9 +6,10 @@ module "vpc" {
 }
 
 module "s3" {
-  source      = "../../modules/s3"
-  project     = var.project
-  environment = var.environment
+  source                   = "../../modules/s3"
+  project                  = var.project
+  environment              = var.environment
+  create_backend_resources = false
 }
 
 module "ecr" {
@@ -18,9 +19,10 @@ module "ecr" {
 }
 
 module "dynamodb" {
-  source      = "../../modules/dynamodb"
-  project     = var.project
-  environment = var.environment
+  source                    = "../../modules/dynamodb"
+  project                   = var.project
+  environment               = var.environment
+  create_backend_lock_table = false
 }
 
 module "secrets" {
@@ -44,7 +46,7 @@ module "ec2" {
   vpc_id               = module.vpc.vpc_id
   vpc_cidr             = module.vpc.vpc_cidr
   subnet_id            = module.vpc.public_subnet_ids[0]
-  instance_type        = "t3.medium"
+  instance_type        = "t3.micro"
   instance_count       = 1
   use_spot             = false
   is_gpu               = false
@@ -53,6 +55,13 @@ module "ec2" {
   instance_profile_arn = module.iam.ec2_runner_instance_profile_arn
   ecr_repo_url         = module.ecr.runner_repo_url
   aws_region           = var.aws_region
+  container_image_uri  = "${module.ecr.runner_repo_url}:latest"
+  container_name       = "thesis-runner"
+  secret_names = [
+    module.secrets.kimi_key_name,
+    module.secrets.openai_compatible_key_name,
+    module.secrets.hf_token_name,
+  ]
 }
 
 module "cloudwatch" {

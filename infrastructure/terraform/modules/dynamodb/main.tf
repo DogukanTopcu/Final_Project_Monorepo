@@ -38,6 +38,7 @@ resource "aws_dynamodb_table" "experiments" {
 }
 
 resource "aws_dynamodb_table" "tf_lock" {
+  count        = var.create_backend_lock_table ? 1 : 0
   name         = "${var.project}-tf-lock"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "LockID"

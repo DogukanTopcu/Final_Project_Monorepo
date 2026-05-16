@@ -29,7 +29,8 @@ resource "aws_s3_bucket" "artifacts" {
 }
 
 resource "aws_s3_bucket" "tf_state" {
-  bucket = "${var.project}-tf-state-${local.suffix}"
+  count  = var.create_backend_resources ? 1 : 0
+  bucket = "${var.project}-tf-state"
 
   tags = {
     Name        = "${var.project}-tf-state"
@@ -49,7 +50,8 @@ resource "aws_s3_bucket_versioning" "artifacts" {
 }
 
 resource "aws_s3_bucket_versioning" "tf_state" {
-  bucket = aws_s3_bucket.tf_state.id
+  count  = var.create_backend_resources ? 1 : 0
+  bucket = aws_s3_bucket.tf_state[0].id
   versioning_configuration { status = "Enabled" }
 }
 
@@ -68,7 +70,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "artifacts" {
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "tf_state" {
-  bucket = aws_s3_bucket.tf_state.id
+  count  = var.create_backend_resources ? 1 : 0
+  bucket = aws_s3_bucket.tf_state[0].id
   rule {
     apply_server_side_encryption_by_default { sse_algorithm = "AES256" }
   }
@@ -91,7 +94,8 @@ resource "aws_s3_bucket_public_access_block" "artifacts" {
 }
 
 resource "aws_s3_bucket_public_access_block" "tf_state" {
-  bucket                  = aws_s3_bucket.tf_state.id
+  count                   = var.create_backend_resources ? 1 : 0
+  bucket                  = aws_s3_bucket.tf_state[0].id
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true

@@ -1,7 +1,7 @@
 project          = "thesis"
 environment      = "prod"
 aws_region       = "eu-central-1"
-allowed_ssh_cidr = "0.0.0.0/32" # REPLACE with your IP
+allowed_ssh_cidr = "88.230.165.100/32"
 public_key_path  = "~/.ssh/thesis-key.pub"
 alert_email      = ""
 github_repo      = "*"
