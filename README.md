@@ -197,7 +197,7 @@ make tf-destroy # Destroy (with warning)
 Create a `.env` file in the project root:
 
 ```env
-THESIS_AWS_REGION=eu-west-1
+THESIS_AWS_REGION=eu-central-1
 THESIS_S3_RESULTS_BUCKET=thesis-results-dev
 THESIS_MLFLOW_TRACKING_URI=http://localhost:5000
 THESIS_OLLAMA_BASE_URL=http://localhost:11434

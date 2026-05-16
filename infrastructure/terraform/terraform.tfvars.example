@@ -1,4 +1,4 @@
 # Copy this file to terraform.tfvars and fill in values
 project          = "thesis"
 environment      = "dev"
-aws_region       = "eu-west-1"
+aws_region       = "eu-central-1"

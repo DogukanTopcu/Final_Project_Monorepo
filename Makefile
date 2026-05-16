@@ -35,7 +35,7 @@ tf-destroy:
 # Docker / ECR
 # ──────────────────────────────────────────────
 
-AWS_REGION ?= eu-west-1
+AWS_REGION ?= eu-central-1
 ECR_REGISTRY ?= $(shell aws sts get-caller-identity --query Account --output text).dkr.ecr.$(AWS_REGION).amazonaws.com
 
 ecr-login:

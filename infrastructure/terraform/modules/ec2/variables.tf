@@ -70,7 +70,7 @@ variable "ecr_repo_url" {
 
 variable "aws_region" {
   type    = string
-  default = "eu-west-1"
+  default = "eu-central-1"
 }
 
 variable "secret_name" {

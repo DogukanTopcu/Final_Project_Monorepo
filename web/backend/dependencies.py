@@ -8,7 +8,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    aws_region: str = "eu-west-1"
+    aws_region: str = "eu-central-1"
     aws_access_key_id: str = ""
     aws_secret_access_key: str = ""
     s3_results_bucket: str = "thesis-results-dev"
