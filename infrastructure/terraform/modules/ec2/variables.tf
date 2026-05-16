@@ -7,6 +7,20 @@ variable "environment" {
   type = string
 }
 
+variable "gcp_project_id" {
+  type = string
+}
+
+variable "gcp_region" {
+  type    = string
+  default = "europe-west4"
+}
+
+variable "gcp_zone" {
+  type    = string
+  default = "europe-west4-a"
+}
+
 variable "vpc_id" {
   type = string
 }
@@ -21,7 +35,7 @@ variable "subnet_id" {
 
 variable "instance_type" {
   type    = string
-  default = "t3.medium"
+  default = "e2-standard-4"
 }
 
 variable "root_volume_size_gb" {
@@ -31,22 +45,12 @@ variable "root_volume_size_gb" {
 
 variable "root_volume_type" {
   type    = string
-  default = "gp3"
-}
-
-variable "ami_id" {
-  type    = string
-  default = ""
+  default = "pd-balanced"
 }
 
 variable "use_spot" {
   type    = bool
   default = false
-}
-
-variable "spot_price" {
-  type    = string
-  default = ""
 }
 
 variable "is_gpu" {
@@ -64,28 +68,23 @@ variable "public_key_path" {
   default = "~/.ssh/thesis-key.pub"
 }
 
-variable "allowed_ssh_cidr" {
-  type        = string
-  description = "CIDR allowed to SSH — never 0.0.0.0/0"
-
-  validation {
-    condition     = var.allowed_ssh_cidr != "0.0.0.0/32"
-    error_message = "allowed_ssh_cidr must be your real public IP in CIDR form, not 0.0.0.0/32."
-  }
+variable "ssh_username" {
+  type    = string
+  default = "ubuntu"
 }
 
-variable "instance_profile_arn" {
+variable "allowed_ssh_cidr" {
+  type        = string
+  description = "CIDR allowed to SSH into instances"
+}
+
+variable "service_account_email" {
   type = string
 }
 
-variable "ecr_repo_url" {
+variable "artifact_registry_host" {
   type    = string
-  default = ""
-}
-
-variable "aws_region" {
-  type    = string
-  default = "eu-central-1"
+  default = "europe-west4-docker.pkg.dev"
 }
 
 variable "container_image_uri" {
@@ -131,4 +130,29 @@ variable "secret_names" {
 variable "extra_env" {
   type    = map(string)
   default = {}
+}
+
+variable "assign_public_ip" {
+  type    = bool
+  default = true
+}
+
+variable "cpu_source_image_project" {
+  type    = string
+  default = "ubuntu-os-cloud"
+}
+
+variable "cpu_source_image_family" {
+  type    = string
+  default = "ubuntu-2204-lts"
+}
+
+variable "gpu_source_image_project" {
+  type    = string
+  default = "ml-images"
+}
+
+variable "gpu_source_image_family" {
+  type    = string
+  default = "common-cu128-ubuntu-2204-nvidia-570"
 }

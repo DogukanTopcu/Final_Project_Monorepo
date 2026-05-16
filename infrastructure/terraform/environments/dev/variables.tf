@@ -8,9 +8,18 @@ variable "environment" {
   default = "dev"
 }
 
-variable "aws_region" {
+variable "gcp_project_id" {
+  type = string
+}
+
+variable "gcp_region" {
   type    = string
-  default = "eu-central-1"
+  default = "europe-west4"
+}
+
+variable "gcp_zone" {
+  type    = string
+  default = "europe-west4-a"
 }
 
 variable "allowed_ssh_cidr" {

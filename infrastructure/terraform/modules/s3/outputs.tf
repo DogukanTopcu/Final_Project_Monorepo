@@ -1,23 +1,23 @@
 output "results_bucket_name" {
-  value = aws_s3_bucket.results.bucket
+  value = google_storage_bucket.results.name
 }
 
 output "results_bucket_arn" {
-  value = aws_s3_bucket.results.arn
+  value = google_storage_bucket.results.url
 }
 
 output "artifacts_bucket_name" {
-  value = aws_s3_bucket.artifacts.bucket
+  value = google_storage_bucket.artifacts.name
 }
 
 output "artifacts_bucket_arn" {
-  value = aws_s3_bucket.artifacts.arn
+  value = google_storage_bucket.artifacts.url
 }
 
 output "tf_state_bucket_name" {
-  value = var.create_backend_resources ? aws_s3_bucket.tf_state[0].bucket : "${var.project}-tf-state"
+  value = var.create_backend_resources ? google_storage_bucket.tf_state[0].name : "${var.project}-tf-state-${replace(var.gcp_project_id, "_", "-")}"
 }
 
 output "tf_state_bucket_arn" {
-  value = var.create_backend_resources ? aws_s3_bucket.tf_state[0].arn : "arn:aws:s3:::${var.project}-tf-state"
+  value = var.create_backend_resources ? google_storage_bucket.tf_state[0].url : "gs://${var.project}-tf-state-${replace(var.gcp_project_id, "_", "-")}"
 }

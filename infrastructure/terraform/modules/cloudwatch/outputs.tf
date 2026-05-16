@@ -1,19 +1,19 @@
 output "sns_topic_arn" {
-  value = aws_sns_topic.alerts.arn
+  value = google_pubsub_topic.alerts.id
 }
 
 output "api_log_group" {
-  value = aws_cloudwatch_log_group.api.name
+  value = "_Default"
 }
 
 output "runner_log_group" {
-  value = aws_cloudwatch_log_group.runner.name
+  value = "_Default"
 }
 
 output "mlflow_log_group" {
-  value = aws_cloudwatch_log_group.mlflow.name
+  value = "_Default"
 }
 
 output "dashboard_name" {
-  value = aws_cloudwatch_dashboard.overview.dashboard_name
+  value = google_monitoring_dashboard.overview.id
 }

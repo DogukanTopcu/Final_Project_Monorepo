@@ -114,6 +114,7 @@ class InstanceInfo(BaseModel):
     name: str
     instance_type: str
     state: str
+    zone: str | None = None
     public_ip: str | None = None
     private_ip: str | None = None
     launch_time: datetime | None = None

@@ -1,19 +1,20 @@
 from __future__ import annotations
 
-import os
 from functools import lru_cache
 
-import boto3
+from google.cloud import bigquery, compute_v1, storage
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    aws_region: str = "eu-central-1"
-    aws_access_key_id: str = ""
-    aws_secret_access_key: str = ""
-    s3_results_bucket: str = "thesis-results-dev"
-    s3_artifacts_bucket: str = "thesis-artifacts-dev"
-    dynamodb_table: str = "thesis-experiments"
+    project: str = "thesis"
+    gcp_project_id: str = "thesis-gcp"
+    gcp_region: str = "europe-west4"
+    gcp_zone: str = "europe-west4-a"
+    gcs_results_bucket: str = "thesis-results-dev"
+    gcs_artifacts_bucket: str = "thesis-artifacts-dev"
+    firestore_collection: str = "thesis-experiments"
+    billing_export_table: str = ""
     mlflow_tracking_uri: str = "http://localhost:5000"
     ollama_base_url: str = "http://localhost:11434"
     environment: str = "dev"
@@ -27,37 +28,13 @@ def get_settings() -> Settings:
     return Settings()
 
 
-def get_s3_client():
-    settings = get_settings()
-    kwargs = {"region_name": settings.aws_region}
-    if settings.aws_access_key_id:
-        kwargs["aws_access_key_id"] = settings.aws_access_key_id
-        kwargs["aws_secret_access_key"] = settings.aws_secret_access_key
-    return boto3.client("s3", **kwargs)
+def get_storage_client() -> storage.Client:
+    return storage.Client(project=get_settings().gcp_project_id)
 
 
-def get_ec2_client():
-    settings = get_settings()
-    kwargs = {"region_name": settings.aws_region}
-    if settings.aws_access_key_id:
-        kwargs["aws_access_key_id"] = settings.aws_access_key_id
-        kwargs["aws_secret_access_key"] = settings.aws_secret_access_key
-    return boto3.client("ec2", **kwargs)
+def get_instances_client() -> compute_v1.InstancesClient:
+    return compute_v1.InstancesClient()
 
 
-def get_dynamodb_resource():
-    settings = get_settings()
-    kwargs = {"region_name": settings.aws_region}
-    if settings.aws_access_key_id:
-        kwargs["aws_access_key_id"] = settings.aws_access_key_id
-        kwargs["aws_secret_access_key"] = settings.aws_secret_access_key
-    return boto3.resource("dynamodb", **kwargs)
-
-
-def get_ce_client():
-    settings = get_settings()
-    kwargs = {"region_name": "us-east-1"}
-    if settings.aws_access_key_id:
-        kwargs["aws_access_key_id"] = settings.aws_access_key_id
-        kwargs["aws_secret_access_key"] = settings.aws_secret_access_key
-    return boto3.client("ce", **kwargs)
+def get_bigquery_client() -> bigquery.Client:
+    return bigquery.Client(project=get_settings().gcp_project_id)

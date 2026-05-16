@@ -1,4 +1,4 @@
-.PHONY: dev dev-down tf-init tf-plan tf-apply tf-destroy ecr-login push-api push-runner mlflow-ui web
+.PHONY: dev dev-down tf-init tf-plan tf-apply tf-destroy gar-login push-api push-runner mlflow-ui web
 
 # ──────────────────────────────────────────────
 # Local development
@@ -32,20 +32,23 @@ tf-destroy:
 	cd $(TF_DIR) && terraform destroy
 
 # ──────────────────────────────────────────────
-# Docker / ECR
+# Docker / Artifact Registry
 # ──────────────────────────────────────────────
 
-AWS_REGION ?= eu-central-1
-ECR_REGISTRY ?= $(shell aws sts get-caller-identity --query Account --output text).dkr.ecr.$(AWS_REGION).amazonaws.com
+GCP_REGION ?= europe-west4
+GCP_PROJECT_ID ?= thesis-gcp
+GAR_HOST ?= $(GCP_REGION)-docker.pkg.dev
+API_IMAGE ?= $(GAR_HOST)/$(GCP_PROJECT_ID)/thesis-api/thesis-api
+RUNNER_IMAGE ?= $(GAR_HOST)/$(GCP_PROJECT_ID)/thesis-runner/thesis-runner
 
-ecr-login:
-	aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(ECR_REGISTRY)
+gar-login:
+	gcloud auth configure-docker $(GAR_HOST) --quiet
 
-push-api: ecr-login
-	docker buildx build --platform linux/amd64 -f docker/Dockerfile.api -t $(ECR_REGISTRY)/thesis-api:latest --push .
+push-api: gar-login
+	docker buildx build --platform linux/amd64 -f docker/Dockerfile.api -t $(API_IMAGE):latest --push .
 
-push-runner: ecr-login
-	docker buildx build --platform linux/amd64 -f docker/Dockerfile.runner -t $(ECR_REGISTRY)/thesis-runner:latest --push .
+push-runner: gar-login
+	docker buildx build --platform linux/amd64 -f docker/Dockerfile.runner -t $(RUNNER_IMAGE):latest --push .
 
 # ──────────────────────────────────────────────
 # Convenience

@@ -1,22 +1,25 @@
 output "instance_ids" {
-  value = aws_instance.runner[*].id
+  value = google_compute_instance.runner[*].instance_id
 }
 
 output "public_ips" {
-  value = aws_instance.runner[*].public_ip
+  value = [
+    for inst in google_compute_instance.runner :
+    try(inst.network_interface[0].access_config[0].nat_ip, null)
+  ]
 }
 
 output "private_ips" {
-  value = aws_instance.runner[*].private_ip
+  value = [for inst in google_compute_instance.runner : inst.network_interface[0].network_ip]
 }
 
 output "security_group_id" {
-  value = aws_security_group.runner.id
+  value = google_compute_firewall.ssh.name
 }
 
 output "ssh_commands" {
   value = [
-    for inst in aws_instance.runner :
-    "ssh -i ~/.ssh/thesis-key.pem ec2-user@${inst.public_ip}"
+    for inst in google_compute_instance.runner :
+    "ssh -i ~/.ssh/thesis-key ${var.ssh_username}@${try(inst.network_interface[0].access_config[0].nat_ip, inst.network_interface[0].network_ip)}"
   ]
 }

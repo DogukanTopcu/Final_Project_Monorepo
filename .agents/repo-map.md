@@ -166,7 +166,7 @@ Mevcut durum:
 Bilinen durum:
 
 - Root `versions.tf` backend/provider ayarları environment dizinleriyle aynı Terraform root'u olmayabilir.
-- Prod GPU serving artık ECR runner image'ı yerine public `vllm/vllm-openai` image'ı ile dedicated model host'lar kurar.
+- Prod GPU serving artık Artifact Registry API/runner image'larından ayrı olarak public `vllm/vllm-openai` image'ı ile dedicated model host'lar kurar.
 - API host private vLLM endpoint'lerini `THESIS_FORCE_VLLM=1` altında env üzerinden alır.
 - `infrastructure/vllm/docker-compose.yml`, yerel ve ad-hoc GPU testleri için tek hostta sığan modelleri taşır; frontier modeller burada intentionally yoktur.
 - MLflow URI localhost olarak kalmış; instance içinde MLflow server varsayımı net değil.

@@ -1,7 +1,11 @@
-output "aws_account_id" {
-  value = data.aws_caller_identity.current.account_id
+output "gcp_project_id" {
+  value = var.gcp_project_id
 }
 
-output "aws_region" {
-  value = data.aws_region.current.name
+output "gcp_region" {
+  value = var.gcp_region
+}
+
+output "gcp_zone" {
+  value = var.gcp_zone
 }

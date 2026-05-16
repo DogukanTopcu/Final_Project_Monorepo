@@ -1,15 +1,15 @@
 output "experiments_table_name" {
-  value = aws_dynamodb_table.experiments.name
+  value = local.experiments_collection
 }
 
 output "experiments_table_arn" {
-  value = aws_dynamodb_table.experiments.arn
+  value = "firestore://${local.experiments_collection}"
 }
 
 output "tf_lock_table_name" {
-  value = var.create_backend_lock_table ? aws_dynamodb_table.tf_lock[0].name : "${var.project}-tf-lock"
+  value = ""
 }
 
 output "tf_lock_table_arn" {
-  value = var.create_backend_lock_table ? aws_dynamodb_table.tf_lock[0].arn : null
+  value = null
 }

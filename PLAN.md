@@ -15,7 +15,7 @@ Selected canonical checkpoints for this iteration:
 
 | WP | Title | Duration | Deliverable |
 |----|-------|----------|-------------|
-| WP1 | Infrastructure Setup | Week 1 | Local vLLM stack + AWS prod model-host matrix verified |
+| WP1 | Infrastructure Setup | Week 1 | Local vLLM stack + GCP prod model-host matrix verified |
 | WP2 | Pilot Study | Week 2 | Calibrated confidence thresholds, stability data |
 | WP3 | Full-Scale Experiments | Weeks 3–4 | Raw results JSON for all 3 setups × 3 benchmarks |
 | WP4 | Statistical Analysis | Week 5 | ANOVA tables, Pareto plots, energy report |
@@ -38,20 +38,19 @@ pip install -e ".[dev]"
 ```
 
 **Reference deployment matrix**:
-- `g5.2xlarge`: `qwen3.5-4b`, `gemma4-4b`, `llama3.2-3b`, `gpt-oss-20b`
-- `g6e.4xlarge`: `qwen3.5-27b`, `gemma4-31b`, `qwen3.5-35b-a3b`, `gemma4-26b-a4b`
-- `g6e.12xlarge`: `llama3.3-70b`
-- `p5.4xlarge`: `gpt-oss-120b`
-- `g6e.48xlarge`: `qwen3.5-122b-a10b`
-- `p5e.48xlarge`: `qwen3.5-397b-a17b`, `kimi-k2.6-1t`
+- `g2-standard-24`: `qwen3.5-4b`, `gemma4-4b`, `llama3.2-3b`, `gpt-oss-20b`
+- `a2-ultragpu-1g`: `qwen3.5-27b`, `gemma4-31b`, `qwen3.5-35b-a3b`, `gemma4-26b-a4b`
+- `a2-ultragpu-2g`: `llama3.3-70b`
+- `a2-ultragpu-4g`: `gpt-oss-120b`
+- `a3-ultragpu-8g`: `qwen3.5-122b-a10b`, `qwen3.5-397b-a17b`, `kimi-k2.6-1t`
 
 Not:
 - Küçük ve orta modeller yerelde veya tek GPU host'ta self-host edilebilir.
-- En büyük heavy modeller için tek generic GPU host yerine model başına dedicated AWS host yaklaşımı kullanılır.
+- En büyük heavy modeller için tek generic GPU host yerine model başına dedicated GCP host yaklaşımı kullanılır.
 
 ### 1.2 vLLM Serving Stack
 
-Each model runs as a separate OpenAI-compatible vLLM endpoint. Local development can use `infrastructure/vllm/docker-compose.yml`; AWS/prod uses Terraform-managed dedicated hosts selected via `enabled_vllm_models`.
+Each model runs as a separate OpenAI-compatible vLLM endpoint. Local development can use `infrastructure/vllm/docker-compose.yml`; GCP/prod uses Terraform-managed dedicated hosts selected via `enabled_vllm_models`.
 
 ```bash
 # Setup A — Monolithic 70B (local example, port 8000)
@@ -72,7 +71,7 @@ python -m vllm.entrypoints.openai.api_server \
 # Setup C uses a 4B drafter (port 8001) + 70B verifier (port 8000)
 ```
 
-For AWS/prod, the same aliases are routed to private vLLM hosts by setting `THESIS_FORCE_VLLM=1`.
+For GCP/prod, the same aliases are routed to private vLLM hosts by setting `THESIS_FORCE_VLLM=1`.
 
 ### 1.3 Environment Variables
 
@@ -385,7 +384,7 @@ Contents: all result JSONs, MLflow export, CodeCarbon emissions.csv, conda envir
 
 ### Infrastructure
 
-- [x] `infrastructure/terraform/` — AWS VPC/EC2/S3/ECR/DynamoDB
+- [x] `infrastructure/terraform/` — GCP VPC/GCE/GCS/Artifact Registry/Secret Manager
 - [x] `infrastructure/vllm/docker-compose.yml` — vLLM multi-model serving
 - [x] `infrastructure/vllm/serve_model.sh` — launch helper scripts
 

@@ -1,15 +1,15 @@
 output "vpc_id" {
-  value = aws_vpc.main.id
+  value = google_compute_network.main.id
 }
 
 output "public_subnet_ids" {
-  value = aws_subnet.public[*].id
+  value = google_compute_subnetwork.public[*].self_link
 }
 
 output "private_subnet_ids" {
-  value = aws_subnet.private[*].id
+  value = google_compute_subnetwork.private[*].self_link
 }
 
 output "vpc_cidr" {
-  value = aws_vpc.main.cidr_block
+  value = var.vpc_cidr
 }

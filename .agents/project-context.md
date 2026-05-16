@@ -35,7 +35,7 @@ Bu yüzden repo yalnızca model çağıran bir uygulama değildir. Aşağıdaki 
 Altyapı notu:
 
 - Küçük ve orta modeller yerelde Ollama veya tek-GPU vLLM ile çalıştırılabilir.
-- AWS/prod tarafında repo artık tek generic GPU instance varsaymaz.
+- GCP/prod tarafında repo artık tek generic GPU instance varsaymaz.
 - `THESIS_FORCE_VLLM=1` ile aynı repo alias'ları private OpenAI-compatible vLLM endpoint'lerine yönlenebilir.
 - Çok büyük modeller (`qwen3.5-397b-a17b`, `kimi-k2.6-1t`) dedicated ve pahalı host sınıfları gerektirir; bunlar dev ortamının doğal uzantısı değildir.
 

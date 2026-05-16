@@ -4,7 +4,7 @@ WORKDIR /app
 FROM base AS deps
 COPY pyproject.toml .
 RUN pip install --no-cache-dir -e ".[api]" || \
-    pip install --no-cache-dir fastapi uvicorn pydantic-settings boto3 httpx mlflow
+    pip install --no-cache-dir fastapi uvicorn pydantic-settings google-cloud-bigquery google-cloud-compute google-cloud-storage httpx mlflow
 
 FROM base AS runtime
 COPY --from=deps /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages

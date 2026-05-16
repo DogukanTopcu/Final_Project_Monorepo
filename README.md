@@ -1,19 +1,19 @@
 # Thesis Experiment Platform — Monorepo
 
-An end-to-end platform for running, tracking, and comparing SLM/LLM experiments across three architectures (Routing, Multi-Agent, Ensemble), automated benchmarks, UI-backed human preference evaluation, and full AWS/MLOps infrastructure.
+An end-to-end platform for running, tracking, and comparing SLM/LLM experiments across three architectures (Routing, Multi-Agent, Ensemble), automated benchmarks, UI-backed human preference evaluation, and full GCP/MLOps infrastructure.
 
 ## Architecture Overview
 
 ```
-Local Machine                          AWS Cloud
+Local Machine                          Google Cloud
 ┌────────────────────┐                ┌─────────────────────────┐
-│  Next.js Frontend  │───────────────▶│  EC2 (CPU) — API/MLflow │
-│  FastAPI Backend   │                │  EC2 (GPU) — model hosts│
-│  ExperimentRunner  │                │  S3 — results/artifacts │
-│  MLflow (local)    │                │  ECR — Docker images    │
-│  Docker Compose    │                │  DynamoDB — metadata    │
-│  Ollama + vLLM     │                │  CloudWatch — monitoring│
-└────────────────────┘                │  Secrets Manager        │
+│  Next.js Frontend  │───────────────▶│  GCE (CPU) — API/MLflow │
+│  FastAPI Backend   │                │  GCE (GPU) — model hosts│
+│  ExperimentRunner  │                │  GCS — results/artifacts│
+│  MLflow (local)    │                │  Artifact Registry      │
+│  Docker Compose    │                │  Firestore-ready meta   │
+│  Ollama + vLLM     │                │  Cloud Monitoring       │
+└────────────────────┘                │  Secret Manager         │
                                       └─────────────────────────┘
 ```
 
@@ -41,7 +41,7 @@ Notes:
 - User shorthand `Qwen 3.5 (396B)` is normalized to the official checkpoint `Qwen/Qwen3.5-397B-A17B`.
 - User shorthand `Gemma 4 (4B)` is normalized to the effective-parameter checkpoint `gemma4:e4b` / `google/gemma-4-E4B-it`.
 - Local development can keep using Ollama for the smaller aliases.
-- Production/AWS can switch the same aliases to OpenAI-compatible vLLM endpoints by setting `THESIS_FORCE_VLLM=1`.
+- Production/GCP can switch the same aliases to OpenAI-compatible vLLM endpoints by setting `THESIS_FORCE_VLLM=1`.
 
 ## Quick Start
 
@@ -50,7 +50,7 @@ Notes:
 - Python 3.11+
 - Node.js 20+
 - Docker & Docker Compose
-- AWS CLI (configured, optional for local dev)
+- `gcloud` CLI with Application Default Credentials (optional for local dev, required for cloud pushes)
 - Terraform >= 1.5 (for infrastructure)
 
 ### Local Development
@@ -93,7 +93,7 @@ mlflow server --host 0.0.0.0 --port 5000
 │   ├── backend/           # FastAPI API server
 │   │   ├── main.py        # App factory, CORS, lifespan
 │   │   ├── routers/       # experiments, models, results, infrastructure, benchmarks
-│   │   ├── services/      # experiment_service, aws_service, mlflow_service
+│   │   ├── services/      # experiment_service, gcp_service, mlflow_service
 │   │   ├── schemas.py     # Pydantic v2 models
 │   │   └── dependencies.py
 │   └── frontend/          # Next.js 14 App Router
@@ -114,7 +114,7 @@ mlflow server --host 0.0.0.0 --port 5000
 ├── infrastructure/
 │   └── terraform/
 │       ├── modules/       # vpc, ec2, s3, ecr, dynamodb, iam, cloudwatch, secrets
-│       └── environments/  # dev (t3.micro), prod (CPU API + optional model-specific GPU hosts)
+│       └── environments/  # dev (single CPU runner), prod (CPU API + optional model-specific GPU hosts)
 ├── docker/
 │   ├── Dockerfile.api
 │   ├── Dockerfile.runner
@@ -122,9 +122,9 @@ mlflow server --host 0.0.0.0 --port 5000
 │   └── docker-compose.yml
 ├── .github/workflows/
 │   ├── ci.yml             # Test + lint + terraform validate
-│   ├── deploy.yml         # Build → ECR → Terraform apply
+│   ├── deploy.yml         # Build → Artifact Registry → Terraform apply
 │   └── nightly.yml        # Scheduled benchmark runs
-└── Makefile               # dev, tf-*, ecr-login, push-*
+└── Makefile               # dev, tf-*, gar-login, push-*
 ```
 
 ## Web UI
@@ -135,7 +135,7 @@ mlflow server --host 0.0.0.0 --port 5000
 | **Experiments** | List all runs, launch new experiments with config form |
 | **Live Progress** | SSE-powered real-time progress bar and metric updates |
 | **Results** | Browse and compare up to 4 experiments side-by-side |
-| **Infrastructure** | EC2 instance management, cost estimates |
+| **Infrastructure** | GCE instance management, cost estimates |
 
 ## Benchmark Scope
 
@@ -155,9 +155,9 @@ python -m training.datasets prepare-sft --input training/data/raw/coding_pilot.j
 python -m training.train_lora --config training/configs/qlora_coding_pilot.yaml
 ```
 
-## AWS Infrastructure
+## GCP Infrastructure
 
-All infrastructure is managed via Terraform with remote state in S3 + DynamoDB locking.
+All infrastructure is managed via Terraform against Google Cloud primitives: VPC, GCE, GCS, Artifact Registry, Secret Manager, Cloud Monitoring, and Workload Identity Federation.
 
 ```bash
 make tf-init    # Initialize Terraform
@@ -170,9 +170,9 @@ make tf-destroy # Destroy (with warning)
 
 | | Dev | Prod |
 |---|---|---|
-| EC2 | `t3.micro` runner | `t3.large` API host + opt-in GPU model hosts |
-| NAT Gateway | No | Yes |
-| AZs | 1 | 2 |
+| GCE | `e2-standard-4` runner | `e2-standard-8` API host + opt-in GPU model hosts |
+| Cloud NAT | No | Yes |
+| Zones | 1 | 1 by default (`europe-west4-a`) |
 | Spot | No | Disabled by default for serving hosts |
 
 ### Prod Model Hosts
@@ -181,25 +181,25 @@ Enable only the models you need in `infrastructure/terraform/environments/prod/t
 
 | Model alias | Default prod host |
 |---|---|
-| `qwen3.5-4b` | `g5.2xlarge` |
-| `gemma4-4b` | `g5.2xlarge` |
-| `llama3.2-3b` | `g5.2xlarge` |
-| `gpt-oss-20b` | `g5.2xlarge` |
-| `qwen3.5-27b` | `g6e.4xlarge` |
-| `gemma4-31b` | `g6e.4xlarge` |
-| `qwen3.5-35b-a3b` | `g6e.4xlarge` |
-| `gemma4-26b-a4b` | `g6e.4xlarge` |
-| `llama3.3-70b` | `g6e.12xlarge` |
-| `gpt-oss-120b` | `p5.4xlarge` |
-| `qwen3.5-122b-a10b` | `g6e.48xlarge` |
-| `qwen3.5-397b-a17b` | `p5e.48xlarge` |
-| `kimi-k2.6-1t` | `p5e.48xlarge` |
+| `qwen3.5-4b` | `g2-standard-24` |
+| `gemma4-4b` | `g2-standard-24` |
+| `llama3.2-3b` | `g2-standard-24` |
+| `gpt-oss-20b` | `g2-standard-24` |
+| `qwen3.5-27b` | `a2-ultragpu-1g` |
+| `gemma4-31b` | `a2-ultragpu-1g` |
+| `qwen3.5-35b-a3b` | `a2-ultragpu-1g` |
+| `gemma4-26b-a4b` | `a2-ultragpu-1g` |
+| `llama3.3-70b` | `a2-ultragpu-2g` |
+| `gpt-oss-120b` | `a2-ultragpu-4g` |
+| `qwen3.5-122b-a10b` | `a3-ultragpu-8g` |
+| `qwen3.5-397b-a17b` | `a3-ultragpu-8g` |
+| `kimi-k2.6-1t` | `a3-ultragpu-8g` |
 
 ## CI/CD Pipeline
 
 - **Every push/PR**: Python tests + linting, frontend lint + typecheck, Terraform validate
-- **Push to main**: Build Docker images → push to ECR → Terraform apply
-- **Nightly (2am UTC)**: Run full benchmark suite, upload to S3, Slack notification
+- **Push to main**: Build Docker images → push to Artifact Registry → Terraform apply
+- **Nightly (2am UTC)**: Run full benchmark suite, upload to GCS, Slack notification
 
 ## API Endpoints
 
@@ -211,7 +211,7 @@ Enable only the models you need in `infrastructure/terraform/environments/prod/t
 | GET | `/api/experiments` | List all experiments |
 | GET | `/api/experiments/{id}/stream` | SSE progress stream |
 | GET | `/api/results/compare?ids=a,b,c` | Compare experiments |
-| GET | `/api/infrastructure/instances` | List EC2 instances |
+| GET | `/api/infrastructure/instances` | List GCE instances |
 | GET | `/api/infrastructure/costs` | Cost estimates |
 
 ## Environment Variables
@@ -219,8 +219,12 @@ Enable only the models you need in `infrastructure/terraform/environments/prod/t
 Create a `.env` file in the project root:
 
 ```env
-THESIS_AWS_REGION=eu-central-1
-THESIS_S3_RESULTS_BUCKET=thesis-results-dev
+THESIS_GCP_PROJECT_ID=thesis-gcp
+THESIS_GCP_REGION=europe-west4
+THESIS_GCP_ZONE=europe-west4-a
+THESIS_GCS_RESULTS_BUCKET=thesis-results-dev-thesis-gcp
+THESIS_GCS_ARTIFACTS_BUCKET=thesis-artifacts-dev-thesis-gcp
+THESIS_BILLING_EXPORT_TABLE=
 THESIS_MLFLOW_TRACKING_URI=http://localhost:5000
 THESIS_OLLAMA_BASE_URL=http://localhost:11434
 THESIS_FORCE_VLLM=0
@@ -242,7 +246,7 @@ VLLM_GPT_OSS_120B_URL=http://localhost:8012/v1
 ## Docker Images
 
 ```bash
-make ecr-login    # Authenticate with ECR
+make gar-login    # Authenticate with Artifact Registry
 make push-api     # Build and push API image
 make push-runner  # Build and push runner image
 ```

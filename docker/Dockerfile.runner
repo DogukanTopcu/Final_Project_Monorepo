@@ -4,7 +4,7 @@ WORKDIR /app
 FROM base AS deps
 COPY pyproject.toml .
 RUN pip install --no-cache-dir -e ".[runner]" || \
-    pip install --no-cache-dir mlflow boto3 requests pyyaml
+    pip install --no-cache-dir google-cloud-storage mlflow requests pyyaml
 
 FROM base AS runtime
 COPY --from=deps /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages

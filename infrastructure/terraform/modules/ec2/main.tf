@@ -1,143 +1,99 @@
-data "aws_ami" "amazon_linux" {
-  most_recent = true
-  owners      = ["amazon"]
-
-  filter {
-    name   = "name"
-    values = ["al2023-ami-*-x86_64"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
+data "google_compute_image" "selected" {
+  family  = var.is_gpu ? var.gpu_source_image_family : var.cpu_source_image_family
+  project = var.is_gpu ? var.gpu_source_image_project : var.cpu_source_image_project
 }
 
-resource "aws_security_group" "runner" {
-  name_prefix = "${var.project}-runner-${var.environment}-"
-  vpc_id      = var.vpc_id
+locals {
+  instance_tag = replace("${var.project}-${var.environment}", ".", "-")
+}
 
-  ingress {
-    description = "SSH from allowed CIDR"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = [var.allowed_ssh_cidr]
+resource "google_compute_firewall" "ssh" {
+  name    = "${local.instance_tag}-ssh"
+  network = var.vpc_id
+
+  allow {
+    protocol = "tcp"
+    ports    = ["22"]
   }
 
-  dynamic "ingress" {
-    for_each = length(var.api_ingress_cidrs) > 0 ? [1] : []
-    content {
-      description = "Application access"
-      from_port   = var.api_port
-      to_port     = var.api_port
-      protocol    = "tcp"
-      cidr_blocks = var.api_ingress_cidrs
+  source_ranges = [var.allowed_ssh_cidr]
+  target_tags   = [local.instance_tag]
+}
+
+resource "google_compute_firewall" "api" {
+  count   = length(var.api_ingress_cidrs) > 0 ? 1 : 0
+  name    = "${local.instance_tag}-api"
+  network = var.vpc_id
+
+  allow {
+    protocol = "tcp"
+    ports    = [tostring(var.api_port)]
+  }
+
+  source_ranges = var.api_ingress_cidrs
+  target_tags   = [local.instance_tag]
+}
+
+resource "google_compute_instance" "runner" {
+  count        = var.instance_count
+  name         = "${local.instance_tag}-${count.index}"
+  machine_type = var.instance_type
+  zone         = var.gcp_zone
+  tags         = [local.instance_tag]
+
+  labels = {
+    project     = var.project
+    environment = replace(var.environment, ".", "-")
+    workload    = replace(var.container_name, "_", "-")
+    name        = replace("${var.project}-runner-${count.index}-${var.environment}", ".", "-")
+  }
+
+  boot_disk {
+    auto_delete = true
+
+    initialize_params {
+      image = data.google_compute_image.selected.self_link
+      size  = var.root_volume_size_gb
+      type  = var.root_volume_type
     }
   }
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+  network_interface {
+    subnetwork = var.subnet_id
 
-  tags = {
-    Name        = "${var.project}-runner-sg-${var.environment}"
-    Project     = var.project
-    Environment = var.environment
-  }
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-resource "aws_key_pair" "runner" {
-  key_name   = "${var.project}-runner-${var.environment}"
-  public_key = file(var.public_key_path)
-
-  tags = {
-    Project     = var.project
-    Environment = var.environment
-  }
-}
-
-resource "aws_launch_template" "runner" {
-  name_prefix   = "${var.project}-runner-${var.environment}-"
-  image_id      = var.ami_id != "" ? var.ami_id : data.aws_ami.amazon_linux.id
-  instance_type = var.instance_type
-  key_name      = aws_key_pair.runner.key_name
-
-  iam_instance_profile {
-    arn = var.instance_profile_arn
-  }
-
-  vpc_security_group_ids = [aws_security_group.runner.id]
-
-  block_device_mappings {
-    device_name = "/dev/xvda"
-
-    ebs {
-      volume_size           = var.root_volume_size_gb
-      volume_type           = var.root_volume_type
-      delete_on_termination = true
+    dynamic "access_config" {
+      for_each = var.assign_public_ip ? [1] : []
+      content {}
     }
   }
 
-  user_data = base64encode(templatefile("${path.module}/user_data.sh", {
-    ecr_repo_url           = var.ecr_repo_url
-    aws_region             = var.aws_region
-    secret_names           = var.secret_names
-    environment            = var.environment
-    is_gpu                 = var.is_gpu
+  metadata = {
+    ssh-keys = "${var.ssh_username}:${file(var.public_key_path)}"
+  }
+
+  metadata_startup_script = templatefile("${path.module}/user_data.sh", {
+    artifact_registry_host = var.artifact_registry_host
     container_image_uri    = var.container_image_uri
     container_name         = var.container_name
-    port_mappings          = var.port_mappings
     container_runtime_args = var.container_runtime_args
     container_command      = var.container_command
+    environment            = var.environment
     extra_env              = var.extra_env
-  }))
+    gcp_project_id         = var.gcp_project_id
+    is_gpu                 = var.is_gpu
+    port_mappings          = var.port_mappings
+    secret_names           = var.secret_names
+  })
 
-  dynamic "instance_market_options" {
-    for_each = var.use_spot ? [1] : []
-    content {
-      market_type = "spot"
-      spot_options {
-        max_price = var.spot_price
-      }
-    }
+  scheduling {
+    automatic_restart   = var.use_spot ? false : true
+    on_host_maintenance = var.is_gpu ? "TERMINATE" : "MIGRATE"
+    preemptible         = var.use_spot
+    provisioning_model  = var.use_spot ? "SPOT" : "STANDARD"
   }
 
-  tag_specifications {
-    resource_type = "instance"
-    tags = {
-      Name        = "${var.project}-runner-${var.environment}"
-      Project     = var.project
-      Environment = var.environment
-    }
-  }
-
-  tags = {
-    Project     = var.project
-    Environment = var.environment
-  }
-}
-
-resource "aws_instance" "runner" {
-  count = var.instance_count
-
-  launch_template {
-    id      = aws_launch_template.runner.id
-    version = "$Latest"
-  }
-
-  subnet_id = var.subnet_id
-
-  tags = {
-    Name        = "${var.project}-runner-${count.index}-${var.environment}"
-    Project     = var.project
-    Environment = var.environment
+  service_account {
+    email  = var.service_account_email
+    scopes = ["https://www.googleapis.com/auth/cloud-platform"]
   }
 }

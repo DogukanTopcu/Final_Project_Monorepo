@@ -8,9 +8,28 @@ variable "environment" {
   default = "prod"
 }
 
-variable "aws_region" {
+variable "gcp_project_id" {
+  type = string
+}
+
+variable "gcp_region" {
   type    = string
-  default = "eu-central-1"
+  default = "europe-west4"
+}
+
+variable "gcp_zone" {
+  type    = string
+  default = "europe-west4-a"
+}
+
+variable "cpu_zone" {
+  type    = string
+  default = "europe-west4-a"
+}
+
+variable "gpu_zone" {
+  type    = string
+  default = "europe-west4-a"
 }
 
 variable "allowed_ssh_cidr" {
@@ -36,7 +55,7 @@ variable "github_repo" {
 
 variable "cpu_instance_type" {
   type    = string
-  default = "t3.large"
+  default = "e2-standard-8"
 }
 
 variable "public_api_cidrs" {
@@ -46,13 +65,13 @@ variable "public_api_cidrs" {
 
 variable "enabled_vllm_models" {
   type        = set(string)
-  description = "Selected models to self-host on dedicated GPU EC2 instances in prod."
+  description = "Selected models to self-host on dedicated GPU GCE instances in prod."
   default     = []
 }
 
 variable "vllm_instance_type_overrides" {
   type        = map(string)
-  description = "Optional per-model EC2 instance type overrides for self-hosted vLLM models."
+  description = "Optional per-model GCE machine type overrides for self-hosted vLLM models."
   default     = {}
 }
 
@@ -60,4 +79,10 @@ variable "vllm_container_image" {
   type        = string
   description = "Pinned vLLM OpenAI-compatible container image."
   default     = "vllm/vllm-openai:v0.19.1"
+}
+
+variable "billing_export_table" {
+  type        = string
+  description = "Optional BigQuery billing export table in project.dataset.table format."
+  default     = ""
 }

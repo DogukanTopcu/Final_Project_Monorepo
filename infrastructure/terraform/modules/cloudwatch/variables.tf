@@ -7,9 +7,13 @@ variable "environment" {
   type = string
 }
 
-variable "aws_region" {
+variable "gcp_project_id" {
+  type = string
+}
+
+variable "gcp_region" {
   type    = string
-  default = "eu-central-1"
+  default = "europe-west4"
 }
 
 variable "alert_email" {

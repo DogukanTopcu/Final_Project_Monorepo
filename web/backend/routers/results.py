@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from web.backend.dependencies import Settings, get_settings
 from web.backend.schemas import ComparisonResponse, ResultDetail, ResultSummary
-from web.backend.services import aws_service, experiment_service
+from web.backend.services import experiment_service, gcp_service
 
 router = APIRouter(tags=["results"])
 
@@ -35,11 +35,11 @@ async def list_results(settings: Settings = Depends(get_settings)):
             )
         )
 
-    s3_files = aws_service.list_s3_results(settings.s3_results_bucket)
-    for f in s3_files:
+    gcs_files = gcp_service.list_gcs_results(settings.gcs_results_bucket)
+    for f in gcs_files:
         try:
             data = json.loads(
-                aws_service.get_s3_object(settings.s3_results_bucket, f["key"])
+                gcp_service.get_gcs_object(settings.gcs_results_bucket, f["key"])
             )
             results.append(
                 ResultSummary(
@@ -99,7 +99,7 @@ async def get_result(result_id: str, settings: Settings = Depends(get_settings))
 
     try:
         data = json.loads(
-            aws_service.get_s3_object(settings.s3_results_bucket, result_id)
+            gcp_service.get_gcs_object(settings.gcs_results_bucket, result_id)
         )
         return ResultDetail(
             id=result_id,

@@ -34,7 +34,8 @@ export function CostWidget() {
           </div>
         ) : (
           <p className="text-zinc-500">
-            Cost data unavailable. Configure AWS credentials to view estimates.
+            Cost data unavailable. Configure GCP credentials and optional
+            billing export to view estimates.
           </p>
         )}
       </CardContent>

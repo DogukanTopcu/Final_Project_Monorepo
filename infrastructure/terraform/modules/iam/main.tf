@@ -1,248 +1,96 @@
-data "aws_caller_identity" "current" {}
-data "aws_region" "current" {}
+data "google_project" "current" {
+  project_id = var.gcp_project_id
+}
 
-resource "aws_iam_role" "ec2_runner" {
-  name = "${var.project}-ec2-runner-${var.environment}"
+resource "google_service_account" "runtime" {
+  account_id   = substr("${var.project}-${var.environment}-runtime", 0, 30)
+  display_name = "Thesis runtime ${var.environment}"
+}
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Action    = "sts:AssumeRole"
-      Effect    = "Allow"
-      Principal = { Service = "ec2.amazonaws.com" }
-    }]
-  })
+resource "google_service_account" "mlflow" {
+  account_id   = substr("${var.project}-${var.environment}-mlflow", 0, 30)
+  display_name = "Thesis MLflow ${var.environment}"
+}
 
-  tags = {
-    Project     = var.project
-    Environment = var.environment
+resource "google_service_account" "github_actions" {
+  account_id   = substr("${var.project}-${var.environment}-gha", 0, 30)
+  display_name = "Thesis GitHub Actions ${var.environment}"
+}
+
+locals {
+  runtime_roles = toset([
+    "roles/artifactregistry.reader",
+    "roles/logging.logWriter",
+    "roles/monitoring.metricWriter",
+    "roles/secretmanager.secretAccessor",
+    "roles/storage.objectAdmin",
+  ])
+
+  mlflow_roles = toset([
+    "roles/storage.objectAdmin",
+  ])
+
+  github_roles = toset([
+    "roles/artifactregistry.reader",
+    "roles/artifactregistry.writer",
+    "roles/compute.admin",
+    "roles/iam.serviceAccountUser",
+    "roles/secretmanager.secretAccessor",
+    "roles/storage.admin",
+  ])
+
+  github_principal = var.github_repo == "*" ? "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/*" : "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.repository/${var.github_repo}"
+}
+
+resource "google_project_iam_member" "runtime" {
+  for_each = local.runtime_roles
+
+  project = var.gcp_project_id
+  role    = each.value
+  member  = "serviceAccount:${google_service_account.runtime.email}"
+}
+
+resource "google_project_iam_member" "mlflow" {
+  for_each = local.mlflow_roles
+
+  project = var.gcp_project_id
+  role    = each.value
+  member  = "serviceAccount:${google_service_account.mlflow.email}"
+}
+
+resource "google_project_iam_member" "github_actions" {
+  for_each = local.github_roles
+
+  project = var.gcp_project_id
+  role    = each.value
+  member  = "serviceAccount:${google_service_account.github_actions.email}"
+}
+
+resource "google_iam_workload_identity_pool" "github" {
+  workload_identity_pool_id = "${var.project}-${var.environment}-gha-pool"
+  display_name              = "GitHub Actions pool ${var.environment}"
+}
+
+resource "google_iam_workload_identity_pool_provider" "github" {
+  workload_identity_pool_id          = google_iam_workload_identity_pool.github.workload_identity_pool_id
+  workload_identity_pool_provider_id = "${var.project}-${var.environment}-gha"
+  display_name                       = "GitHub Actions provider ${var.environment}"
+
+  attribute_mapping = {
+    "google.subject"       = "assertion.sub"
+    "attribute.actor"      = "assertion.actor"
+    "attribute.repository" = "assertion.repository"
   }
-}
 
-resource "aws_iam_role_policy" "ec2_runner" {
-  name = "${var.project}-ec2-runner-policy-${var.environment}"
-  role = aws_iam_role.ec2_runner.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:ListBucket",
-          "s3:DeleteObject"
-        ]
-        Resource = [
-          "arn:aws:s3:::${var.project}-*",
-          "arn:aws:s3:::${var.project}-*/*"
-        ]
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "dynamodb:GetItem",
-          "dynamodb:PutItem",
-          "dynamodb:UpdateItem",
-          "dynamodb:Query",
-          "dynamodb:Scan"
-        ]
-        Resource = [
-          "arn:aws:dynamodb:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:table/${var.project}-experiments",
-          "arn:aws:dynamodb:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:table/${var.project}-experiments/index/*"
-        ]
-      },
-      {
-        Effect   = "Allow"
-        Action   = ["secretsmanager:GetSecretValue"]
-        Resource = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project}/*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "ecr:GetAuthorizationToken",
-          "ecr:BatchGetImage",
-          "ecr:GetDownloadUrlForLayer",
-          "ecr:BatchCheckLayerAvailability"
-        ]
-        Resource = "*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents",
-          "cloudwatch:PutMetricData"
-        ]
-        Resource = "*"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_instance_profile" "ec2_runner" {
-  name = "${var.project}-ec2-runner-${var.environment}"
-  role = aws_iam_role.ec2_runner.name
-}
-
-resource "aws_iam_openid_connect_provider" "github" {
-  count = var.create_github_oidc ? 1 : 0
-
-  url             = "https://token.actions.githubusercontent.com"
-  client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
-
-  tags = {
-    Project     = var.project
-    Environment = var.environment
+  oidc {
+    issuer_uri = "https://token.actions.githubusercontent.com"
   }
+
+  attribute_condition = var.github_repo == "*" ? null : "assertion.repository == '${var.github_repo}'"
 }
 
-resource "aws_iam_role" "github_actions" {
-  name = "${var.project}-github-actions-${var.environment}"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Action = "sts:AssumeRoleWithWebIdentity"
-      Effect = "Allow"
-      Principal = {
-        Federated = var.create_github_oidc ? aws_iam_openid_connect_provider.github[0].arn : "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
-      }
-      Condition = {
-        StringLike = {
-          "token.actions.githubusercontent.com:sub" = "repo:${var.github_repo}:*"
-        }
-        StringEquals = {
-          "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
-        }
-      }
-    }]
-  })
-
-  tags = {
-    Project     = var.project
-    Environment = var.environment
-  }
-}
-
-resource "aws_iam_role_policy" "github_actions" {
-  name = "${var.project}-github-actions-policy-${var.environment}"
-  role = aws_iam_role.github_actions.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "ecr:GetAuthorizationToken",
-          "ecr:BatchGetImage",
-          "ecr:GetDownloadUrlForLayer",
-          "ecr:BatchCheckLayerAvailability",
-          "ecr:PutImage",
-          "ecr:InitiateLayerUpload",
-          "ecr:UploadLayerPart",
-          "ecr:CompleteLayerUpload"
-        ]
-        Resource = "*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "ec2:DescribeInstances",
-          "ec2:StartInstances",
-          "ec2:StopInstances"
-        ]
-        Resource = "*"
-        Condition = {
-          StringEquals = {
-            "ec2:ResourceTag/Project" = var.project
-          }
-        }
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "ec2:DescribeInstances"
-        ]
-        Resource = "*"
-      },
-      {
-        Effect = "Allow"
-        Action = ["s3:GetObject", "s3:ListBucket"]
-        Resource = [
-          "arn:aws:s3:::${var.project}-*",
-          "arn:aws:s3:::${var.project}-*/*"
-        ]
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "dynamodb:GetItem",
-          "dynamodb:Query",
-          "dynamodb:Scan"
-        ]
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:table/${var.project}-*"
-      },
-      {
-        Effect   = "Allow"
-        Action   = ["secretsmanager:GetSecretValue"]
-        Resource = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project}/*"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role" "mlflow_server" {
-  name = "${var.project}-mlflow-server-${var.environment}"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Action    = "sts:AssumeRole"
-      Effect    = "Allow"
-      Principal = { Service = "ec2.amazonaws.com" }
-    }]
-  })
-
-  tags = {
-    Project     = var.project
-    Environment = var.environment
-  }
-}
-
-resource "aws_iam_role_policy" "mlflow_server" {
-  name = "${var.project}-mlflow-policy-${var.environment}"
-  role = aws_iam_role.mlflow_server.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:ListBucket",
-          "s3:DeleteObject"
-        ]
-        Resource = [
-          "arn:aws:s3:::${var.project}-artifacts-*",
-          "arn:aws:s3:::${var.project}-artifacts-*/*"
-        ]
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "dynamodb:GetItem",
-          "dynamodb:Query",
-          "dynamodb:Scan"
-        ]
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:table/${var.project}-experiments"
-      }
-    ]
-  })
+resource "google_service_account_iam_member" "github_wif" {
+  service_account_id = google_service_account.github_actions.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = local.github_principal
 }

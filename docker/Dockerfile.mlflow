@@ -1,6 +1,6 @@
 FROM python:3.11-slim
 WORKDIR /app
-RUN pip install --no-cache-dir mlflow boto3
+RUN pip install --no-cache-dir mlflow google-cloud-storage
 ENV PYTHONUNBUFFERED=1
 EXPOSE 5000
 CMD ["mlflow", "server", \

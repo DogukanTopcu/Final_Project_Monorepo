@@ -92,6 +92,7 @@ export interface InstanceInfo {
   name: string;
   instance_type: string;
   state: string;
+  zone: string | null;
   public_ip: string | null;
   private_ip: string | null;
   launch_time: string | null;

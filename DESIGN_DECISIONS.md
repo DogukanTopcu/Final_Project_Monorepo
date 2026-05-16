@@ -57,11 +57,11 @@ Among the selected heavy models, `llama3.3-70b` is still the most practical heav
 
 The repo no longer assumes a single generic GPU production host. The selected model pool spans at least three deployment classes:
 
-| Deployment class | Typical AWS host | Models |
+| Deployment class | Typical GCP host | Models |
 |------------------|------------------|--------|
-| Small/medium single-GPU | `g5.2xlarge`, `g6e.4xlarge` | `qwen3.5-4b`, `gemma4-4b`, `llama3.2-3b`, `gpt-oss-20b`, `qwen3.5-27b`, `gemma4-31b`, `qwen3.5-35b-a3b`, `gemma4-26b-a4b` |
-| Large but still practical self-host | `g6e.12xlarge`, `p5.4xlarge`, `g6e.48xlarge` | `llama3.3-70b`, `gpt-oss-120b`, `qwen3.5-122b-a10b` |
-| Frontier, very expensive | `p5e.48xlarge` class | `qwen3.5-397b-a17b`, `kimi-k2.6-1t` |
+| Small/medium single-GPU | `g2-standard-24`, `a2-ultragpu-1g` | `qwen3.5-4b`, `gemma4-4b`, `llama3.2-3b`, `gpt-oss-20b`, `qwen3.5-27b`, `gemma4-31b`, `qwen3.5-35b-a3b`, `gemma4-26b-a4b` |
+| Large but still practical self-host | `a2-ultragpu-2g`, `a2-ultragpu-4g` | `llama3.3-70b`, `gpt-oss-120b` |
+| Frontier, very expensive | `a3-ultragpu-8g` | `qwen3.5-122b-a10b`, `qwen3.5-397b-a17b`, `kimi-k2.6-1t` |
 
 This is why prod Terraform was changed to an opt-in `enabled_vllm_models` design with one dedicated host per selected model instead of one shared GPU box.
 

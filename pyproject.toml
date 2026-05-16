@@ -27,7 +27,7 @@ api = [
 # MLflow tracking
 mlflow = [
     "mlflow>=2.13",
-    "boto3>=1.34",
+    "google-cloud-storage>=2.16",
 ]
 
 # FastAPI backend
@@ -37,7 +37,9 @@ backend = [
     "pydantic>=2.7",
     "pydantic-settings>=2.3",
     "httpx>=0.27",
-    "boto3>=1.34",
+    "google-cloud-bigquery>=3.25",
+    "google-cloud-compute>=1.19",
+    "google-cloud-storage>=2.16",
 ]
 
 # Full runner (all inference + tracking)

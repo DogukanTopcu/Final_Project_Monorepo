@@ -1,127 +1,49 @@
-data "aws_availability_zones" "available" {
-  state = "available"
+resource "google_compute_network" "main" {
+  name                    = "${var.project}-vpc-${var.environment}"
+  auto_create_subnetworks = false
 }
 
-resource "aws_vpc" "main" {
-  cidr_block           = var.vpc_cidr
-  enable_dns_support   = true
-  enable_dns_hostnames = true
-
-  tags = {
-    Name        = "${var.project}-vpc-${var.environment}"
-    Project     = var.project
-    Environment = var.environment
-  }
-}
-
-resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id
-
-  tags = {
-    Name        = "${var.project}-igw-${var.environment}"
-    Project     = var.project
-    Environment = var.environment
-  }
-}
-
-resource "aws_subnet" "public" {
+resource "google_compute_subnetwork" "public" {
   count = length(var.public_subnet_cidrs)
 
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = var.public_subnet_cidrs[count.index]
-  availability_zone       = data.aws_availability_zones.available.names[count.index]
-  map_public_ip_on_launch = true
-
-  tags = {
-    Name        = "${var.project}-public-${count.index}-${var.environment}"
-    Project     = var.project
-    Environment = var.environment
-  }
+  name                     = "${var.project}-public-${count.index}-${var.environment}"
+  ip_cidr_range            = var.public_subnet_cidrs[count.index]
+  region                   = var.gcp_region
+  network                  = google_compute_network.main.id
+  private_ip_google_access = true
 }
 
-resource "aws_subnet" "private" {
+resource "google_compute_subnetwork" "private" {
   count = length(var.private_subnet_cidrs)
 
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = var.private_subnet_cidrs[count.index]
-  availability_zone = data.aws_availability_zones.available.names[count.index]
-
-  tags = {
-    Name        = "${var.project}-private-${count.index}-${var.environment}"
-    Project     = var.project
-    Environment = var.environment
-  }
+  name                     = "${var.project}-private-${count.index}-${var.environment}"
+  ip_cidr_range            = var.private_subnet_cidrs[count.index]
+  region                   = var.gcp_region
+  network                  = google_compute_network.main.id
+  private_ip_google_access = true
 }
 
-resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.main.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.main.id
-  }
-
-  tags = {
-    Name        = "${var.project}-public-rt-${var.environment}"
-    Project     = var.project
-    Environment = var.environment
-  }
+resource "google_compute_router" "main" {
+  count   = var.nat_enabled ? 1 : 0
+  name    = "${var.project}-router-${var.environment}"
+  region  = var.gcp_region
+  network = google_compute_network.main.id
 }
 
-resource "aws_route_table_association" "public" {
-  count = length(aws_subnet.public)
-
-  subnet_id      = aws_subnet.public[count.index].id
-  route_table_id = aws_route_table.public.id
-}
-
-resource "aws_eip" "nat" {
+resource "google_compute_router_nat" "main" {
   count  = var.nat_enabled ? 1 : 0
-  domain = "vpc"
+  name   = "${var.project}-nat-${var.environment}"
+  router = google_compute_router.main[0].name
+  region = var.gcp_region
 
-  tags = {
-    Name        = "${var.project}-nat-eip-${var.environment}"
-    Project     = var.project
-    Environment = var.environment
-  }
-}
+  nat_ip_allocate_option             = "AUTO_ONLY"
+  source_subnetwork_ip_ranges_to_nat = "LIST_OF_SUBNETWORKS"
 
-resource "aws_nat_gateway" "main" {
-  count = var.nat_enabled ? 1 : 0
-
-  allocation_id = aws_eip.nat[0].id
-  subnet_id     = aws_subnet.public[0].id
-
-  tags = {
-    Name        = "${var.project}-nat-${var.environment}"
-    Project     = var.project
-    Environment = var.environment
-  }
-
-  depends_on = [aws_internet_gateway.main]
-}
-
-resource "aws_route_table" "private" {
-  vpc_id = aws_vpc.main.id
-
-  dynamic "route" {
-    for_each = var.nat_enabled ? [1] : []
+  dynamic "subnetwork" {
+    for_each = google_compute_subnetwork.private
     content {
-      cidr_block     = "0.0.0.0/0"
-      nat_gateway_id = aws_nat_gateway.main[0].id
+      name                    = subnetwork.value.id
+      source_ip_ranges_to_nat = ["ALL_IP_RANGES"]
     }
   }
-
-  tags = {
-    Name        = "${var.project}-private-rt-${var.environment}"
-    Project     = var.project
-    Environment = var.environment
-  }
-}
-
-resource "aws_route_table_association" "private" {
-  count = length(aws_subnet.private)
-
-  subnet_id      = aws_subnet.private[count.index].id
-  route_table_id = aws_route_table.private.id
 }

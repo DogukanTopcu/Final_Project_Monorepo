@@ -1,4 +1,6 @@
 # Copy this file to terraform.tfvars and fill in values
 project          = "thesis"
 environment      = "dev"
-aws_region       = "eu-central-1"
+gcp_project_id   = "thesis-gcp"
+gcp_region       = "europe-west4"
+gcp_zone         = "europe-west4-a"

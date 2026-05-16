@@ -34,7 +34,7 @@ services:
     volumes:
       - mlflow_data:/app
     environment:
-      - MLFLOW_ARTIFACT_ROOT=s3://thesis-artifacts-dev/mlflow
+      - MLFLOW_ARTIFACT_ROOT=./mlartifacts
 
   ollama:
     image: ollama/ollama

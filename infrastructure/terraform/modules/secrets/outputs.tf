@@ -1,31 +1,31 @@
 output "kimi_key_arn" {
-  value = aws_secretsmanager_secret.kimi_key.arn
+  value = google_secret_manager_secret.kimi_key.id
 }
 
 output "kimi_key_name" {
-  value = aws_secretsmanager_secret.kimi_key.name
+  value = google_secret_manager_secret.kimi_key.secret_id
 }
 
 output "openai_compatible_key_arn" {
-  value = aws_secretsmanager_secret.openai_compatible_key.arn
+  value = google_secret_manager_secret.openai_compatible_key.id
 }
 
 output "openai_compatible_key_name" {
-  value = aws_secretsmanager_secret.openai_compatible_key.name
+  value = google_secret_manager_secret.openai_compatible_key.secret_id
 }
 
 output "hf_token_arn" {
-  value = aws_secretsmanager_secret.hf_token.arn
+  value = google_secret_manager_secret.hf_token.id
 }
 
 output "hf_token_name" {
-  value = aws_secretsmanager_secret.hf_token.name
+  value = google_secret_manager_secret.hf_token.secret_id
 }
 
 output "secret_arns" {
   value = [
-    aws_secretsmanager_secret.kimi_key.arn,
-    aws_secretsmanager_secret.openai_compatible_key.arn,
-    aws_secretsmanager_secret.hf_token.arn,
+    google_secret_manager_secret.kimi_key.id,
+    google_secret_manager_secret.openai_compatible_key.id,
+    google_secret_manager_secret.hf_token.id,
   ]
 }

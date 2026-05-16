@@ -43,6 +43,12 @@ export function InstanceCard({ instance }: InstanceCardProps) {
             <span className="text-zinc-500">ID:</span>{" "}
             <span className="font-mono text-xs">{instance.instance_id}</span>
           </div>
+          {instance.zone && (
+            <div>
+              <span className="text-zinc-500">Zone:</span>{" "}
+              <span className="font-mono">{instance.zone}</span>
+            </div>
+          )}
           {instance.public_ip && (
             <div>
               <span className="text-zinc-500">Public IP:</span>{" "}
@@ -69,7 +75,7 @@ export function InstanceCard({ instance }: InstanceCardProps) {
               SSH Instructions
             </summary>
             <pre className="mt-2 rounded bg-zinc-100 p-2 text-xs">
-              ssh -i ~/.ssh/thesis-key.pem ec2-user@{instance.public_ip}
+              ssh -i ~/.ssh/thesis-key ubuntu@{instance.public_ip}
             </pre>
           </details>
         )}
