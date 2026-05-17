@@ -1,31 +1,31 @@
 output "kimi_key_arn" {
-  value = google_secret_manager_secret.kimi_key.id
+  value = try(google_secret_manager_secret.kimi_key[0].id, null)
 }
 
 output "kimi_key_name" {
-  value = google_secret_manager_secret.kimi_key.secret_id
+  value = try(google_secret_manager_secret.kimi_key[0].secret_id, null)
 }
 
 output "openai_compatible_key_arn" {
-  value = google_secret_manager_secret.openai_compatible_key.id
+  value = try(google_secret_manager_secret.openai_compatible_key[0].id, null)
 }
 
 output "openai_compatible_key_name" {
-  value = google_secret_manager_secret.openai_compatible_key.secret_id
+  value = try(google_secret_manager_secret.openai_compatible_key[0].secret_id, null)
 }
 
 output "hf_token_arn" {
-  value = google_secret_manager_secret.hf_token.id
+  value = try(google_secret_manager_secret.hf_token[0].id, null)
 }
 
 output "hf_token_name" {
-  value = google_secret_manager_secret.hf_token.secret_id
+  value = "${var.project}-hf-token"
 }
 
 output "secret_arns" {
-  value = [
-    google_secret_manager_secret.kimi_key.id,
-    google_secret_manager_secret.openai_compatible_key.id,
-    google_secret_manager_secret.hf_token.id,
-  ]
+  value = compact([
+    try(google_secret_manager_secret.kimi_key[0].id, null),
+    try(google_secret_manager_secret.openai_compatible_key[0].id, null),
+    try(google_secret_manager_secret.hf_token[0].id, null),
+  ])
 }

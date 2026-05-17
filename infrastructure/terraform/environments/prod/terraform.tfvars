@@ -1,6 +1,6 @@
 project           = "thesis"
 environment       = "prod"
-gcp_project_id    = "thesis-gcp"
+gcp_project_id    = "llm-slm-comparison"
 gcp_region        = "europe-west4"
 gcp_zone          = "europe-west4-a"
 cpu_zone          = "europe-west4-a"
@@ -13,9 +13,9 @@ cpu_instance_type = "e2-standard-8"
 
 # Keep this empty by default to avoid accidentally launching very expensive GPU hosts.
 # Enable only the models you want to benchmark in that window.
-enabled_vllm_models = ["gpt-oss-20b", "llama3.3-70b"]
+enabled_vllm_models = ["qwen3.5-4b", "gpt-oss-20b"]
 
 # Examples:
 # enabled_vllm_models = ["llama3.3-70b", "gpt-oss-20b"]
 # enabled_vllm_models = ["gpt-oss-120b"]
-# enabled_vllm_models = ["qwen3.5-397b-a17b"]
+# enabled_vllm_models = ["llama3.3-70b", "gemma4-31b"]

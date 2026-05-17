@@ -58,12 +58,13 @@ module "s3" {
 }
 
 module "ecr" {
-  source         = "../../modules/ecr"
-  project        = var.project
-  environment    = var.environment
-  gcp_project_id = var.gcp_project_id
-  gcp_region     = var.gcp_region
-  depends_on     = [google_project_service.required]
+  source              = "../../modules/ecr"
+  project             = var.project
+  environment         = var.environment
+  gcp_project_id      = var.gcp_project_id
+  gcp_region          = var.gcp_region
+  create_repositories = false
+  depends_on          = [google_project_service.required]
 }
 
 module "dynamodb" {
@@ -75,10 +76,12 @@ module "dynamodb" {
 }
 
 module "secrets" {
-  source      = "../../modules/secrets"
-  project     = var.project
-  environment = var.environment
-  depends_on  = [google_project_service.required]
+  source                         = "../../modules/secrets"
+  project                        = var.project
+  environment                    = var.environment
+  create_hosted_provider_secrets = false
+  create_hf_token_secret         = false
+  depends_on                     = [google_project_service.required]
 }
 
 module "iam" {
@@ -92,11 +95,9 @@ module "iam" {
 }
 
 locals {
-  secret_names = [
-    module.secrets.kimi_key_name,
-    module.secrets.openai_compatible_key_name,
+  secret_names = compact([
     module.secrets.hf_token_name,
-  ]
+  ])
 
   vllm_model_deployments = {
     "llama3.3-70b" = {
@@ -162,27 +163,6 @@ locals {
       command             = "--model nvidia/Gemma-4-26B-A4B-NVFP4 --served-model-name nvidia/Gemma-4-26B-A4B-NVFP4 --port 8000 --reasoning-parser gemma4 --max-model-len 32768 --gpu-memory-utilization 0.90"
       api_port            = 8000
     }
-    "qwen3.5-122b-a10b" = {
-      instance_type       = "a3-ultragpu-8g"
-      root_volume_size_gb = 1200
-      runtime_args        = ["--ipc=host", "--shm-size=64g", "-v /opt/hf-cache:/root/.cache/huggingface"]
-      command             = "--model Qwen/Qwen3.5-122B-A10B --served-model-name Qwen/Qwen3.5-122B-A10B --port 8000 --tensor-parallel-size 8 --max-model-len 32768 --reasoning-parser qwen3 --language-model-only"
-      api_port            = 8000
-    }
-    "kimi-k2.6-1t" = {
-      instance_type       = "a3-ultragpu-8g"
-      root_volume_size_gb = 2000
-      runtime_args        = ["--ipc=host", "--shm-size=64g", "-v /opt/hf-cache:/root/.cache/huggingface"]
-      command             = "--model moonshotai/Kimi-K2.6 --served-model-name moonshotai/Kimi-K2.6 --port 8000 --tensor-parallel-size 8 --mm-encoder-tp-mode data --trust-remote-code --tool-call-parser kimi_k2 --reasoning-parser kimi_k2"
-      api_port            = 8000
-    }
-    "qwen3.5-397b-a17b" = {
-      instance_type       = "a3-ultragpu-8g"
-      root_volume_size_gb = 2000
-      runtime_args        = ["--ipc=host", "--shm-size=64g", "-v /opt/hf-cache:/root/.cache/huggingface"]
-      command             = "--model Qwen/Qwen3.5-397B-A17B --served-model-name Qwen/Qwen3.5-397B-A17B --port 8000 --tensor-parallel-size 8 --max-model-len 32768 --reasoning-parser qwen3 --language-model-only"
-      api_port            = 8000
-    }
     "gpt-oss-120b" = {
       instance_type       = "a2-ultragpu-4g"
       root_volume_size_gb = 800
@@ -202,16 +182,16 @@ locals {
 
   cpu_extra_env = merge(
     {
-      THESIS_GCP_PROJECT_ID         = var.gcp_project_id
-      THESIS_GCP_REGION             = var.gcp_region
-      THESIS_GCS_RESULTS_BUCKET     = module.s3.results_bucket_name
-      THESIS_GCS_ARTIFACTS_BUCKET   = module.s3.artifacts_bucket_name
-      THESIS_FIRESTORE_COLLECTION   = module.dynamodb.experiments_table_name
-      THESIS_ENVIRONMENT            = var.environment
-      THESIS_MLFLOW_TRACKING_URI    = "http://localhost:5000"
-      THESIS_BILLING_EXPORT_TABLE   = var.billing_export_table
-      MLFLOW_TRACKING_URI           = "http://localhost:5000"
-      THESIS_FORCE_VLLM             = length(var.enabled_vllm_models) > 0 ? "1" : "0"
+      THESIS_GCP_PROJECT_ID       = var.gcp_project_id
+      THESIS_GCP_REGION           = var.gcp_region
+      THESIS_GCS_RESULTS_BUCKET   = module.s3.results_bucket_name
+      THESIS_GCS_ARTIFACTS_BUCKET = module.s3.artifacts_bucket_name
+      THESIS_FIRESTORE_COLLECTION = module.dynamodb.experiments_table_name
+      THESIS_ENVIRONMENT          = var.environment
+      THESIS_MLFLOW_TRACKING_URI  = "http://localhost:5000"
+      THESIS_BILLING_EXPORT_TABLE = var.billing_export_table
+      MLFLOW_TRACKING_URI         = "http://localhost:5000"
+      THESIS_FORCE_VLLM           = length(var.enabled_vllm_models) > 0 ? "1" : "0"
     },
     contains(var.enabled_vllm_models, "llama3.3-70b") ? {
       VLLM_LLAMA33_70B_URL = "http://${module.vllm_hosts["llama3.3-70b"].private_ips[0]}:8000/v1"
@@ -239,15 +219,6 @@ locals {
     } : {},
     contains(var.enabled_vllm_models, "gemma4-26b-a4b") ? {
       VLLM_GEMMA4_26B_A4B_URL = "http://${module.vllm_hosts["gemma4-26b-a4b"].private_ips[0]}:8000/v1"
-    } : {},
-    contains(var.enabled_vllm_models, "qwen3.5-122b-a10b") ? {
-      VLLM_QWEN35_122B_A10B_URL = "http://${module.vllm_hosts["qwen3.5-122b-a10b"].private_ips[0]}:8000/v1"
-    } : {},
-    contains(var.enabled_vllm_models, "kimi-k2.6-1t") ? {
-      VLLM_KIMI_K26_1T_URL = "http://${module.vllm_hosts["kimi-k2.6-1t"].private_ips[0]}:8000/v1"
-    } : {},
-    contains(var.enabled_vllm_models, "qwen3.5-397b-a17b") ? {
-      VLLM_QWEN35_397B_A17B_URL = "http://${module.vllm_hosts["qwen3.5-397b-a17b"].private_ips[0]}:8000/v1"
     } : {},
     contains(var.enabled_vllm_models, "gpt-oss-120b") ? {
       VLLM_GPT_OSS_120B_URL = "http://${module.vllm_hosts["gpt-oss-120b"].private_ips[0]}:8000/v1"
@@ -289,32 +260,32 @@ module "vllm_hosts" {
 }
 
 module "ec2_cpu" {
-  source                = "../../modules/ec2"
-  project               = var.project
-  environment           = var.environment
-  gcp_project_id        = var.gcp_project_id
-  gcp_region            = var.gcp_region
-  gcp_zone              = var.cpu_zone
-  vpc_id                = module.vpc.vpc_id
-  vpc_cidr              = module.vpc.vpc_cidr
-  subnet_id             = module.vpc.public_subnet_ids[0]
-  instance_type         = var.cpu_instance_type
-  root_volume_size_gb   = 60
-  instance_count        = 1
-  use_spot              = false
-  is_gpu                = false
-  allowed_ssh_cidr      = var.allowed_ssh_cidr
-  public_key_path       = var.public_key_path
-  service_account_email = module.iam.ec2_runner_instance_profile_arn
+  source                 = "../../modules/ec2"
+  project                = var.project
+  environment            = var.environment
+  gcp_project_id         = var.gcp_project_id
+  gcp_region             = var.gcp_region
+  gcp_zone               = var.cpu_zone
+  vpc_id                 = module.vpc.vpc_id
+  vpc_cidr               = module.vpc.vpc_cidr
+  subnet_id              = module.vpc.public_subnet_ids[0]
+  instance_type          = var.cpu_instance_type
+  root_volume_size_gb    = 60
+  instance_count         = 1
+  use_spot               = false
+  is_gpu                 = false
+  allowed_ssh_cidr       = var.allowed_ssh_cidr
+  public_key_path        = var.public_key_path
+  service_account_email  = module.iam.ec2_runner_instance_profile_arn
   artifact_registry_host = module.ecr.registry_host
-  api_port              = 8000
-  api_ingress_cidrs     = var.public_api_cidrs
-  container_image_uri   = "${module.ecr.api_repo_url}:latest"
-  container_name        = "thesis-api"
-  port_mappings         = ["8000:8000"]
-  secret_names          = local.secret_names
-  extra_env             = local.cpu_extra_env
-  depends_on            = [google_project_service.required]
+  api_port               = 8000
+  api_ingress_cidrs      = var.public_api_cidrs
+  container_image_uri    = "${module.ecr.api_repo_url}:latest"
+  container_name         = "thesis-api"
+  port_mappings          = ["8000:8000"]
+  secret_names           = local.secret_names
+  extra_env              = local.cpu_extra_env
+  depends_on             = [google_project_service.required]
 }
 
 module "cloudwatch" {

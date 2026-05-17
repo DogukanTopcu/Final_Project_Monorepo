@@ -39,7 +39,8 @@ locals {
     "roles/storage.admin",
   ])
 
-  github_principal = var.github_repo == "*" ? "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/*" : "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.repository/${var.github_repo}"
+  github_principal        = var.github_repo == "*" ? "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/*" : "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.repository/${var.github_repo}"
+  github_repo_is_wildcard = trimspace(var.github_repo) == "*"
 }
 
 resource "google_project_iam_member" "runtime" {
@@ -72,6 +73,8 @@ resource "google_iam_workload_identity_pool" "github" {
 }
 
 resource "google_iam_workload_identity_pool_provider" "github" {
+  count = var.create_github_oidc && local.github_repo_is_wildcard ? 1 : 0
+
   workload_identity_pool_id          = google_iam_workload_identity_pool.github.workload_identity_pool_id
   workload_identity_pool_provider_id = "${var.project}-${var.environment}-gha"
   display_name                       = "GitHub Actions provider ${var.environment}"
@@ -86,7 +89,29 @@ resource "google_iam_workload_identity_pool_provider" "github" {
     issuer_uri = "https://token.actions.githubusercontent.com"
   }
 
-  attribute_condition = var.github_repo == "*" ? null : "assertion.repository == '${var.github_repo}'"
+  # The Google API rejects an empty attribute_condition for deployment-pipeline
+  # providers, so keep a no-op claim check in the wildcard case.
+  attribute_condition = "assertion.repository != ''"
+}
+
+resource "google_iam_workload_identity_pool_provider" "github_scoped" {
+  count = var.create_github_oidc && !local.github_repo_is_wildcard ? 1 : 0
+
+  workload_identity_pool_id          = google_iam_workload_identity_pool.github.workload_identity_pool_id
+  workload_identity_pool_provider_id = "${var.project}-${var.environment}-gha"
+  display_name                       = "GitHub Actions provider ${var.environment}"
+
+  attribute_mapping = {
+    "google.subject"       = "assertion.sub"
+    "attribute.actor"      = "assertion.actor"
+    "attribute.repository" = "assertion.repository"
+  }
+
+  oidc {
+    issuer_uri = "https://token.actions.githubusercontent.com"
+  }
+
+  attribute_condition = "assertion.repository == '${var.github_repo}'"
 }
 
 resource "google_service_account_iam_member" "github_wif" {

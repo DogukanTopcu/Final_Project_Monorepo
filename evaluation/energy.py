@@ -129,14 +129,11 @@ class EnergyTracker:
 # ------------------------------------------------------------------
 
 _MODEL_PARAMS: dict[str, float] = {
-    "moonshotai/Kimi-K2.6": 1_000e9,
-    "Qwen/Qwen3.5-397B-A17B": 397e9,
     "openai/gpt-oss-120b": 120e9,
     "meta-llama/Llama-3.3-70B-Instruct": 70e9,
     "Qwen/Qwen3.5-27B": 27e9,
     "openai/gpt-oss-20b": 20e9,
     "google/gemma-4-31B-it": 31e9,
-    "Qwen/Qwen3.5-122B-A10B": 10e9,
     "google/gemma-4-26B-A4B-it": 3.8e9,
     "Qwen/Qwen3.5-35B-A3B": 3e9,
     "google/gemma-4-E4B-it": 4.5e9,

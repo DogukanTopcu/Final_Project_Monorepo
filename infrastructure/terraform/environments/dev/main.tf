@@ -75,10 +75,11 @@ module "dynamodb" {
 }
 
 module "secrets" {
-  source      = "../../modules/secrets"
-  project     = var.project
-  environment = var.environment
-  depends_on  = [google_project_service.required]
+  source                         = "../../modules/secrets"
+  project                        = var.project
+  environment                    = var.environment
+  create_hosted_provider_secrets = false
+  depends_on                     = [google_project_service.required]
 }
 
 module "iam" {
@@ -92,32 +93,30 @@ module "iam" {
 }
 
 module "ec2" {
-  source                = "../../modules/ec2"
-  project               = var.project
-  environment           = var.environment
-  gcp_project_id        = var.gcp_project_id
-  gcp_region            = var.gcp_region
-  gcp_zone              = var.gcp_zone
-  vpc_id                = module.vpc.vpc_id
-  vpc_cidr              = module.vpc.vpc_cidr
-  subnet_id             = module.vpc.public_subnet_ids[0]
-  instance_type         = "e2-standard-4"
-  root_volume_size_gb   = 40
-  instance_count        = 1
-  use_spot              = false
-  is_gpu                = false
-  allowed_ssh_cidr      = var.allowed_ssh_cidr
-  public_key_path       = var.public_key_path
-  service_account_email = module.iam.ec2_runner_instance_profile_arn
+  source                 = "../../modules/ec2"
+  project                = var.project
+  environment            = var.environment
+  gcp_project_id         = var.gcp_project_id
+  gcp_region             = var.gcp_region
+  gcp_zone               = var.gcp_zone
+  vpc_id                 = module.vpc.vpc_id
+  vpc_cidr               = module.vpc.vpc_cidr
+  subnet_id              = module.vpc.public_subnet_ids[0]
+  instance_type          = "e2-standard-4"
+  root_volume_size_gb    = 40
+  instance_count         = 1
+  use_spot               = false
+  is_gpu                 = false
+  allowed_ssh_cidr       = var.allowed_ssh_cidr
+  public_key_path        = var.public_key_path
+  service_account_email  = module.iam.ec2_runner_instance_profile_arn
   artifact_registry_host = module.ecr.registry_host
-  container_image_uri   = "${module.ecr.runner_repo_url}:latest"
-  container_name        = "thesis-runner"
-  container_command     = "sleep infinity"
-  secret_names = [
-    module.secrets.kimi_key_name,
-    module.secrets.openai_compatible_key_name,
+  container_image_uri    = "${module.ecr.runner_repo_url}:latest"
+  container_name         = "thesis-runner"
+  container_command      = "sleep infinity"
+  secret_names = compact([
     module.secrets.hf_token_name,
-  ]
+  ])
   depends_on = [google_project_service.required]
 }
 

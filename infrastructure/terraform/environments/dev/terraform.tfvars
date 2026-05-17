@@ -1,6 +1,6 @@
 project          = "thesis"
 environment      = "dev"
-gcp_project_id   = "thesis-gcp"
+gcp_project_id   = "llm-slm-comparison"
 gcp_region       = "europe-west4"
 gcp_zone         = "europe-west4-a"
 allowed_ssh_cidr = "88.230.165.100/32"

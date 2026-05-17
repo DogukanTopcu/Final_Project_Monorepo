@@ -15,5 +15,8 @@ output "mlflow_server_role_arn" {
 }
 
 output "github_actions_workload_identity_provider" {
-  value = google_iam_workload_identity_pool_provider.github.name
+  value = try(
+    google_iam_workload_identity_pool_provider.github[0].name,
+    google_iam_workload_identity_pool_provider.github_scoped[0].name,
+  )
 }

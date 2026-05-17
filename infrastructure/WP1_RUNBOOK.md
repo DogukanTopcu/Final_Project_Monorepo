@@ -57,7 +57,6 @@ pip install "vllm==0.19.1"
 | `qwen3.5-27b`, `gemma4-31b`, `qwen3.5-35b-a3b`, `gemma4-26b-a4b` | `a2-ultragpu-1g` |
 | `llama3.3-70b` | `a2-ultragpu-2g` |
 | `gpt-oss-120b` | `a2-ultragpu-4g` |
-| `qwen3.5-122b-a10b`, `qwen3.5-397b-a17b`, `kimi-k2.6-1t` | `a3-ultragpu-8g` |
 
 ### Option A: Docker / manual host serving
 

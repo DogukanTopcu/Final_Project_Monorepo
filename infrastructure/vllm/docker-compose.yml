@@ -1,8 +1,8 @@
 services:
 
   # Models that fit on a single GPU for local or ad-hoc server use.
-  # Very large models such as Qwen3.5-397B-A17B and Kimi K2.6 are intentionally
-  # not defined here; use the Terraform prod host matrix for those.
+  # Larger multi-GPU deployments are intentionally not defined here; use the
+  # Terraform prod host matrix for those.
 
   llama33-70b:
     image: vllm/vllm-openai:v0.19.1

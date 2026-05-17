@@ -23,14 +23,11 @@ The repo is normalized around the following canonical aliases:
 
 | Tier | Repo alias | Runtime checkpoint |
 |------|------------|--------------------|
-| Heavy LLM | `kimi-k2.6-1t` | `moonshotai/Kimi-K2.6` |
-| Heavy LLM | `qwen3.5-397b-a17b` | `Qwen/Qwen3.5-397B-A17B` |
 | Heavy LLM | `gpt-oss-120b` | `openai/gpt-oss-120b` |
 | Heavy LLM | `llama3.3-70b` | `meta-llama/Llama-3.3-70B-Instruct` |
 | Light LLM | `qwen3.5-27b` | `qwen3.5:27b` |
 | Light LLM | `gpt-oss-20b` | `openai/gpt-oss-20b` |
 | Light LLM | `gemma4-31b` | `gemma4:31b` |
-| MoE | `qwen3.5-122b-a10b` | `qwen3.5:122b` |
 | MoE | `gemma4-26b-a4b` | `gemma4:26b` |
 | MoE | `qwen3.5-35b-a3b` | `qwen3.5:35b` |
 | SLM | `gemma4-4b` | `gemma4:e4b` |
@@ -38,7 +35,6 @@ The repo is normalized around the following canonical aliases:
 | SLM | `llama3.2-3b` | `llama3.2:3b` |
 
 Notes:
-- User shorthand `Qwen 3.5 (396B)` is normalized to the official checkpoint `Qwen/Qwen3.5-397B-A17B`.
 - User shorthand `Gemma 4 (4B)` is normalized to the effective-parameter checkpoint `gemma4:e4b` / `google/gemma-4-E4B-it`.
 - Local development can keep using Ollama for the smaller aliases.
 - Production/GCP can switch the same aliases to OpenAI-compatible vLLM endpoints by setting `THESIS_FORCE_VLLM=1`.
@@ -191,9 +187,6 @@ Enable only the models you need in `infrastructure/terraform/environments/prod/t
 | `gemma4-26b-a4b` | `a2-ultragpu-1g` |
 | `llama3.3-70b` | `a2-ultragpu-2g` |
 | `gpt-oss-120b` | `a2-ultragpu-4g` |
-| `qwen3.5-122b-a10b` | `a3-ultragpu-8g` |
-| `qwen3.5-397b-a17b` | `a3-ultragpu-8g` |
-| `kimi-k2.6-1t` | `a3-ultragpu-8g` |
 
 ## CI/CD Pipeline
 
@@ -237,10 +230,7 @@ VLLM_GPT_OSS_20B_URL=http://localhost:8005/v1
 VLLM_GEMMA4_31B_URL=http://localhost:8006/v1
 VLLM_QWEN35_35B_A3B_URL=http://localhost:8007/v1
 VLLM_GEMMA4_26B_A4B_URL=http://localhost:8008/v1
-VLLM_QWEN35_122B_A10B_URL=http://localhost:8009/v1
-VLLM_KIMI_K26_1T_URL=http://localhost:8010/v1
-VLLM_QWEN35_397B_A17B_URL=http://localhost:8011/v1
-VLLM_GPT_OSS_120B_URL=http://localhost:8012/v1
+VLLM_GPT_OSS_120B_URL=http://localhost:8009/v1
 ```
 
 ## Docker Images

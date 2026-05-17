@@ -154,5 +154,5 @@ variable "gpu_source_image_project" {
 
 variable "gpu_source_image_family" {
   type    = string
-  default = "common-cu128-ubuntu-2204-nvidia-570"
+  default = "common-cu129-ubuntu-2204-nvidia-580"
 }

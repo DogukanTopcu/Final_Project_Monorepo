@@ -25,12 +25,12 @@ All three SLMs are open-weight, locally runnable, and publicly available through
 | Model | Params | Family | Why Selected | Repo alias |
 |-------|--------|--------|-------------|------------|
 | **Gemma 4 E4B** | 4.5B effective | Google | Strong compact reasoning/coding checkpoint; good cross-family control against Qwen | `gemma4-4b` |
-| **Qwen 3.5 4B** | 4B | Qwen | Default routing/ensemble SLM baseline; same family as the 27B/35B/122B/397B comparison set | `qwen3.5-4b` |
+| **Qwen 3.5 4B** | 4B | Qwen | Default routing/ensemble SLM baseline; same family as the 27B/35B comparison set | `qwen3.5-4b` |
 | **Llama 3.2 3B** | 3B | Meta | Lightweight open-weight control from a third family; useful for multi-agent diversity | `llama3.2-3b` |
 
 ### Why This Combination
 
-Using Qwen 3.5 at both SLM and larger LLM/MoE scales lets us answer: *does orchestration still dominate when the same family is available from 4B all the way to 397B-A17B?* Gemma 4 E4B and Llama 3.2 3B act as cross-family controls.
+Using Qwen 3.5 at both SLM and larger LLM/MoE scales lets us answer: *does orchestration still dominate when the same family is available from 4B up through the larger open-weight Qwen checkpoints?* Gemma 4 E4B and Llama 3.2 3B act as cross-family controls.
 
 ---
 
@@ -42,12 +42,10 @@ LLMs serve two roles: (1) the monolithic **Setup A baseline**, and (2) the escal
 
 | Model | Deployment class | Why Selected | Repo alias |
 |-------|------------------|-------------|------------|
-| **Kimi K2.6 (1T)** | Heavy LLM | Highest-capability frontier anchor in the selected set | `kimi-k2.6-1t` |
-| **Qwen 3.5 397B-A17B** | Heavy LLM | Open-weight flagship for the Qwen family; normalized form of the user's "396B" shorthand | `qwen3.5-397b-a17b` |
 | **GPT OSS 120B** | Heavy LLM | Open-weight OpenAI-family comparison point | `gpt-oss-120b` |
 | **Llama 3.3 70B** | Heavy LLM | Default monolithic baseline and verifier model because it remains the lightest reproducibly self-hosted heavy baseline in the selected set | `llama3.3-70b` |
 | **Qwen 3.5 27B / GPT OSS 20B / Gemma 4 31B** | Light LLM | Mid-tier models for lower-cost escalation experiments | `qwen3.5-27b`, `gpt-oss-20b`, `gemma4-31b` |
-| **Qwen 3.5 122B-A10B / Gemma 4 26B-A4B / Qwen 3.5 35B-A3B** | MoE | Active-parameter-efficient comparison set for architecture-level efficiency analysis | `qwen3.5-122b-a10b`, `gemma4-26b-a4b`, `qwen3.5-35b-a3b` |
+| **Gemma 4 26B-A4B / Qwen 3.5 35B-A3B** | MoE | Active-parameter-efficient comparison set for architecture-level efficiency analysis | `gemma4-26b-a4b`, `qwen3.5-35b-a3b` |
 
 ### Why Llama 3.3 70B Is the Default Baseline
 
@@ -61,7 +59,6 @@ The repo no longer assumes a single generic GPU production host. The selected mo
 |------------------|------------------|--------|
 | Small/medium single-GPU | `g2-standard-24`, `a2-ultragpu-1g` | `qwen3.5-4b`, `gemma4-4b`, `llama3.2-3b`, `gpt-oss-20b`, `qwen3.5-27b`, `gemma4-31b`, `qwen3.5-35b-a3b`, `gemma4-26b-a4b` |
 | Large but still practical self-host | `a2-ultragpu-2g`, `a2-ultragpu-4g` | `llama3.3-70b`, `gpt-oss-120b` |
-| Frontier, very expensive | `a3-ultragpu-8g` | `qwen3.5-122b-a10b`, `qwen3.5-397b-a17b`, `kimi-k2.6-1t` |
 
 This is why prod Terraform was changed to an opt-in `enabled_vllm_models` design with one dedicated host per selected model instead of one shared GPU box.
 
@@ -214,7 +211,7 @@ Recommended record format:
 The SLR's RQ2 analysis finds:
 > *"cost and energy remain far less reported than accuracy — only 34% of studies include latency and 18% include energy metrics."*
 
-Standard benchmarks (MMLU accuracy, pass@1) only measure *output quality*, not *architectural efficiency*. A system that gets 80% MMLU accuracy by calling a heavy model like Kimi K2.6 or Qwen 3.5 397B on every query is not comparable to one that achieves 78% by routing only 15% of queries to an LLM — yet standard metrics treat them equivalently.
+Standard benchmarks (MMLU accuracy, pass@1) only measure *output quality*, not *architectural efficiency*. A system that gets 80% MMLU accuracy by calling a heavy model on every query is not comparable to one that achieves 78% by routing only 15% of queries to an LLM — yet standard metrics treat them equivalently.
 
 ### EATS Formula
 

@@ -6,8 +6,7 @@
 Selected canonical checkpoints for this iteration:
 - Heavy LLM baseline: `llama3.3-70b` → `meta-llama/Llama-3.3-70B-Instruct`
 - Small-model pool: `qwen3.5-4b`, `gemma4-4b`, `llama3.2-3b`
-- Extended comparison pool: `kimi-k2.6-1t`, `qwen3.5-397b-a17b`, `gpt-oss-120b`, `qwen3.5-27b`, `gpt-oss-20b`, `gemma4-31b`, `qwen3.5-122b-a10b`, `gemma4-26b-a4b`, `qwen3.5-35b-a3b`
-- Normalization note: user shorthand `Qwen 3.5 (396B)` is stored as the official `Qwen3.5-397B-A17B`.
+- Extended comparison pool: `gpt-oss-120b`, `qwen3.5-27b`, `gpt-oss-20b`, `gemma4-31b`, `gemma4-26b-a4b`, `qwen3.5-35b-a3b`
 
 ---
 
@@ -42,7 +41,6 @@ pip install -e ".[dev]"
 - `a2-ultragpu-1g`: `qwen3.5-27b`, `gemma4-31b`, `qwen3.5-35b-a3b`, `gemma4-26b-a4b`
 - `a2-ultragpu-2g`: `llama3.3-70b`
 - `a2-ultragpu-4g`: `gpt-oss-120b`
-- `a3-ultragpu-8g`: `qwen3.5-122b-a10b`, `qwen3.5-397b-a17b`, `kimi-k2.6-1t`
 
 Not:
 - Küçük ve orta modeller yerelde veya tek GPU host'ta self-host edilebilir.
@@ -87,10 +85,7 @@ VLLM_GPT_OSS_20B_URL=http://localhost:8005/v1
 VLLM_GEMMA4_31B_URL=http://localhost:8006/v1
 VLLM_QWEN35_35B_A3B_URL=http://localhost:8007/v1
 VLLM_GEMMA4_26B_A4B_URL=http://localhost:8008/v1
-VLLM_QWEN35_122B_A10B_URL=http://localhost:8009/v1
-VLLM_KIMI_K26_1T_URL=http://localhost:8010/v1
-VLLM_QWEN35_397B_A17B_URL=http://localhost:8011/v1
-VLLM_GPT_OSS_120B_URL=http://localhost:8012/v1
+VLLM_GPT_OSS_120B_URL=http://localhost:8009/v1
 MLFLOW_TRACKING_URI=http://localhost:5000
 CODECARBON_PROJECT_NAME=thesis_benchmark
 ```
