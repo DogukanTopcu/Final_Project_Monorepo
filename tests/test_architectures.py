@@ -55,6 +55,14 @@ class TestRoutingArchitecture:
         resp = arch.run(QUERY)
         assert resp.predicted_answer == "B"
 
+    def test_unparseable_slm_answer_escalates_even_with_high_confidence(self):
+        slm = StubModel("slm", answer="I am not sure", confidence=0.91)
+        llm = StubModel("llm", answer="B", confidence=0.9)
+        arch = RoutingArchitecture(slm=slm, llm=llm, confidence_threshold=0.7)
+        resp = arch.run(QUERY)
+        assert resp.llm_calls == 1
+        assert resp.model_id == "llm"
+
 
 class TestMultiAgentArchitecture:
     def test_all_slm_no_llm_calls(self):

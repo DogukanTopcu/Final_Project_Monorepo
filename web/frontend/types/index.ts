@@ -82,9 +82,37 @@ export interface ResultDetail {
   architecture: string;
   benchmark: string;
   metrics: Record<string, number>;
-  samples: Record<string, unknown>[];
+  samples: ResultSample[];
   config: Record<string, unknown>;
   created_at: string;
+}
+
+export interface ResultSample {
+  query_id: string;
+  query_text?: string;
+  correct: boolean;
+  predicted?: string | null;
+  ground_truth?: string | null;
+  llm_calls?: number;
+  confidence?: number;
+  latency_ms?: number;
+  cost_usd?: number;
+  final_model_id?: string | null;
+  used_llm?: boolean;
+  escalated?: boolean;
+  slm_confidence?: number;
+  confidence_threshold?: number | null;
+  slm_latency_ms?: number | null;
+  llm_latency_ms?: number | null;
+  slm_input_tokens?: number | null;
+  slm_output_tokens?: number | null;
+  llm_input_tokens?: number | null;
+  llm_output_tokens?: number | null;
+  slm_cost_usd?: number | null;
+  llm_cost_usd?: number | null;
+  prompt_text?: string | null;
+  slm_text?: string | null;
+  final_text?: string | null;
 }
 
 export interface ComparisonResponse {

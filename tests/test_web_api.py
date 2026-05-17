@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
 
 import pytest
 from fastapi.testclient import TestClient
 
+from evaluation.reporter import Reporter
 from core.types import ExperimentResult, Query, Response, SampleResult
 from web.backend.dependencies import get_settings
 from web.backend.main import create_app
@@ -83,6 +85,24 @@ def test_models_endpoint_handles_unreachable_ollama(client: TestClient, monkeypa
     assert payload["slm"] == []
     assert payload["ollama_reachable"] is False
     assert payload["warnings"]
+
+
+def test_runtime_provider_env_is_synced_from_settings(monkeypatch):
+    monkeypatch.delenv("THESIS_GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("THESIS_OLLAMA_BASE_URL", raising=False)
+    monkeypatch.delenv("OLLAMA_BASE_URL", raising=False)
+
+    settings = get_settings()
+    settings.gemini_api_key = "gemini-test-key"
+    settings.ollama_base_url = "http://localhost:11434"
+
+    experiment_service._sync_runtime_provider_env(settings)  # type: ignore[attr-defined]
+
+    assert os.getenv("THESIS_GEMINI_API_KEY") == "gemini-test-key"
+    assert os.getenv("GEMINI_API_KEY") == "gemini-test-key"
+    assert os.getenv("THESIS_OLLAMA_BASE_URL") == "http://localhost:11434"
+    assert os.getenv("OLLAMA_BASE_URL") == "http://localhost:11434"
 
 
 def test_launch_rejects_non_routing_architecture(client: TestClient):
@@ -221,6 +241,83 @@ def test_sse_events_and_results_use_real_metric_shape(client: TestClient, monkey
     assert matching["eats_score"] > 0
 
 
+def test_get_result_returns_routing_audit_samples(client: TestClient, tmp_path: Path):
+    result = ExperimentResult(
+        experiment_id="exp_audit_detail",
+        config=experiment_service._build_config(  # type: ignore[attr-defined]
+            create_stub_params(llm="gemini-2.5-flash"),
+            get_settings(),
+        ),
+        samples=[
+            SampleResult(
+                query=Query(id="q1", text="Question 1", answer="B"),
+                response=Response(
+                    query_id="q1",
+                    text="B",
+                    predicted_answer="B",
+                    confidence=0.4,
+                    model_id="gemini-2.5-flash",
+                    latency_ms=55.0,
+                    input_tokens=15,
+                    output_tokens=4,
+                    cost_usd=0.02,
+                    llm_calls=1,
+                    metadata={
+                        "prompt_text": "Prompt 1",
+                        "slm_text": "Draft answer",
+                        "final_model_id": "gemini-2.5-flash",
+                        "escalated": True,
+                        "slm_confidence": 0.4,
+                        "confidence_threshold": 0.7,
+                        "llm_input_tokens": 10,
+                        "llm_output_tokens": 4,
+                        "llm_cost_usd": 0.02,
+                    },
+                ),
+                correct=True,
+            )
+        ],
+    )
+    Reporter(tmp_path).save(result)
+
+    response = client.get("/api/results/exp_audit_detail")
+    assert response.status_code == 200
+    payload = response.json()
+    sample = payload["samples"][0]
+    assert sample["escalated"] is True
+    assert sample["final_model_id"] == "gemini-2.5-flash"
+    assert sample["prompt_text"] == "Prompt 1"
+    assert sample["slm_text"] == "Draft answer"
+
+
+def test_get_result_gracefully_handles_old_result_shape(client: TestClient, tmp_path: Path):
+    old_payload = {
+        "experiment_id": "exp_old_shape",
+        "created_at": "2026-05-17T12:00:00+00:00",
+        "config": {"architecture": "routing", "benchmark": "mmlu"},
+        "metrics": {"accuracy": 0.5, "total_cost_usd": 0.0},
+        "samples": [
+            {
+                "query_id": "q1",
+                "correct": True,
+                "predicted": "A",
+                "ground_truth": "A",
+                "llm_calls": 0,
+                "confidence": 0.9,
+                "latency_ms": 10.0,
+                "cost_usd": 0.0,
+            }
+        ],
+    }
+    (tmp_path / "exp_old_shape.json").write_text(__import__("json").dumps(old_payload))
+
+    response = client.get("/api/results/exp_old_shape")
+    assert response.status_code == 200
+    sample = response.json()["samples"][0]
+    assert sample["query_id"] == "q1"
+    assert "final_model_id" not in sample
+
+
 def test_launch_accepts_gemini_configured_fallback(client: TestClient, monkeypatch):
     monkeypatch.setenv("THESIS_GEMINI_API_KEY", "gemini-test-key")
     get_settings.cache_clear()
@@ -241,3 +338,16 @@ def test_launch_accepts_gemini_configured_fallback(client: TestClient, monkeypat
     )
 
     assert response.status_code == 200
+
+
+def create_stub_params(llm: str = "gpt-4o-mini"):
+    from web.backend.schemas import Architecture, Benchmark, ExperimentCreate
+
+    return ExperimentCreate(
+        architecture=Architecture.ROUTING,
+        benchmark=Benchmark.MMLU,
+        n_samples=1,
+        slm="gemma4:latest",
+        llm=llm,
+        config_overrides={"confidence_threshold": 0.7},
+    )

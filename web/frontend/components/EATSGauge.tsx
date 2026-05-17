@@ -16,7 +16,7 @@ function getColor(score: number): string {
 
 export function EATSGauge({ score, label = "EATS Score" }: EATSGaugeProps) {
   const data = [
-    { name: "score", value: score * 100, fill: getColor(score) },
+    { name: "score", value: Math.min(Math.max(score * 100, 0), 100), fill: getColor(score) },
   ];
 
   return (
@@ -46,7 +46,7 @@ export function EATSGauge({ score, label = "EATS Score" }: EATSGaugeProps) {
           </ResponsiveContainer>
           <div className="absolute inset-0 flex items-center justify-center pt-6">
             <span className="text-3xl font-bold" style={{ color: getColor(score) }}>
-              {(score * 100).toFixed(1)}
+              {score.toFixed(2)}
             </span>
           </div>
         </div>

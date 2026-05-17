@@ -92,16 +92,32 @@ class OllamaModel(ModelProvider):
 
     def _estimate_confidence(self, data: dict) -> float:
         """
-        Approximate confidence from eval duration ratio.
-        If Ollama doesn't expose log-probs, we use a heuristic:
-        short, fast responses tend to be higher-confidence.
+        Approximate confidence from Ollama timing metadata.
+
+        Ollama does not expose token logprobs in this code path, so confidence is
+        necessarily heuristic. The previous implementation used ``tanh`` on raw
+        token/ns throughput and saturated to ``0.95`` for most local runs,
+        which effectively disabled routing fallback.
+
+        This version keeps the estimate in a wider, more useful range by mixing:
+        - decode throughput (tokens / second)
+        - prompt processing throughput
+        - a small length bonus for substantive answers
         """
-        eval_count = data.get("eval_count", 1) or 1
-        eval_duration = data.get("eval_duration", 1) or 1
-        tokens_per_ns = eval_count / eval_duration
-        # Normalise to [0.3, 0.95] range
-        raw = math.tanh(tokens_per_ns * 1e8)
-        return max(0.3, min(0.95, raw))
+        eval_count = max(int(data.get("eval_count", 0) or 0), 1)
+        prompt_eval_count = max(int(data.get("prompt_eval_count", 0) or 0), 1)
+        eval_duration_ns = max(int(data.get("eval_duration", 0) or 0), 1)
+        prompt_eval_duration_ns = max(int(data.get("prompt_eval_duration", 0) or 0), 1)
+
+        decode_tps = eval_count / (eval_duration_ns / 1_000_000_000)
+        prompt_tps = prompt_eval_count / (prompt_eval_duration_ns / 1_000_000_000)
+
+        decode_score = 1 / (1 + math.exp(-(decode_tps - 22.0) / 7.0))
+        prompt_score = 1 / (1 + math.exp(-(prompt_tps - 160.0) / 45.0))
+        length_score = min(eval_count / 32.0, 1.0)
+
+        confidence = 0.18 + (0.52 * decode_score) + (0.20 * prompt_score) + (0.10 * length_score)
+        return max(0.18, min(0.92, confidence))
 
 
 class OpenAIModel(ModelProvider):

@@ -154,18 +154,6 @@ async def compare_results(
 
 @router.get("/results/{result_id}", response_model=ResultDetail)
 async def get_result(result_id: str, settings: Settings = Depends(get_settings)):
-    exp = experiment_service.get_experiment(result_id)
-    if exp and exp.metrics:
-        return ResultDetail(
-            id=result_id,
-            experiment_id=exp.experiment_id,
-            architecture=exp.architecture.value,
-            benchmark=exp.benchmark.value,
-            metrics=exp.metrics,
-            config=exp.config_overrides,
-            created_at=exp.created_at,
-        )
-
     local_path = Path(settings.results_dir) / f"{result_id}.json"
     if local_path.exists():
         try:
@@ -184,6 +172,18 @@ async def get_result(result_id: str, settings: Settings = Depends(get_settings))
             )
         except Exception:
             pass
+
+    exp = experiment_service.get_experiment(result_id)
+    if exp and exp.metrics:
+        return ResultDetail(
+            id=result_id,
+            experiment_id=exp.experiment_id,
+            architecture=exp.architecture.value,
+            benchmark=exp.benchmark.value,
+            metrics=exp.metrics,
+            config=exp.config_overrides,
+            created_at=exp.created_at,
+        )
 
     try:
         data = json.loads(

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -57,6 +58,23 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
     )
 
 
+def _sync_runtime_provider_env(settings: Settings) -> None:
+    """Expose provider keys/base URLs to runtime code that reads os.environ."""
+    env_map = {
+        "THESIS_OLLAMA_BASE_URL": settings.ollama_base_url,
+        "OLLAMA_BASE_URL": settings.ollama_base_url,
+        "THESIS_OPENAI_API_KEY": settings.openai_api_key,
+        "OPENAI_API_KEY": settings.openai_api_key,
+        "THESIS_GEMINI_API_KEY": settings.gemini_api_key,
+        "GEMINI_API_KEY": settings.gemini_api_key,
+        "THESIS_TOGETHER_API_KEY": settings.together_api_key,
+        "TOGETHER_API_KEY": settings.together_api_key,
+    }
+    for key, value in env_map.items():
+        if value:
+            os.environ[key] = value
+
+
 def _run_experiment(
     experiment_id: str,
     params: ExperimentCreate,
@@ -82,9 +100,11 @@ def _run_experiment(
     )
 
     try:
+        _sync_runtime_provider_env(settings)
         config = _build_config(params, settings)
         exp.total = config.n_samples
         runner = ExperimentRunner(config, callbacks=callbacks)
+        runner.experiment_id = experiment_id
         result = runner.run()
         metrics = compute_metrics(result)
 
