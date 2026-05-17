@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
+from web.backend.dependencies import Settings, get_settings
 from web.backend.schemas import (
+    Architecture,
     ExperimentCreate,
     ExperimentLaunchResponse,
     ExperimentResponse,
@@ -19,8 +21,19 @@ router = APIRouter(tags=["experiments"])
 
 
 @router.post("/experiments", response_model=ExperimentLaunchResponse)
-async def launch_experiment(params: ExperimentCreate):
-    exp = experiment_service.launch_experiment(params)
+async def launch_experiment(
+    params: ExperimentCreate,
+    settings: Settings = Depends(get_settings),
+):
+    if params.architecture is not Architecture.ROUTING:
+        raise HTTPException(
+            status_code=400,
+            detail="Web launch currently supports routing only.",
+        )
+    try:
+        exp = experiment_service.launch_experiment(params, settings)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return ExperimentLaunchResponse(
         experiment_id=exp.experiment_id,
         status=exp.status,

@@ -1,0 +1,86 @@
+{
+  "experiment_id": "exp_812d76ca",
+  "created_at": "2026-05-12T19:46:44.625258+00:00",
+  "config": {
+    "architecture": "routing",
+    "benchmark": "mmlu",
+    "n_samples": 5,
+    "slm": "gemma4",
+    "llm": "gpt-4o-mini",
+    "confidence_threshold": 0.7,
+    "n_debate_rounds": 1,
+    "arbitrator": "slm",
+    "n_models": 3,
+    "voting": "majority",
+    "dry_run": false,
+    "seed": 42,
+    "output_dir": "results",
+    "mlflow_tracking_uri": "http://localhost:5000",
+    "extra": {}
+  },
+  "metrics": {
+    "accuracy": 0.4,
+    "llm_call_ratio": 0.0,
+    "avg_latency_ms": 9677.619824800058,
+    "total_cost_usd": 0.0,
+    "n_total": 5.0,
+    "n_correct": 2.0,
+    "eats_score": 40.0,
+    "normalized_cost": 1.0,
+    "latency_p50_ms": 9880.159832999198,
+    "latency_p95_ms": 13311.232083000505,
+    "total_tokens": 2986
+  },
+  "samples": [
+    {
+      "query_id": "mmlu_10476",
+      "correct": false,
+      "predicted": null,
+      "ground_truth": "A",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 13311.232083000505,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_1824",
+      "correct": true,
+      "predicted": "D",
+      "ground_truth": "D",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 6604.360624998662,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_409",
+      "correct": true,
+      "predicted": "C",
+      "ground_truth": "C",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 8333.947041999636,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_12149",
+      "correct": false,
+      "predicted": null,
+      "ground_truth": "B",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 10258.39954100229,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_4506",
+      "correct": false,
+      "predicted": null,
+      "ground_truth": "D",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 9880.159832999198,
+      "cost_usd": 0.0
+    }
+  ]
+}

@@ -6,15 +6,17 @@ from datetime import datetime, timezone
 from threading import Event
 from typing import Any
 
+from core.types import ExperimentConfig
+from evaluation.metrics import compute_metrics
+from experiments.runner import ExperimentCancelledError, ExperimentRunner
+from mlops.callbacks import RunnerCallbacks
+from web.backend.dependencies import Settings
 from web.backend.schemas import (
     Architecture,
-    Benchmark,
     ExperimentCreate,
     ExperimentResponse,
     ExperimentStatus,
 )
-from mlops.callbacks import ExperimentResult, RunnerCallbacks
-from mlops.tracking import MLflowTracker
 
 _executor = ThreadPoolExecutor(max_workers=4)
 
@@ -33,100 +35,139 @@ def get_events(experiment_id: str) -> list[dict[str, Any]]:
     return _sse_queues.get(experiment_id, [])
 
 
-def _run_experiment(experiment_id: str, params: ExperimentCreate) -> None:
+def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentConfig:
+    overrides = params.config_overrides or {}
+    allowed_override_keys = {"confidence_threshold", "dry_run"}
+    unexpected = sorted(set(overrides) - allowed_override_keys)
+    if unexpected:
+        raise ValueError(
+            f"Unsupported config overrides for web routing: {', '.join(unexpected)}"
+        )
+
+    return ExperimentConfig(
+        architecture=params.architecture.value,
+        benchmark=params.benchmark.value,
+        n_samples=params.n_samples,
+        slm=params.slm,
+        llm=params.llm,
+        confidence_threshold=float(overrides.get("confidence_threshold", 0.7)),
+        dry_run=bool(overrides.get("dry_run", False)),
+        output_dir=settings.results_dir,
+        mlflow_tracking_uri=settings.mlflow_tracking_uri,
+    )
+
+
+def _run_experiment(
+    experiment_id: str,
+    params: ExperimentCreate,
+    settings: Settings,
+) -> None:
     exp = _experiments[experiment_id]
     exp.status = ExperimentStatus.RUNNING
     cancel = _cancel_flags[experiment_id]
 
-    tracker = MLflowTracker(f"thesis-{params.architecture.value}")
-
     callbacks = RunnerCallbacks(
-        on_sample_complete=lambda cur, total, resp: _push_event(
-            experiment_id,
-            {
-                "type": "progress",
-                "completed": cur,
-                "total": total,
-                "current_query": getattr(resp, "query", ""),
-            },
+        on_sample_complete=lambda cur, total, resp: _handle_sample_complete(
+            experiment_id, cur, total, resp
         ),
         on_metric_update=lambda name, value: _push_event(
             experiment_id,
             {"type": "metric", "name": name, "value": value},
         ),
-        on_experiment_done=lambda result: _push_event(
-            experiment_id,
-            {
-                "type": "complete",
-                "experiment_id": experiment_id,
-                "metrics": result.metrics,
-            },
-        ),
         on_error=lambda exc: _push_event(
             experiment_id,
             {"type": "error", "message": str(exc)},
         ),
+        should_cancel=cancel.is_set,
     )
 
     try:
-        config = {
-            "architecture": params.architecture.value,
-            "benchmark": params.benchmark.value,
-            "n_samples": params.n_samples,
-            "slm": params.slm,
-            "llm": params.llm,
-            **params.config_overrides,
-        }
-        run_id = tracker.start_run(
-            f"{params.slm}-{params.benchmark.value}-{params.n_samples}",
-            config,
-        )
-
-        n = params.n_samples
-        exp.total = n
-        for i in range(1, n + 1):
-            if cancel.is_set():
-                exp.status = ExperimentStatus.CANCELLED
-                tracker.end_run("KILLED")
-                return
-
-            correct = True
-            callbacks.sample_complete(i, n, type("R", (), {"query": f"sample_{i}"})())
-            exp.progress = i
-
-        metrics = {
-            "accuracy": 0.75,
-            "eats_score": 0.82,
-            "llm_call_ratio": 0.35,
-            "total_cost": 1.23,
-            "latency_avg": 0.45,
-        }
-
-        tracker.log_final_metrics(metrics)
-        tracker.end_run()
+        config = _build_config(params, settings)
+        exp.total = config.n_samples
+        runner = ExperimentRunner(config, callbacks=callbacks)
+        result = runner.run()
+        metrics = compute_metrics(result)
 
         exp.status = ExperimentStatus.COMPLETED
         exp.metrics = metrics
         exp.completed_at = datetime.now(timezone.utc)
+        exp.progress = exp.total
 
-        result = ExperimentResult(
-            experiment_id=experiment_id,
-            architecture=params.architecture.value,
-            benchmark=params.benchmark.value,
-            metrics=metrics,
-            samples_processed=n,
-            status="completed",
+        _push_event(
+            experiment_id,
+            {
+                "type": "complete",
+                "experiment_id": experiment_id,
+                "metrics": metrics,
+                "status": ExperimentStatus.COMPLETED.value,
+            },
         )
-        callbacks.experiment_done(result)
-
+    except ExperimentCancelledError:
+        exp.status = ExperimentStatus.CANCELLED
+        exp.completed_at = datetime.now(timezone.utc)
+        _push_event(
+            experiment_id,
+            {
+                "type": "complete",
+                "experiment_id": experiment_id,
+                "status": ExperimentStatus.CANCELLED.value,
+            },
+        )
     except Exception as exc:
         exp.status = ExperimentStatus.FAILED
         exp.error = str(exc)
+        exp.completed_at = datetime.now(timezone.utc)
         callbacks.error(exc)
-        tracker.end_run("FAILED")
+        _push_event(
+            experiment_id,
+            {
+                "type": "complete",
+                "experiment_id": experiment_id,
+                "status": ExperimentStatus.FAILED.value,
+            },
+        )
 
 
-def launch_experiment(params: ExperimentCreate) -> ExperimentResponse:
+def _handle_sample_complete(
+    experiment_id: str,
+    current: int,
+    total: int,
+    response: Any,
+) -> None:
+    exp = _experiments[experiment_id]
+    exp.progress = current
+    exp.total = total
+    _push_event(
+        experiment_id,
+        {
+            "type": "progress",
+            "completed": current,
+            "total": total,
+            "current_query": getattr(response, "query_id", ""),
+        },
+    )
+
+
+def _llm_provider_is_configured(llm_model_id: str, settings: Settings) -> bool:
+    if llm_model_id.startswith("gpt-"):
+        return bool(settings.openai_api_key)
+    if llm_model_id.startswith("gemini-"):
+        return bool(settings.gemini_api_key)
+    if llm_model_id in {"llama-3.1-70b", "llama3-70b"}:
+        return bool(settings.together_api_key)
+    return False
+
+
+def launch_experiment(params: ExperimentCreate, settings: Settings) -> ExperimentResponse:
+    config = _build_config(params, settings)
+    if params.architecture is not Architecture.ROUTING:
+        raise ValueError("Web launch currently supports routing only.")
+    if not config.dry_run and not _llm_provider_is_configured(params.llm, settings):
+        raise ValueError(
+            f"The selected fallback model `{params.llm}` is not configured. "
+            "Set the matching API key in `.env`."
+        )
+
     experiment_id = f"exp_{uuid.uuid4().hex[:8]}"
     now = datetime.now(timezone.utc)
 
@@ -146,7 +187,7 @@ def launch_experiment(params: ExperimentCreate) -> ExperimentResponse:
     _cancel_flags[experiment_id] = Event()
     _sse_queues[experiment_id] = []
 
-    _executor.submit(_run_experiment, experiment_id, params)
+    _executor.submit(_run_experiment, experiment_id, params, settings)
     return exp
 
 

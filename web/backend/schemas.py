@@ -16,7 +16,9 @@ class Architecture(str, Enum):
 class Benchmark(str, Enum):
     MMLU = "mmlu"
     ARC = "arc"
-    EATS = "eats"
+    HELLASWAG = "hellaswag"
+    GSM8K = "gsm8k"
+    TRUTHFULQA = "truthfulqa"
 
 
 class ExperimentStatus(str, Enum):
@@ -69,6 +71,10 @@ class ModelInfo(BaseModel):
 class ModelListResponse(BaseModel):
     slm: list[ModelInfo]
     llm: list[ModelInfo]
+    ollama_reachable: bool = False
+    openai_configured: bool = False
+    gemini_configured: bool = False
+    warnings: list[str] = Field(default_factory=list)
 
 
 class ModelPingResponse(BaseModel):
@@ -85,9 +91,10 @@ class ResultSummary(BaseModel):
     slm: str
     llm: str
     accuracy: float
+    avg_latency_ms: float | None = None
     eats_score: float | None = None
     llm_call_ratio: float | None = None
-    total_cost: float | None = None
+    total_cost_usd: float | None = None
     created_at: datetime
 
 
@@ -126,4 +133,12 @@ class CostEstimate(BaseModel):
 
 class SSEEvent(BaseModel):
     type: str
-    data: dict[str, Any]
+    completed: int | None = None
+    total: int | None = None
+    current_query: str | None = None
+    name: str | None = None
+    value: float | None = None
+    experiment_id: str | None = None
+    metrics: dict[str, float] | None = None
+    message: str | None = None
+    status: str | None = None

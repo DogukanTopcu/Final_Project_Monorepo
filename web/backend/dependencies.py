@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from functools import lru_cache
 
 import boto3
@@ -17,7 +16,9 @@ class Settings(BaseSettings):
     mlflow_tracking_uri: str = "http://localhost:5000"
     ollama_base_url: str = "http://localhost:11434"
     openai_api_key: str = ""
+    gemini_api_key: str = ""
     together_api_key: str = ""
+    results_dir: str = "results"
     environment: str = "dev"
     cors_origins: list[str] = ["http://localhost:3000"]
 

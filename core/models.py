@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import math
 import os
-import time
 from abc import ABC, abstractmethod
 
 import requests
@@ -22,6 +21,18 @@ _OPENAI_COSTS: dict[str, tuple[float, float]] = {
 _TOGETHER_COSTS: dict[str, tuple[float, float]] = {
     "meta-llama/Llama-3-70b-chat-hf": (0.90 / 1_000_000, 0.90 / 1_000_000),
 }
+_GEMINI_COSTS: dict[str, tuple[float, float]] = {
+    "gemini-2.5-flash": (0.30 / 1_000_000, 2.50 / 1_000_000),
+    "gemini-2.5-flash-lite": (0.10 / 1_000_000, 0.40 / 1_000_000),
+}
+
+
+def _get_env(*names: str, default: str = "") -> str:
+    for name in names:
+        value = os.getenv(name)
+        if value:
+            return value
+    return default
 
 
 class ModelProvider(ABC):
@@ -46,7 +57,14 @@ class OllamaModel(ModelProvider):
         temperature: float = 0.0,
     ) -> None:
         super().__init__(model_id)
-        self.base_url = (base_url or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")).rstrip("/")
+        self.base_url = (
+            base_url
+            or _get_env(
+                "THESIS_OLLAMA_BASE_URL",
+                "OLLAMA_BASE_URL",
+                default="http://localhost:11434",
+            )
+        ).rstrip("/")
         self.temperature = temperature
 
     def generate(self, prompt: str, **kwargs) -> tuple[str, float, int, int, float]:
@@ -96,7 +114,10 @@ class OpenAIModel(ModelProvider):
         temperature: float = 0.0,
     ) -> None:
         super().__init__(model_id)
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY", "")
+        self.api_key = api_key or _get_env(
+            "THESIS_OPENAI_API_KEY",
+            "OPENAI_API_KEY",
+        )
         self.temperature = temperature
 
     def generate(self, prompt: str, **kwargs) -> tuple[str, float, int, int, float]:
@@ -150,7 +171,10 @@ class TogetherModel(ModelProvider):
         temperature: float = 0.0,
     ) -> None:
         super().__init__(model_id)
-        self.api_key = api_key or os.getenv("TOGETHER_API_KEY", "")
+        self.api_key = api_key or _get_env(
+            "THESIS_TOGETHER_API_KEY",
+            "TOGETHER_API_KEY",
+        )
         self.temperature = temperature
 
     def generate(self, prompt: str, **kwargs) -> tuple[str, float, int, int, float]:
@@ -178,6 +202,51 @@ class TogetherModel(ModelProvider):
         return text, 0.8, in_tok, out_tok, cost
 
 
+class GeminiModel(ModelProvider):
+    """Gemini Developer API via the official OpenAI-compatible endpoint."""
+
+    def __init__(
+        self,
+        model_id: str = "gemini-2.5-flash",
+        api_key: str | None = None,
+        temperature: float = 0.0,
+        base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/",
+    ) -> None:
+        super().__init__(model_id)
+        self.api_key = api_key or _get_env(
+            "THESIS_GEMINI_API_KEY",
+            "GEMINI_API_KEY",
+        )
+        self.temperature = temperature
+        self.base_url = base_url
+
+    def generate(self, prompt: str, **kwargs) -> tuple[str, float, int, int, float]:
+        import openai
+
+        client = openai.OpenAI(
+            api_key=self.api_key,
+            base_url=self.base_url,
+        )
+
+        response = client.chat.completions.create(
+            model=self.model_id,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=kwargs.get("temperature", self.temperature),
+            max_tokens=kwargs.get("max_tokens", 512),
+        )
+
+        choice = response.choices[0]
+        text = choice.message.content or ""
+        usage = response.usage
+        in_tok = usage.prompt_tokens if usage is not None else 0
+        out_tok = usage.completion_tokens if usage is not None else 0
+
+        in_cost, out_cost = _GEMINI_COSTS.get(self.model_id, (0.0, 0.0))
+        cost = in_tok * in_cost + out_tok * out_cost
+
+        return text.strip(), 0.5, in_tok, out_tok, cost
+
+
 _OLLAMA_MAP = {
     "phi3-mini":    "phi3:mini",
     "qwen2.5-1.5b": "qwen2.5:1.5b",
@@ -193,6 +262,10 @@ _OPENAI_MAP = {
 _TOGETHER_MAP = {
     "llama3-70b": "meta-llama/Llama-3-70b-chat-hf",
 }
+_GEMINI_MAP = {
+    "gemini-2.5-flash": "gemini-2.5-flash",
+    "gemini-2.5-flash-lite": "gemini-2.5-flash-lite",
+}
 
 
 def get_model(model_id: str) -> ModelProvider:
@@ -201,5 +274,7 @@ def get_model(model_id: str) -> ModelProvider:
         return OpenAIModel(model_id=_OPENAI_MAP[model_id])
     if model_id in _TOGETHER_MAP:
         return TogetherModel(model_id=_TOGETHER_MAP[model_id])
+    if model_id in _GEMINI_MAP:
+        return GeminiModel(model_id=_GEMINI_MAP[model_id])
     ollama_name = _OLLAMA_MAP.get(model_id, model_id)
     return OllamaModel(model_id=ollama_name)

@@ -1,5 +1,5 @@
 export type Architecture = "routing" | "multi_agent" | "ensemble";
-export type Benchmark = "mmlu" | "arc" | "eats";
+export type Benchmark = "mmlu" | "arc" | "hellaswag" | "gsm8k" | "truthfulqa";
 export type ExperimentStatus =
   | "queued"
   | "running"
@@ -49,6 +49,10 @@ export interface ModelInfo {
 export interface ModelListResponse {
   slm: ModelInfo[];
   llm: ModelInfo[];
+  ollama_reachable: boolean;
+  openai_configured: boolean;
+  gemini_configured: boolean;
+  warnings: string[];
 }
 
 export interface ModelPingResponse {
@@ -65,9 +69,10 @@ export interface ResultSummary {
   slm: string;
   llm: string;
   accuracy: number;
+  avg_latency_ms: number | null;
   eats_score: number | null;
   llm_call_ratio: number | null;
-  total_cost: number | null;
+  total_cost_usd: number | null;
   created_at: string;
 }
 

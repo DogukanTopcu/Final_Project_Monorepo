@@ -1,6 +1,5 @@
 "use client";
 
-import { use } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,9 +11,9 @@ import { formatDate, formatPercent, formatCost } from "@/lib/utils";
 export default function ExperimentDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }) {
-  const { id } = use(params);
+  const { id } = params;
   const { data: experiment, isLoading } = useExperiment(id);
 
   if (isLoading) {

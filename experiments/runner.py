@@ -21,10 +21,15 @@ from typing import Any
 
 from architectures import get_architecture
 from benchmarks import get_benchmark
-from core.config import load_config, save_config
+from core.config import load_config
 from core.models import get_model
 from core.types import ExperimentConfig, ExperimentResult, SampleResult
+from evaluation.metrics import compute_metrics
 from evaluation.reporter import Reporter
+
+
+class ExperimentCancelledError(RuntimeError):
+    """Raised when a caller requests cancellation mid-run."""
 
 
 class ExperimentRunner:
@@ -38,7 +43,7 @@ class ExperimentRunner:
         self.experiment_id = f"exp_{uuid.uuid4().hex[:8]}"
 
     @classmethod
-    def from_yaml(cls, path: str | Path, **overrides) -> "ExperimentRunner":
+    def from_yaml(cls, path: str | Path, **overrides) -> ExperimentRunner:
         config = load_config(path)
         for k, v in overrides.items():
             if hasattr(config, k):
@@ -89,6 +94,7 @@ class ExperimentRunner:
 
         # MLflow tracking
         tracker = None
+        final_metrics = result.to_metrics()
         try:
             from mlops.tracking import MLflowTracker
             import dataclasses
@@ -104,6 +110,11 @@ class ExperimentRunner:
             print(f"[WARN] MLflow not available: {e}")
 
         for i, query in enumerate(queries, start=1):
+            if self.callbacks and self.callbacks.is_cancelled():
+                if tracker:
+                    tracker.end_run("KILLED")
+                raise ExperimentCancelledError("Experiment cancelled by user.")
+
             try:
                 response = architecture.run(query)
             except Exception as exc:
@@ -139,10 +150,11 @@ class ExperimentRunner:
         # Save reports
         reporter = Reporter(output_dir=cfg.output_dir)
         reporter.save(result)
+        final_metrics = compute_metrics(result)
 
         if tracker:
             try:
-                tracker.log_final_metrics(result.to_metrics())
+                tracker.log_final_metrics(final_metrics)
                 tracker.log_artifacts(Path(cfg.output_dir))
                 tracker.end_run()
             except Exception:
@@ -154,7 +166,7 @@ class ExperimentRunner:
                 experiment_id=self.experiment_id,
                 architecture=cfg.architecture,
                 benchmark=cfg.benchmark,
-                metrics=result.to_metrics(),
+                metrics=final_metrics,
                 samples_processed=result.n_total,
                 status="completed",
             )
@@ -162,7 +174,7 @@ class ExperimentRunner:
 
         print(
             f"[{self.experiment_id}] DONE — acc={result.accuracy:.3f} "
-            f"eats={result.to_metrics().get('eats_score', 0):.3f}"
+            f"eats={final_metrics.get('eats_score', 0):.3f}"
         )
         return result
 

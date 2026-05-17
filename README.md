@@ -47,18 +47,84 @@ make dev-down
 
 ```bash
 # Backend
-cd web/backend
-pip install -e "../../.[api]"
-uvicorn web.backend.main:app --reload --port 8000
+./venv/bin/uvicorn web.backend.main:app --reload --host 127.0.0.1 --port 8000
 
 # Frontend
-cd web/frontend
-npm install
-npm run dev
+cd web/frontend && npm install
+cd web/frontend && npm run dev
 
 # MLflow
 mlflow server --host 0.0.0.0 --port 5000
 ```
+
+### Manual Web Run: Ollama SLM + Gemini Fallback
+
+This is the simplest local workflow if you want to:
+
+- run a local Ollama model such as Gemma,
+- use the web UI to launch a `routing` experiment,
+- and use Gemini as the remote fallback LLM.
+
+1. Create a root `.env` file:
+
+```env
+THESIS_GEMINI_API_KEY=your_gemini_api_key
+THESIS_OLLAMA_BASE_URL=http://localhost:11434
+THESIS_MLFLOW_TRACKING_URI=http://localhost:5000
+THESIS_RESULTS_DIR=results
+```
+
+2. Start Ollama:
+
+```bash
+ollama serve
+```
+
+3. Make sure your local model exists:
+
+```bash
+ollama list
+```
+
+If Gemma is not installed yet, pull one first:
+
+```bash
+ollama pull gemma3:4b
+```
+
+4. Start the backend from the repo root:
+
+```bash
+./venv/bin/uvicorn web.backend.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+5. Start the frontend in a second terminal:
+
+```bash
+cd web/frontend
+npm install
+npm run dev
+```
+
+6. Open the app:
+
+```text
+http://localhost:3000
+```
+
+7. In the web form:
+
+- choose your local Ollama SLM, for example `gemma3:4b`,
+- choose `Gemini 2.5 Flash` or `Gemini 2.5 Flash-Lite` as the fallback LLM,
+- keep architecture as `routing`,
+- then launch the experiment.
+
+Notes:
+
+- The backend reads `.env` from the repo root.
+- `dry_run` does not require a Gemini key.
+- Real fallback calls require `THESIS_GEMINI_API_KEY`.
+- If you change `.env`, restart the backend.
 
 ## Project Structure
 
@@ -174,11 +240,13 @@ Create a `.env` file in the project root:
 
 ```env
 THESIS_OPENAI_API_KEY=sk-...
+THESIS_GEMINI_API_KEY=...
 THESIS_TOGETHER_API_KEY=...
 THESIS_AWS_REGION=eu-west-1
 THESIS_S3_RESULTS_BUCKET=thesis-results-dev
 THESIS_MLFLOW_TRACKING_URI=http://localhost:5000
 THESIS_OLLAMA_BASE_URL=http://localhost:11434
+THESIS_RESULTS_DIR=results
 ```
 
 ## Docker Images

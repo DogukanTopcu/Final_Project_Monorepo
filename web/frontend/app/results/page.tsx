@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MetricsChart } from "@/components/MetricsChart";
@@ -85,7 +84,7 @@ export default function ResultsPage() {
                         {r.eats_score != null ? formatPercent(r.eats_score) : "—"}
                       </td>
                       <td className="py-3 pr-4">
-                        {r.total_cost != null ? formatCost(r.total_cost) : "—"}
+                        {r.total_cost_usd != null ? formatCost(r.total_cost_usd) : "—"}
                       </td>
                       <td className="py-3">{formatDate(r.created_at)}</td>
                     </tr>
