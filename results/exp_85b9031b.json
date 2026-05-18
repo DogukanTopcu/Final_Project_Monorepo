@@ -1,0 +1,436 @@
+{
+  "experiment_id": "exp_85b9031b",
+  "created_at": "2026-05-17T15:56:24.869060+00:00",
+  "config": {
+    "architecture": "routing",
+    "benchmark": "mmlu",
+    "n_samples": 40,
+    "slm": "gemma4:latest",
+    "llm": "gemini-2.5-flash",
+    "confidence_threshold": 0.7,
+    "n_debate_rounds": 1,
+    "arbitrator": "llm",
+    "n_models": 3,
+    "voting": "majority",
+    "dry_run": false,
+    "seed": 42,
+    "output_dir": "results",
+    "mlflow_tracking_uri": "http://localhost:5000",
+    "extra": {}
+  },
+  "metrics": {
+    "accuracy": 0.425,
+    "llm_call_ratio": 0.0,
+    "avg_latency_ms": 8896.038068700182,
+    "total_cost_usd": 0.0,
+    "n_total": 40.0,
+    "n_correct": 17.0,
+    "eats_score": 42.5,
+    "normalized_cost": 1.0,
+    "latency_p50_ms": 9837.28662500289,
+    "latency_p95_ms": 11040.66020800019,
+    "total_tokens": 23053
+  },
+  "samples": [
+    {
+      "query_id": "mmlu_10476",
+      "correct": false,
+      "predicted": null,
+      "ground_truth": "A",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 15181.712999998126,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_1824",
+      "correct": true,
+      "predicted": "D",
+      "ground_truth": "D",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 6740.784499997972,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_409",
+      "correct": true,
+      "predicted": "C",
+      "ground_truth": "C",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 8213.283625002077,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_12149",
+      "correct": false,
+      "predicted": null,
+      "ground_truth": "B",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 10215.333708001708,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_4506",
+      "correct": false,
+      "predicted": null,
+      "ground_truth": "D",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 9837.28662500289,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_4012",
+      "correct": true,
+      "predicted": "A",
+      "ground_truth": "A",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 6730.052875002002,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_3657",
+      "correct": true,
+      "predicted": "B",
+      "ground_truth": "B",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 8223.839874997793,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_2286",
+      "correct": true,
+      "predicted": "C",
+      "ground_truth": "C",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 8389.765167001315,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_12066",
+      "correct": false,
+      "predicted": null,
+      "ground_truth": "C",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 10267.905874999997,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_1679",
+      "correct": true,
+      "predicted": "C",
+      "ground_truth": "C",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 301.0150000009162,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_11087",
+      "correct": false,
+      "predicted": null,
+      "ground_truth": "D",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 10320.991000000504,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_12135",
+      "correct": false,
+      "predicted": null,
+      "ground_truth": "B",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 10858.508667002752,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_8935",
+      "correct": false,
+      "predicted": null,
+      "ground_truth": "A",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 9905.504333000863,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_1424",
+      "correct": false,
+      "predicted": null,
+      "ground_truth": "D",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 10029.412416999548,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_9674",
+      "correct": true,
+      "predicted": "D",
+      "ground_truth": "D",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 6200.021708002168,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_6912",
+      "correct": false,
+      "predicted": null,
+      "ground_truth": "A",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 9959.243041001173,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_520",
+      "correct": false,
+      "predicted": null,
+      "ground_truth": "B",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 9887.204458002088,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_488",
+      "correct": true,
+      "predicted": "D",
+      "ground_truth": "D",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 5922.118708000198,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_1535",
+      "correct": true,
+      "predicted": "D",
+      "ground_truth": "D",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 7038.356458000635,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_3582",
+      "correct": false,
+      "predicted": "B",
+      "ground_truth": "C",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 6541.295499999251,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_3811",
+      "correct": true,
+      "predicted": "B",
+      "ground_truth": "B",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 9119.80670900084,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_8279",
+      "correct": false,
+      "predicted": null,
+      "ground_truth": "C",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 10289.124874998379,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_9863",
+      "correct": false,
+      "predicted": null,
+      "ground_truth": "A",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 10298.29137499837,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_434",
+      "correct": true,
+      "predicted": "A",
+      "ground_truth": "A",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 5703.90899999984,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_9195",
+      "correct": true,
+      "predicted": "B",
+      "ground_truth": "B",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 9797.771417001059,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_3257",
+      "correct": false,
+      "predicted": null,
+      "ground_truth": "C",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 10933.20812499951,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_11731",
+      "correct": false,
+      "predicted": null,
+      "ground_truth": "B",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 10567.145791999792,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_10647",
+      "correct": false,
+      "predicted": null,
+      "ground_truth": "C",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 10435.927791000722,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_11490",
+      "correct": false,
+      "predicted": null,
+      "ground_truth": "A",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 10467.340915998648,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_8928",
+      "correct": true,
+      "predicted": "D",
+      "ground_truth": "D",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 8440.555957997276,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_6873",
+      "correct": false,
+      "predicted": null,
+      "ground_truth": "B",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 10370.63175000003,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_3611",
+      "correct": true,
+      "predicted": "A",
+      "ground_truth": "A",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 4783.390749998944,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_7359",
+      "correct": true,
+      "predicted": "B",
+      "ground_truth": "B",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 7247.0102080005745,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_9654",
+      "correct": false,
+      "predicted": null,
+      "ground_truth": "C",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 11040.66020800019,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_4557",
+      "correct": false,
+      "predicted": null,
+      "ground_truth": "B",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 10347.989917001541,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_13261",
+      "correct": true,
+      "predicted": "C",
+      "ground_truth": "C",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 9768.03470899904,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_106",
+      "correct": true,
+      "predicted": "A",
+      "ground_truth": "A",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 6819.180999998935,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_12432",
+      "correct": false,
+      "predicted": null,
+      "ground_truth": "A",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 10623.166499997751,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_13202",
+      "correct": false,
+      "predicted": "D",
+      "ground_truth": "B",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 9836.242625002342,
+      "cost_usd": 0.0
+    },
+    {
+      "query_id": "mmlu_2615",
+      "correct": false,
+      "predicted": "B",
+      "ground_truth": "A",
+      "llm_calls": 0,
+      "confidence": 0.95,
+      "latency_ms": 8188.496582999505,
+      "cost_usd": 0.0
+    }
+  ]
+}

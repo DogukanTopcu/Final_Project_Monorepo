@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Callable
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -20,6 +21,7 @@ class RunnerCallbacks:
     on_metric_update: Callable[[str, float], None] | None = None
     on_experiment_done: Callable[[ExperimentResult], None] | None = None
     on_error: Callable[[Exception], None] | None = None
+    should_cancel: Callable[[], bool] | None = None
 
     def sample_complete(self, current: int, total: int, response: Any) -> None:
         if self.on_sample_complete is not None:
@@ -36,3 +38,8 @@ class RunnerCallbacks:
     def error(self, exc: Exception) -> None:
         if self.on_error is not None:
             self.on_error(exc)
+
+    def is_cancelled(self) -> bool:
+        if self.should_cancel is None:
+            return False
+        return self.should_cancel()

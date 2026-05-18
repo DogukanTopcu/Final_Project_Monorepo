@@ -84,6 +84,12 @@ export function LiveProgress({ experimentId, enabled }: LiveProgressProps) {
           </div>
         )}
 
+        {lastEvent?.type === "complete" && lastEvent.status === "cancelled" && (
+          <div className="rounded-lg bg-zinc-100 p-4">
+            <p className="font-medium text-zinc-800">Experiment Cancelled</p>
+          </div>
+        )}
+
         {lastEvent?.type === "error" && (
           <div className="rounded-lg bg-red-50 p-4">
             <p className="font-medium text-red-800">Error</p>

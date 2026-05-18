@@ -44,6 +44,16 @@ class RoutingArchitecture(BaseArchitecture):
         slm_text, conf, in_tok, out_tok, cost, latency = self._timed_generate(
             self.slm, prompt
         )
+        slm_parsed = (
+            parse_mcq_answer(slm_text)
+            if self.task_type == "mcq"
+            else parse_open_answer(slm_text)
+        )
+
+        # If the draft answer cannot even be parsed into the expected output
+        # format, treat it as low-confidence so routing can escalate.
+        if slm_parsed is None:
+            conf = min(conf, 0.2)
 
         total_in = in_tok
         total_out = out_tok
@@ -52,6 +62,11 @@ class RoutingArchitecture(BaseArchitecture):
         llm_calls = 0
         final_text = slm_text
         used_model = self.slm.model_id
+        llm_text: str | None = None
+        llm_input_tokens = 0
+        llm_output_tokens = 0
+        llm_cost = 0.0
+        llm_latency = 0.0
 
         # Step 2: Escalate if low confidence
         if conf < self.threshold:
@@ -65,6 +80,10 @@ class RoutingArchitecture(BaseArchitecture):
             llm_calls = 1
             final_text = llm_text
             used_model = self.llm.model_id
+            llm_input_tokens = l_in
+            llm_output_tokens = l_out
+            llm_cost = l_cost
+            llm_latency = l_lat
 
         parsed = (
             parse_mcq_answer(final_text)
@@ -84,8 +103,23 @@ class RoutingArchitecture(BaseArchitecture):
             cost_usd=total_cost,
             llm_calls=llm_calls,
             metadata={
+                "prompt_text": prompt,
                 "slm_text": slm_text,
                 "slm_confidence": conf,
+                "slm_model_id": self.slm.model_id,
+                "slm_latency_ms": latency,
+                "slm_input_tokens": in_tok,
+                "slm_output_tokens": out_tok,
+                "slm_cost_usd": cost,
                 "escalated": llm_calls == 1,
+                "used_llm": llm_calls == 1,
+                "confidence_threshold": self.threshold,
+                "final_model_id": used_model,
+                "llm_text": llm_text,
+                "llm_model_id": self.llm.model_id if llm_calls == 1 else None,
+                "llm_latency_ms": llm_latency if llm_calls == 1 else None,
+                "llm_input_tokens": llm_input_tokens if llm_calls == 1 else None,
+                "llm_output_tokens": llm_output_tokens if llm_calls == 1 else None,
+                "llm_cost_usd": llm_cost if llm_calls == 1 else None,
             },
         )

@@ -29,16 +29,7 @@ class Reporter:
             "config": dataclasses.asdict(result.config),
             "metrics": metrics,
             "samples": [
-                {
-                    "query_id": s.query.id,
-                    "correct": s.correct,
-                    "predicted": s.response.predicted_answer,
-                    "ground_truth": s.query.answer,
-                    "llm_calls": s.response.llm_calls,
-                    "confidence": s.response.confidence,
-                    "latency_ms": s.response.latency_ms,
-                    "cost_usd": s.response.cost_usd,
-                }
+                self._sample_payload(s)
                 for s in result.samples
             ],
         }
@@ -95,3 +86,41 @@ class Reporter:
 
         with open(path, "w") as f:
             f.write("\n".join(lines))
+
+    @staticmethod
+    def _sample_payload(sample) -> dict:
+        metadata = sample.response.metadata
+        escalated = bool(metadata.get("escalated", sample.response.llm_calls))
+        payload = {
+            "query_id": sample.query.id,
+            "query_text": sample.query.text,
+            "correct": sample.correct,
+            "predicted": sample.response.predicted_answer,
+            "ground_truth": sample.query.answer,
+            "llm_calls": sample.response.llm_calls,
+            "confidence": sample.response.confidence,
+            "latency_ms": sample.response.latency_ms,
+            "cost_usd": sample.response.cost_usd,
+            "final_model_id": metadata.get("final_model_id", sample.response.model_id),
+            "used_llm": escalated,
+            "escalated": escalated,
+            "slm_confidence": metadata.get("slm_confidence", sample.response.confidence),
+            "confidence_threshold": metadata.get("confidence_threshold"),
+            "slm_latency_ms": metadata.get("slm_latency_ms"),
+            "llm_latency_ms": metadata.get("llm_latency_ms"),
+            "slm_input_tokens": metadata.get("slm_input_tokens"),
+            "slm_output_tokens": metadata.get("slm_output_tokens"),
+            "llm_input_tokens": metadata.get("llm_input_tokens"),
+            "llm_output_tokens": metadata.get("llm_output_tokens"),
+            "slm_cost_usd": metadata.get("slm_cost_usd"),
+            "llm_cost_usd": metadata.get("llm_cost_usd"),
+        }
+        if escalated:
+            payload.update(
+                {
+                    "prompt_text": metadata.get("prompt_text"),
+                    "slm_text": metadata.get("slm_text"),
+                    "final_text": sample.response.text,
+                }
+            )
+        return payload

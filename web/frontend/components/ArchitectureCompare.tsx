@@ -21,7 +21,7 @@ const METRIC_COLORS: Record<string, string> = {
   accuracy: "#3b82f6",
   llm_call_ratio: "#f59e0b",
   eats_score: "#22c55e",
-  total_cost: "#ef4444",
+  total_cost_usd: "#ef4444",
 };
 
 export function ArchitectureCompare({ comparison }: ArchitectureCompareProps) {

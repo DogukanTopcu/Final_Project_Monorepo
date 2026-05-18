@@ -23,7 +23,7 @@ export default function DashboardPage() {
     (a, b) => (b.metrics?.accuracy ?? 0) - (a.metrics?.accuracy ?? 0),
   )[0];
   const totalCost = completedRuns.reduce(
-    (sum, e) => sum + (e.metrics?.total_cost ?? 0),
+    (sum, e) => sum + (e.metrics?.total_cost_usd ?? 0),
     0,
   );
 

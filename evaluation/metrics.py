@@ -67,6 +67,27 @@ def compute_metrics(
     p50 = sorted(latencies)[len(latencies) // 2] if latencies else 0.0
     p95_idx = int(len(latencies) * 0.95)
     p95 = sorted(latencies)[min(p95_idx, len(latencies) - 1)] if latencies else 0.0
+    confidences = [
+        float(s.response.metadata.get("slm_confidence", s.response.confidence))
+        for s in result.samples
+    ]
+    escalated_samples = [
+        s for s in result.samples if bool(s.response.metadata.get("escalated", s.response.llm_calls))
+    ]
+    non_escalated_samples = [
+        s for s in result.samples if not bool(s.response.metadata.get("escalated", s.response.llm_calls))
+    ]
+    escalated_confidences = [
+        float(s.response.metadata.get("slm_confidence", s.response.confidence))
+        for s in escalated_samples
+    ]
+    non_escalated_confidences = [
+        float(s.response.metadata.get("slm_confidence", s.response.confidence))
+        for s in non_escalated_samples
+    ]
+    n_escalated = len(escalated_samples)
+    n_total = int(base["n_total"])
+    escalation_rate = n_escalated / n_total if n_total else 0.0
 
     return {
         **base,
@@ -76,5 +97,22 @@ def compute_metrics(
         "latency_p95_ms": p95,
         "total_tokens": base["n_total"] and sum(
             s.response.input_tokens + s.response.output_tokens for s in result.samples
+        ),
+        "n_escalated": float(n_escalated),
+        "escalation_rate": escalation_rate,
+        "n_slm_only": float(n_total - n_escalated),
+        "n_llm_final": float(n_escalated),
+        "avg_slm_confidence": (
+            sum(confidences) / len(confidences) if confidences else 0.0
+        ),
+        "avg_confidence_escalated": (
+            sum(escalated_confidences) / len(escalated_confidences)
+            if escalated_confidences
+            else 0.0
+        ),
+        "avg_confidence_non_escalated": (
+            sum(non_escalated_confidences) / len(non_escalated_confidences)
+            if non_escalated_confidences
+            else 0.0
         ),
     }
