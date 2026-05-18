@@ -122,7 +122,10 @@ class OpenAIModel(ModelProvider):
         temperature: float = 0.0,
     ) -> None:
         super().__init__(model_id)
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY", "")
+        self.api_key = api_key or _get_env(
+            "THESIS_OPENAI_API_KEY",
+            "OPENAI_COMPATIBLE_API_KEY",
+        )
         self.temperature = temperature
 
     def generate(self, prompt: str, **kwargs) -> tuple[str, float, int, int, float]:
@@ -176,7 +179,10 @@ class TogetherModel(ModelProvider):
         temperature: float = 0.0,
     ) -> None:
         super().__init__(model_id)
-        self.api_key = api_key or os.getenv("TOGETHER_API_KEY", "")
+        self.api_key = api_key or _get_env(
+            "THESIS_TOGETHER_API_KEY",
+            "OPENAI_COMPATIBLE_API_KEY",
+        )
         self.temperature = temperature
 
     def generate(self, prompt: str, **kwargs) -> tuple[str, float, int, int, float]:
@@ -249,28 +255,192 @@ class GeminiModel(ModelProvider):
         return text.strip(), 0.5, in_tok, out_tok, cost
 
 
-_OLLAMA_MAP = {
-    "phi3-mini":    "phi3:mini",
-    "qwen2.5-1.5b": "qwen2.5:1.5b",
-    "qwen2.5-7b":   "qwen2.5:7b",
-    "llama3.2-3b":  "llama3.2:3b",
-}
+class OpenAICompatibleModel(ModelProvider):
+    """OpenAI-compatible HTTP endpoint wrapper for vLLM and hosted gateways."""
 
-_OPENAI_MAP = {
-    "gpt-4o-mini": "gpt-4o-mini",
-    "gpt-4o":      "gpt-4o",
-}
+    def __init__(
+        self,
+        model_id: str,
+        base_url: str,
+        api_key: str | None = None,
+        temperature: float = 0.0,
+    ) -> None:
+        super().__init__(model_id)
+        self.base_url = base_url.rstrip("/")
+        self.api_key = api_key or ""
+        self.temperature = temperature
+        self._local_endpoint = _is_local_or_private_endpoint(self.base_url)
 
-_TOGETHER_MAP = {
-    "llama3-70b": "meta-llama/Llama-3-70b-chat-hf",
+    def generate(self, prompt: str, **kwargs) -> tuple[str, float, int, int, float]:
+        payload = {
+            "model": self.model_id,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": kwargs.get("temperature", self.temperature),
+            "max_tokens": kwargs.get("max_tokens", 512),
+            "logprobs": True,
+            "top_logprobs": 1,
+        }
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+
+        resp = requests.post(
+            f"{self.base_url}/chat/completions",
+            json=payload,
+            headers=headers,
+            timeout=120,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+        choice = data["choices"][0]
+        text = choice["message"]["content"].strip()
+        usage = data.get("usage", {})
+        in_tok = usage.get("prompt_tokens", 0)
+        out_tok = usage.get("completion_tokens", 0)
+        cost = 0.0
+        if not self._local_endpoint:
+            in_cost, out_cost = _APPROX_MODEL_COSTS.get(self.model_id, (0.0, 0.0))
+            cost = in_tok * in_cost + out_tok * out_cost
+
+        confidence = self._logprob_confidence(choice)
+        return text, confidence, in_tok, out_tok, cost
+
+    @staticmethod
+    def _logprob_confidence(choice: dict) -> float:
+        try:
+            content = (choice.get("logprobs") or {}).get("content") or []
+            log_probs = [token["logprob"] for token in content[:10] if token.get("logprob") is not None]
+            if not log_probs:
+                return 0.5
+            return float(math.exp(sum(log_probs) / len(log_probs)))
+        except Exception:
+            return 0.5
+_GEMINI_MAP = {
+    "gemini-2.5-flash": "gemini-2.5-flash",
+    "gemini-2.5-flash-lite": "gemini-2.5-flash-lite",
 }
 
 
 def get_model(model_id: str) -> ModelProvider:
-    """Factory — resolve friendly name to a ModelProvider instance."""
-    if model_id in _OPENAI_MAP:
-        return OpenAIModel(model_id=_OPENAI_MAP[model_id])
-    if model_id in _TOGETHER_MAP:
-        return TogetherModel(model_id=_TOGETHER_MAP[model_id])
-    ollama_name = _OLLAMA_MAP.get(model_id, model_id)
-    return OllamaModel(model_id=ollama_name)
+    """Factory — resolve selected-model aliases to the right runtime provider."""
+    spec = get_model_spec(model_id)
+    if spec is not None:
+        if spec.provider == "ollama":
+            if _force_openai_compatible(spec):
+                base_url = os.getenv(spec.base_url_env or "", spec.base_url_default or "http://localhost:8000/v1")
+                return OpenAICompatibleModel(
+                    model_id=spec.openai_compatible_model or spec.provider_model,
+                    base_url=base_url,
+                )
+            return OllamaModel(model_id=spec.provider_model)
+        if spec.provider == "openai_compatible":
+            base_url = os.getenv(spec.base_url_env or "", spec.base_url_default or "http://localhost:8000/v1")
+            api_key = os.getenv(spec.api_key_env or "", "")
+            return OpenAICompatibleModel(
+                model_id=spec.provider_model,
+                base_url=base_url,
+                api_key=api_key,
+            )
+
+    return OllamaModel(model_id=model_id)
+
+
+def get_model_runtime_status(model_id: str) -> dict[str, str | bool]:
+    """
+    Return the resolved runtime shape for a model alias.
+
+    This is intentionally lightweight and config-driven. It answers:
+    - which provider would be used right now
+    - which endpoint/key envs are relevant
+    - whether the current config is sufficient to attempt a call
+    """
+    spec = get_model_spec(model_id)
+    if spec is None:
+        return {
+            "available": False,
+            "provider": "unknown",
+            "reason": f"Unknown model alias: {model_id}",
+        }
+
+    if spec.provider == "ollama" and not _force_openai_compatible(spec):
+        base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").rstrip("/")
+        return {
+            "available": True,
+            "provider": "ollama",
+            "base_url": base_url,
+            "reason": "Uses local Ollama endpoint.",
+        }
+
+    base_url = os.getenv(spec.base_url_env or "", spec.base_url_default or "").rstrip("/")
+    if not base_url:
+        return {
+            "available": False,
+            "provider": "openai_compatible",
+            "reason": f"No endpoint configured for {model_id}.",
+        }
+
+    api_key = os.getenv(spec.api_key_env or "", "")
+    key_required = bool(spec.api_key_env) and not _is_local_or_private_endpoint(base_url)
+    if key_required and not api_key:
+        return {
+            "available": False,
+            "provider": "openai_compatible",
+            "base_url": base_url,
+            "reason": f"{model_id} targets a remote OpenAI-compatible endpoint and requires {spec.api_key_env}.",
+        }
+
+    return {
+        "available": True,
+        "provider": "openai_compatible",
+        "base_url": base_url,
+        "reason": "Uses an OpenAI-compatible endpoint.",
+    }
+
+
+def assert_model_runnable(model_id: str, timeout: float = 3.0) -> None:
+    """
+    Fail early with a clear message if the resolved runtime is unreachable.
+    """
+    status = get_model_runtime_status(model_id)
+    if not bool(status.get("available")):
+        raise RuntimeError(str(status.get("reason", f"Model {model_id} is unavailable.")))
+
+    provider = str(status.get("provider", "unknown"))
+    base_url = str(status.get("base_url", ""))
+    try:
+        if provider == "ollama":
+            resp = requests.get(f"{base_url}/api/tags", timeout=timeout)
+        elif provider == "openai_compatible":
+            resp = requests.get(f"{base_url}/models", timeout=timeout)
+        else:
+            raise RuntimeError(f"Unsupported provider for {model_id}: {provider}")
+        resp.raise_for_status()
+    except Exception as exc:
+        raise RuntimeError(
+            f"{model_id} is configured for {provider} at {base_url}, but the endpoint is unreachable: {exc}"
+        ) from exc
+
+
+def _force_openai_compatible(spec) -> bool:
+    if not spec.openai_compatible_model or not spec.base_url_env:
+        return False
+
+    force_vllm = os.getenv("THESIS_FORCE_VLLM", "").strip().lower()
+    if force_vllm not in {"1", "true", "yes", "on"}:
+        return False
+
+    return bool(os.getenv(spec.base_url_env, spec.base_url_default or ""))
+
+
+def _is_local_or_private_endpoint(base_url: str) -> bool:
+    hostname = urlparse(base_url).hostname
+    if hostname is None:
+        return False
+    if hostname in {"localhost", "127.0.0.1"}:
+        return True
+    try:
+        parsed_ip = ip_address(hostname)
+    except ValueError:
+        return hostname.endswith(".internal")
+    return parsed_ip.is_private or parsed_ip.is_loopback
