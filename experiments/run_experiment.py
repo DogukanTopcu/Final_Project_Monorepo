@@ -46,6 +46,7 @@ def parse_args() -> argparse.Namespace:
         default=0,
         help="0 = auto budget; positive values override completion budget explicitly.",
     )
+    p.add_argument("--slm_only", action="store_true")
     p.add_argument("--confidence_threshold", type=float, default=0.7)
     p.add_argument("--arbitrator", choices=["slm", "llm"], default="slm")
     p.add_argument("--n_models", type=int, default=3)
@@ -72,6 +73,7 @@ def build_config(args: argparse.Namespace, architecture: str) -> ExperimentConfi
         llm_temperature=args.llm_temperature,
         slm_max_tokens=args.slm_max_tokens,
         llm_max_tokens=args.llm_max_tokens,
+        slm_only=args.slm_only,
         confidence_threshold=args.confidence_threshold,
         arbitrator=args.arbitrator,
         n_models=args.n_models,

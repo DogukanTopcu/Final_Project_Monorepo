@@ -342,7 +342,7 @@ export function ExperimentForm() {
               className="h-4 w-4 rounded border-zinc-300"
             />
             <label htmlFor="dry-run" className="text-sm text-zinc-700">
-              Dry run (validate config without executing)
+              Dry run (validate config without executing any model inference)
             </label>
           </div>
 

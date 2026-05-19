@@ -35,6 +35,7 @@ class RoutingArchitecture(BaseArchitecture):
         llm_temperature: float = 0.0,
         slm_max_tokens: int = 0,
         llm_max_tokens: int = 0,
+        slm_only: bool = False,
     ) -> None:
         super().__init__(slm, llm)
         self.threshold = confidence_threshold
@@ -43,6 +44,7 @@ class RoutingArchitecture(BaseArchitecture):
         self.llm_temperature = llm_temperature
         self.slm_max_tokens = slm_max_tokens
         self.llm_max_tokens = llm_max_tokens
+        self.slm_only = slm_only
 
     def run(self, query: Query) -> Response:
         prompt = (
@@ -98,7 +100,7 @@ class RoutingArchitecture(BaseArchitecture):
         ]
 
         # Step 2: Escalate if low confidence
-        if conf < self.threshold:
+        if conf < self.threshold and not self.slm_only:
             llm_budget = compute_completion_budget(
                 self.llm,
                 prompt,
@@ -162,6 +164,7 @@ class RoutingArchitecture(BaseArchitecture):
                 "slm_cost_usd": cost,
                 "escalated": llm_calls == 1,
                 "used_llm": llm_calls == 1,
+                "slm_only": self.slm_only,
                 "confidence_threshold": self.threshold,
                 "final_model_id": used_model,
                 "llm_text": llm_text,

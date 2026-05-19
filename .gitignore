@@ -89,3 +89,6 @@ training/adapters/*
 !training/adapters/registry.json
 !training/adapters/registry.example.json
 training/outputs/
+
+
+*/tsconfig.tsbuildinfo

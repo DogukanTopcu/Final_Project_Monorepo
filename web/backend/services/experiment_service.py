@@ -148,6 +148,7 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         llm_temperature=llm_temperature,
         slm_max_tokens=slm_max_tokens,
         llm_max_tokens=llm_max_tokens,
+        slm_only=bool(overrides.get("slm_only", False)),
         confidence_threshold=float(overrides.get("confidence_threshold", 0.7)),
         arbitrator=str(overrides.get("arbitrator", "llm")),
         n_debate_rounds=int(overrides.get("n_debate_rounds", 1)),

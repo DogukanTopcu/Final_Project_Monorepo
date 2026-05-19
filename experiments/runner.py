@@ -104,6 +104,7 @@ class ExperimentRunner:
         arch_kwargs["llm_max_tokens"] = cfg.llm_max_tokens
 
         if cfg.architecture == "routing":
+            arch_kwargs["slm_only"] = cfg.slm_only
             arch_kwargs["confidence_threshold"] = cfg.confidence_threshold
         elif cfg.architecture == "multi_agent":
             arch_kwargs["arbitrator"] = cfg.arbitrator

@@ -66,6 +66,7 @@ class Reporter:
             f"| LLM Temperature | {cfg.llm_temperature} |",
             f"| SLM Max Tokens | {cfg.slm_max_tokens} |",
             f"| LLM Max Tokens | {cfg.llm_max_tokens} |",
+            f"| SLM Only | {cfg.slm_only} |",
             f"| N Samples | {cfg.n_samples} |",
             f"| Confidence Threshold | {cfg.confidence_threshold} |",
             "",
