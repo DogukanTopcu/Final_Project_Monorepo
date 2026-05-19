@@ -36,18 +36,5 @@ services:
     environment:
       - MLFLOW_ARTIFACT_ROOT=s3://thesis-artifacts-dev/mlflow
 
-  ollama:
-    image: ollama/ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - capabilities: [gpu]
-
 volumes:
   mlflow_data:
-  ollama_data:

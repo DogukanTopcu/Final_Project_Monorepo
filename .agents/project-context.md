@@ -17,7 +17,7 @@ Bu iterasyonda seçilmiş resmi model havuzu şudur:
 
 Normalizasyon notu:
 
-- Kullanıcı kısaltması `Gemma 4 (4B)` repo içinde `gemma4-4b` alias'ı ve `google/gemma-4-E4B-it` / `gemma4:e4b` runtime adıyla temsil edilir.
+- Kullanıcı kısaltması `Gemma 4 (4B)` repo içinde `gemma4-4b` alias'ı ve `google/gemma-4-E4B-it` served runtime adıyla temsil edilir.
 
 Bu yüzden repo yalnızca model çağıran bir uygulama değildir. Aşağıdaki katmanları birlikte kurmaya çalışır:
 
@@ -33,9 +33,8 @@ Bu yüzden repo yalnızca model çağıran bir uygulama değildir. Aşağıdaki 
 
 Altyapı notu:
 
-- Küçük ve orta modeller yerelde Ollama veya tek-GPU vLLM ile çalıştırılabilir.
+- Tüm seçili modeller remote OpenAI-compatible vLLM endpoint'leri üzerinden çağrılır.
 - AWS/prod tarafında repo artık tek generic GPU instance varsaymaz.
-- `THESIS_FORCE_VLLM=1` ile aynı repo alias'ları private OpenAI-compatible vLLM endpoint'lerine yönlenebilir.
 - Ağır modeller (`llama3.3-70b`, `gpt-oss-120b`) dedicated ve pahalı host sınıfları gerektirir; bunlar dev ortamının doğal uzantısı değildir.
 
 ## Kritik Kavramlar

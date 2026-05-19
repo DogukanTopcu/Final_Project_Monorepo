@@ -168,15 +168,12 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
 def _sync_runtime_provider_env(settings: Settings) -> None:
     """Expose provider keys/base URLs to runtime code that reads os.environ."""
     env_map = {
-        "THESIS_OLLAMA_BASE_URL": settings.ollama_base_url,
-        "OLLAMA_BASE_URL": settings.ollama_base_url,
         "THESIS_OPENAI_API_KEY": settings.openai_api_key,
         "OPENAI_API_KEY": settings.openai_api_key,
         "THESIS_GEMINI_API_KEY": settings.gemini_api_key,
         "GEMINI_API_KEY": settings.gemini_api_key,
         "THESIS_TOGETHER_API_KEY": settings.together_api_key,
         "TOGETHER_API_KEY": settings.together_api_key,
-        "THESIS_FORCE_VLLM": "1" if settings.force_vllm else "",
     }
     for key, value in env_map.items():
         if value:

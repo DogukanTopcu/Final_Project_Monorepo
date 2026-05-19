@@ -77,8 +77,6 @@ export interface ModelInfo {
 export interface ModelListResponse {
   slm: ModelInfo[];
   llm: ModelInfo[];
-  runtime_mode: string;
-  force_vllm: boolean;
   warnings: string[];
 }
 

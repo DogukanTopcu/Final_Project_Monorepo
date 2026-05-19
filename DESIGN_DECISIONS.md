@@ -29,7 +29,7 @@ The project needs reproducible experiments across multiple model tiers without h
 
 That leads to three decisions:
 - use canonical model aliases in `core/model_catalog.py`
-- resolve each alias to either Ollama or an OpenAI-compatible endpoint
+- resolve each alias to a remote OpenAI-compatible endpoint
 - make the frontend read the same runtime status as the backend and CLI
 
 Practical consequence:

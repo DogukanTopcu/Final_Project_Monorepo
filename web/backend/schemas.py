@@ -93,8 +93,6 @@ class ModelInfo(BaseModel):
 class ModelListResponse(BaseModel):
     slm: list[ModelInfo]
     llm: list[ModelInfo]
-    runtime_mode: str = "mixed"
-    force_vllm: bool = False
     warnings: list[str] = Field(default_factory=list)
 
 

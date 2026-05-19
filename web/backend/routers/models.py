@@ -6,7 +6,7 @@ import httpx
 from fastapi import APIRouter, Depends
 
 from core.hosts import get_host_for_model
-from core.model_catalog import SELECTED_MODELS
+from core.model_catalog import SELECTED_MODELS, get_expected_runtime_model_ids
 from core.models import get_model_runtime_status
 from web.backend.dependencies import Settings, get_settings
 from web.backend.schemas import ModelInfo, ModelListResponse, ModelPingResponse
@@ -26,10 +26,7 @@ async def _probe_runtime_endpoint(
 
     try:
         async with httpx.AsyncClient(timeout=timeout) as client:
-            if provider == "ollama":
-                response = await client.get(f"{base_url}/api/tags")
-            else:
-                response = await client.get(f"{base_url}/models")
+            response = await client.get(f"{base_url}/models")
             if response.status_code == 200:
                 return True, None
             return False, f"Runtime endpoint returned HTTP {response.status_code}."
@@ -49,7 +46,7 @@ async def list_models(settings: Settings = Depends(get_settings)):
     served_by_url: dict[str, set[str]] = {}
 
     def _served_ids_for(provider: str, base_url: str) -> set[str]:
-        if provider == "ollama" or not base_url:
+        if not base_url:
             return set()
         if base_url in served_by_url:
             return served_by_url[base_url]
@@ -77,10 +74,7 @@ async def list_models(settings: Settings = Depends(get_settings)):
         is_active_on_host: bool | None = None
         if host is not None and host.shared and configured and base_url:
             served = _served_ids_for(provider, base_url)
-            expected = {spec.provider_model}
-            if spec.openai_compatible_model:
-                expected.add(spec.openai_compatible_model)
-            expected = {e for e in expected if e}
+            expected = get_expected_runtime_model_ids(spec.id)
             is_active_on_host = bool(served & expected)
 
         model = ModelInfo(
@@ -106,15 +100,13 @@ async def list_models(settings: Settings = Depends(get_settings)):
             llm_models.append(model)
 
     if not any(model.configured for model in slm_models):
-        warnings.append("No runnable SLM is configured. Set a VLLM_* endpoint or start Ollama.")
+        warnings.append("No runnable SLM is configured. Set a VLLM_* endpoint.")
     if not any(model.configured for model in llm_models):
         warnings.append("No runnable LLM is configured. Set a VLLM_* endpoint or matching API key.")
 
     return ModelListResponse(
         slm=slm_models,
         llm=llm_models,
-        runtime_mode="forced_vllm" if settings.force_vllm else "mixed",
-        force_vllm=settings.force_vllm,
         warnings=warnings,
     )
 
@@ -134,10 +126,7 @@ async def ping_model(model_id: str, settings: Settings = Depends(get_settings)):
 
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
-            if provider == "ollama":
-                response = await client.get(f"{base_url}/api/tags")
-            else:
-                response = await client.get(f"{base_url}/models")
+            response = await client.get(f"{base_url}/models")
             reachable = response.status_code == 200
     except Exception:
         reachable = False

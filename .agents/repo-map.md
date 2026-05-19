@@ -68,7 +68,7 @@ Ana dosyalar:
 
 - `types.py`: `Query`, `Response`, `ExperimentConfig`, `SampleResult`, `ExperimentResult`
 - `model_catalog.py`: Repo geneline yayılmış canonical model alias listesi ve provider eşlemeleri
-- `models.py`: `ModelProvider`, Ollama/OpenAI-compatible wrapper'ları, `get_model`
+- `models.py`: `ModelProvider`, OpenAI-compatible/API wrapper'ları, `get_model`
 - `prompt.py`: MCQ/open prompt builder ve parser
 - `config.py`: YAML config load/save
 
@@ -81,7 +81,7 @@ Bilinen durum:
 
 ## `docker/`
 
-Amaç: API, runner, MLflow, frontend ve Ollama servislerini container ortamında ayağa kaldırmak.
+Amaç: API, runner, MLflow ve frontend servislerini container ortamında ayağa kaldırmak.
 
 Ana dosyalar:
 
@@ -95,7 +95,6 @@ Bilinen durum:
 - `docker compose -f docker/docker-compose.yml config`, `.env` olmadığı için başarısız oldu.
 - API Dockerfile `.[api]` extra'sını kullanıyor; pyproject extra isimleriyle doğrulanmalı.
 - Compose içinde runner image var ama runner service yok.
-- API için Ollama base URL compose ağına göre ayarlanmamış olabilir.
 - MLflow artifact root env expansion exec-form CMD içinde riskli olabilir.
 
 ## `evaluation/`
@@ -167,7 +166,7 @@ Bilinen durum:
 
 - Root `versions.tf` backend/provider ayarları environment dizinleriyle aynı Terraform root'u olmayabilir.
 - Prod GPU serving artık ECR runner image'ı yerine public `vllm/vllm-openai` image'ı ile dedicated model host'lar kurar.
-- API host private vLLM endpoint'lerini `THESIS_FORCE_VLLM=1` altında env üzerinden alır.
+- API host private vLLM endpoint'lerini doğrudan env üzerinden alır.
 - `infrastructure/vllm/docker-compose.yml`, yerel ve ad-hoc GPU testleri için tek hostta sığan modelleri taşır; frontier modeller burada intentionally yoktur.
 - MLflow URI localhost olarak kalmış; instance içinde MLflow server varsayımı net değil.
 

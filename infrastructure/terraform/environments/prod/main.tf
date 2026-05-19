@@ -176,7 +176,6 @@ locals {
       THESIS_ENVIRONMENT         = var.environment
       THESIS_MLFLOW_TRACKING_URI = "http://localhost:5000"
       MLFLOW_TRACKING_URI        = "http://localhost:5000"
-      THESIS_FORCE_VLLM          = length(var.enabled_vllm_models) > 0 ? "1" : "0"
     },
     contains(var.enabled_vllm_models, "llama3.3-70b") ? {
       VLLM_LLAMA33_70B_URL = "http://${module.vllm_hosts["llama3.3-70b"].private_ips[0]}:8000/v1"

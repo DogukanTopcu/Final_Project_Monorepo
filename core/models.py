@@ -15,7 +15,11 @@ from urllib.parse import urlparse
 
 import requests
 
-from core.model_catalog import get_model_spec
+from core.model_catalog import (
+    get_expected_runtime_model_ids,
+    get_model_spec,
+    get_served_model_id,
+)
 from core.token_budget import compute_completion_budget
 
 # Per-token costs in USD (approximate, May 2026)
@@ -103,80 +107,6 @@ class ModelProvider(ABC):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.model_id})"
-
-
-class OllamaModel(ModelProvider):
-    """Local Ollama model for the selected Qwen, Gemma, and Llama checkpoints."""
-
-    def __init__(
-        self,
-        model_id: str,
-        base_url: str | None = None,
-        temperature: float = 0.0,
-    ) -> None:
-        super().__init__(model_id)
-        self.base_url = (
-            base_url
-            or _get_env(
-                "THESIS_OLLAMA_BASE_URL",
-                "OLLAMA_BASE_URL",
-                default="http://localhost:11434",
-            )
-        ).rstrip("/")
-        self.temperature = temperature
-
-    def generate(self, prompt: str, **kwargs) -> tuple[str, float, int, int, float]:
-        url = f"{self.base_url}/api/generate"
-        max_tokens = _resolve_max_tokens(self, prompt, kwargs)
-        payload = {
-            "model": self.model_id,
-            "prompt": prompt,
-            "stream": False,
-            "options": {
-                "temperature": kwargs.get("temperature", self.temperature),
-                "num_predict": max_tokens,
-            },
-        }
-        resp = requests.post(url, json=payload, timeout=120)
-        resp.raise_for_status()
-        data = resp.json()
-
-        text = data.get("response", "").strip()
-        input_tokens = data.get("prompt_eval_count", 0)
-        output_tokens = data.get("eval_count", 0)
-
-        # Confidence via token probability (Ollama returns logits optionally)
-        confidence = self._estimate_confidence(data)
-        return text, confidence, input_tokens, output_tokens, 0.0  # local = free
-
-    def _estimate_confidence(self, data: dict) -> float:
-        """
-        Approximate confidence from Ollama timing metadata.
-
-        Ollama does not expose token logprobs in this code path, so confidence is
-        necessarily heuristic. The previous implementation used ``tanh`` on raw
-        token/ns throughput and saturated to ``0.95`` for most local runs,
-        which effectively disabled routing fallback.
-
-        This version keeps the estimate in a wider, more useful range by mixing:
-        - decode throughput (tokens / second)
-        - prompt processing throughput
-        - a small length bonus for substantive answers
-        """
-        eval_count = max(int(data.get("eval_count", 0) or 0), 1)
-        prompt_eval_count = max(int(data.get("prompt_eval_count", 0) or 0), 1)
-        eval_duration_ns = max(int(data.get("eval_duration", 0) or 0), 1)
-        prompt_eval_duration_ns = max(int(data.get("prompt_eval_duration", 0) or 0), 1)
-
-        decode_tps = eval_count / (eval_duration_ns / 1_000_000_000)
-        prompt_tps = prompt_eval_count / (prompt_eval_duration_ns / 1_000_000_000)
-
-        decode_score = 1 / (1 + math.exp(-(decode_tps - 22.0) / 7.0))
-        prompt_score = 1 / (1 + math.exp(-(prompt_tps - 160.0) / 45.0))
-        length_score = min(eval_count / 32.0, 1.0)
-
-        confidence = 0.18 + (0.52 * decode_score) + (0.20 * prompt_score) + (0.10 * length_score)
-        return max(0.18, min(0.92, confidence))
 
 
 class OpenAIModel(ModelProvider):
@@ -397,24 +327,20 @@ def get_model(model_id: str) -> ModelProvider:
     """Factory — resolve selected-model aliases to the right runtime provider."""
     spec = get_model_spec(model_id)
     if spec is not None:
-        if spec.provider == "ollama":
-            if _force_openai_compatible(spec):
-                base_url = os.getenv(spec.base_url_env or "", spec.base_url_default or "http://localhost:8000/v1")
-                return OpenAICompatibleModel(
-                    model_id=spec.openai_compatible_model or spec.provider_model,
-                    base_url=base_url,
-                )
-            return OllamaModel(model_id=spec.provider_model)
         if spec.provider == "openai_compatible":
             base_url = os.getenv(spec.base_url_env or "", spec.base_url_default or "http://localhost:8000/v1")
             api_key = os.getenv(spec.api_key_env or "", "")
             return OpenAICompatibleModel(
-                model_id=spec.provider_model,
+                model_id=get_served_model_id(model_id) or spec.provider_model,
                 base_url=base_url,
                 api_key=api_key,
             )
+        raise ValueError(f"Unsupported provider '{spec.provider}' for {model_id}.")
 
-    return OllamaModel(model_id=model_id)
+    if model_id in _GEMINI_MAP:
+        return GeminiModel(model_id=_GEMINI_MAP[model_id])
+
+    raise ValueError(f"Unknown model alias: {model_id}")
 
 
 def get_model_runtime_status(model_id: str) -> dict[str, str | bool]:
@@ -432,15 +358,6 @@ def get_model_runtime_status(model_id: str) -> dict[str, str | bool]:
             "available": False,
             "provider": "unknown",
             "reason": f"Unknown model alias: {model_id}",
-        }
-
-    if spec.provider == "ollama" and not _force_openai_compatible(spec):
-        base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").rstrip("/")
-        return {
-            "available": True,
-            "provider": "ollama",
-            "base_url": base_url,
-            "reason": "Uses local Ollama endpoint.",
         }
 
     base_url = os.getenv(spec.base_url_env or "", spec.base_url_default or "").rstrip("/")
@@ -481,29 +398,24 @@ def assert_model_runnable(model_id: str, timeout: float = 3.0) -> None:
     base_url = str(status.get("base_url", ""))
     spec = get_model_spec(model_id)
     try:
-        if provider == "ollama":
-            resp = requests.get(f"{base_url}/api/tags", timeout=timeout)
-        elif provider == "openai_compatible":
-            resp = requests.get(f"{base_url}/models", timeout=timeout)
-        else:
+        if provider != "openai_compatible":
             raise RuntimeError(f"Unsupported provider for {model_id}: {provider}")
+        resp = requests.get(f"{base_url}/models", timeout=timeout)
         resp.raise_for_status()
-        if provider == "openai_compatible" and spec is not None:
+        if spec is not None:
             payload = resp.json()
             served = {
                 item.get("id")
                 for item in payload.get("data", [])
                 if isinstance(item, dict) and isinstance(item.get("id"), str)
             }
-            expected = {spec.provider_model}
-            if spec.openai_compatible_model:
-                expected.add(spec.openai_compatible_model)
+            expected = get_expected_runtime_model_ids(model_id)
             if served.isdisjoint(expected):
                 raise RuntimeError(
                     f"{model_id} expects one of {sorted(expected)} at {base_url}, "
                     f"but the endpoint currently serves {sorted(served) or ['<none>']}."
                 )
-            probe_model_id = spec.openai_compatible_model or spec.provider_model
+            probe_model_id = get_served_model_id(model_id) or spec.provider_model
             probe_payload = {
                 "model": probe_model_id,
                 "messages": [{"role": "user", "content": "Ping"}],
@@ -520,17 +432,6 @@ def assert_model_runnable(model_id: str, timeout: float = 3.0) -> None:
         raise RuntimeError(
             f"{model_id} is configured for {provider} at {base_url}, but the runtime check failed: {exc}"
         ) from exc
-
-
-def _force_openai_compatible(spec) -> bool:
-    if not spec.openai_compatible_model or not spec.base_url_env:
-        return False
-
-    force_vllm = os.getenv("THESIS_FORCE_VLLM", "").strip().lower()
-    if force_vllm not in {"1", "true", "yes", "on"}:
-        return False
-
-    return bool(os.getenv(spec.base_url_env, spec.base_url_default or ""))
 
 
 def _is_local_or_private_endpoint(base_url: str) -> bool:

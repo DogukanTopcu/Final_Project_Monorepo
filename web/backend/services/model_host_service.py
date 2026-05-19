@@ -19,7 +19,7 @@ from typing import Callable
 import requests
 
 from core.hosts import HOSTS, HostSpec, base_url_for_host, get_host_for_model
-from core.model_catalog import get_model_spec
+from core.model_catalog import get_expected_runtime_model_ids, get_served_model_id
 from core.models import get_model_runtime_status
 from web.backend.dependencies import Settings
 
@@ -105,7 +105,9 @@ class SharedHostReservation:
         expected_model_ids = _expected_served_model_ids(self.model_id)
         if not expected_model_ids:
             raise RuntimeError(f"Could not resolve served model ids for {self.model_id}.")
-        probe_model_id = next(iter(sorted(expected_model_ids)))
+        probe_model_id = get_served_model_id(self.model_id)
+        if not probe_model_id:
+            raise RuntimeError(f"Could not resolve probe model id for {self.model_id}.")
 
         active_model_ids = fetch_served_model_ids(base_url)
         if active_model_ids & expected_model_ids:
@@ -207,13 +209,7 @@ def reserve_llm_host(
 
 
 def _expected_served_model_ids(model_id: str) -> set[str]:
-    spec = get_model_spec(model_id)
-    if spec is None:
-        return set()
-    expected = {spec.provider_model}
-    if spec.openai_compatible_model:
-        expected.add(spec.openai_compatible_model)
-    return {item for item in expected if item}
+    return get_expected_runtime_model_ids(model_id)
 
 
 def fetch_served_model_ids(base_url: str) -> set[str]:

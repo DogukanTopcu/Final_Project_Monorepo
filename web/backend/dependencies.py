@@ -38,11 +38,9 @@ class Settings(BaseSettings):
     s3_artifacts_bucket: str = "thesis-artifacts-dev"
     dynamodb_table: str = "thesis-experiments"
     mlflow_tracking_uri: str = "http://localhost:5000"
-    ollama_base_url: str = "http://localhost:11434"
     openai_api_key: str = ""
     gemini_api_key: str = ""
     together_api_key: str = ""
-    force_vllm: bool = False
     hf_token: str = ""
     rtx6000_autoswitch_enabled: bool = True
     rtx6000_instance_name: str = "dogukan-topcu-rtx6000-spot"

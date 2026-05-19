@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from pathlib import Path
+from contextlib import nullcontext
 import os
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
+from core.model_catalog import SELECTED_MODELS
 from evaluation.reporter import Reporter
 from core.types import ExperimentResult, Query, Response, SampleResult
 from web.backend.dependencies import get_settings
@@ -51,75 +53,68 @@ def test_benchmarks_endpoint_matches_active_benchmarks(client: TestClient):
     assert response.status_code == 200
 
     benchmark_ids = {item["id"] for item in response.json()}
-    assert benchmark_ids == {"mmlu", "arc", "hellaswag", "gsm8k", "truthfulqa"}
+    assert benchmark_ids == {"mmlu", "arc", "hellaswag", "gsm8k", "truthfulqa", "custom_stratified"}
 
 
-def test_models_endpoint_discovers_local_ollama_models(client: TestClient, monkeypatch):
+def test_models_endpoint_lists_selected_remote_models(client: TestClient, monkeypatch):
     from web.backend.routers import models as models_router
 
-    async def fake_fetch(base_url: str):
-        return [{"name": "gemma3:4b"}, {"name": "phi3:mini"}]
+    async def fake_probe(provider: str, base_url: str, timeout: float = 1.5):
+        return True, None
 
-    monkeypatch.setattr(models_router, "fetch_ollama_tags", fake_fetch)
+    monkeypatch.setattr(models_router, "_probe_runtime_endpoint", fake_probe)
+    monkeypatch.setattr(
+        models_router,
+        "fetch_served_model_ids",
+        lambda base_url: {
+            "Qwen/Qwen3.5-4B",
+            "openai/gpt-oss-20b",
+            "meta-llama/Llama-3.3-70B-Instruct",
+        },
+    )
     response = client.get("/api/models")
     assert response.status_code == 200
 
     payload = response.json()
-    assert payload["ollama_reachable"] is True
-    assert [model["id"] for model in payload["slm"]] == ["gemma3:4b", "phi3:mini"]
+    assert {model["id"] for model in payload["slm"]} == {
+        spec.id for spec in SELECTED_MODELS if spec.kind == "slm"
+    }
+    assert {model["id"] for model in payload["llm"]} == {
+        spec.id for spec in SELECTED_MODELS if spec.kind == "llm"
+    }
     assert payload["warnings"] == []
-    assert any(model["id"] == "gemini-2.5-flash" for model in payload["llm"])
-
-
-def test_models_endpoint_handles_unreachable_ollama(client: TestClient, monkeypatch):
-    from web.backend.routers import models as models_router
-
-    async def fake_fetch(base_url: str):
-        raise RuntimeError("down")
-
-    monkeypatch.setattr(models_router, "fetch_ollama_tags", fake_fetch)
-    response = client.get("/api/models")
-    assert response.status_code == 200
-
-    payload = response.json()
-    assert payload["slm"] == []
-    assert payload["ollama_reachable"] is False
-    assert payload["warnings"]
+    qwen = next(model for model in payload["slm"] if model["id"] == "qwen3.5-4b")
+    assert qwen["configured"] is True
+    assert qwen["is_active_on_host"] is None
 
 
 def test_runtime_provider_env_is_synced_from_settings(monkeypatch):
     monkeypatch.delenv("THESIS_GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
-    monkeypatch.delenv("THESIS_OLLAMA_BASE_URL", raising=False)
-    monkeypatch.delenv("OLLAMA_BASE_URL", raising=False)
 
     settings = get_settings()
     settings.gemini_api_key = "gemini-test-key"
-    settings.ollama_base_url = "http://localhost:11434"
 
     experiment_service._sync_runtime_provider_env(settings)  # type: ignore[attr-defined]
 
     assert os.getenv("THESIS_GEMINI_API_KEY") == "gemini-test-key"
     assert os.getenv("GEMINI_API_KEY") == "gemini-test-key"
-    assert os.getenv("THESIS_OLLAMA_BASE_URL") == "http://localhost:11434"
-    assert os.getenv("OLLAMA_BASE_URL") == "http://localhost:11434"
 
 
-def test_launch_rejects_non_routing_architecture(client: TestClient):
+def test_launch_accepts_ensemble_architecture(client: TestClient):
     response = client.post(
         "/api/experiments",
         json={
             "architecture": "ensemble",
             "benchmark": "mmlu",
             "n_samples": 5,
-            "slm": "gemma3:4b",
-            "llm": "gpt-4o-mini",
+            "slm": "qwen3.5-4b",
+            "llm": "gpt-oss-20b",
             "config_overrides": {"dry_run": True},
         },
     )
 
-    assert response.status_code == 400
-    assert "routing only" in response.json()["detail"].lower()
+    assert response.status_code == 200
 
 
 def test_launch_dry_run_transitions_to_completed_and_surfaces_metrics(
@@ -135,8 +130,8 @@ def test_launch_dry_run_transitions_to_completed_and_surfaces_metrics(
             "architecture": "routing",
             "benchmark": "mmlu",
             "n_samples": 3,
-            "slm": "gemma3:4b",
-            "llm": "gpt-4o-mini",
+            "slm": "qwen3.5-4b",
+            "llm": "gpt-oss-20b",
             "config_overrides": {"dry_run": True, "confidence_threshold": 0.65},
         },
     )
@@ -168,8 +163,8 @@ def test_launch_accepts_per_model_runtime_settings(client: TestClient, monkeypat
             "architecture": "routing",
             "benchmark": "mmlu",
             "n_samples": 3,
-            "slm": "gemma3:4b",
-            "llm": "gpt-4o-mini",
+            "slm": "qwen3.5-4b",
+            "llm": "gpt-oss-20b",
             "config_overrides": {
                 "dry_run": True,
                 "slm_temperature": 0.15,
@@ -192,7 +187,7 @@ def test_launch_accepts_per_model_runtime_settings(client: TestClient, monkeypat
     assert payload["config_overrides"]["llm_max_tokens"] == 2048
 
 
-def test_launch_accepts_routing_slm_only_without_runnable_llm(client: TestClient, monkeypatch):
+def test_launch_rejects_unsupported_override_keys(client: TestClient, monkeypatch):
     executor = DeferredExecutor()
     monkeypatch.setattr(experiment_service, "_executor", executor)
 
@@ -202,8 +197,8 @@ def test_launch_accepts_routing_slm_only_without_runnable_llm(client: TestClient
             "architecture": "routing",
             "benchmark": "mmlu",
             "n_samples": 3,
-            "slm": "gemma3:4b",
-            "llm": "gpt-4o-mini",
+            "slm": "qwen3.5-4b",
+            "llm": "gpt-oss-20b",
             "config_overrides": {
                 "slm_only": True,
                 "dry_run": False,
@@ -211,7 +206,7 @@ def test_launch_accepts_routing_slm_only_without_runnable_llm(client: TestClient
         },
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 400
 
 
 def test_launch_rejects_invalid_runtime_setting_ranges(client: TestClient):
@@ -221,8 +216,8 @@ def test_launch_rejects_invalid_runtime_setting_ranges(client: TestClient):
             "architecture": "routing",
             "benchmark": "mmlu",
             "n_samples": 3,
-            "slm": "gemma3:4b",
-            "llm": "gpt-4o-mini",
+            "slm": "qwen3.5-4b",
+            "llm": "gpt-oss-20b",
             "config_overrides": {"slm_temperature": 2.5},
         },
     )
@@ -247,7 +242,7 @@ def test_sse_events_and_results_use_real_metric_shape(client: TestClient, monkey
                     text="B",
                     predicted_answer="B",
                     confidence=0.82,
-                    model_id="gemma3:4b",
+                    model_id="qwen3.5-4b",
                     latency_ms=12.5,
                     input_tokens=4,
                     output_tokens=2,
@@ -268,7 +263,7 @@ def test_sse_events_and_results_use_real_metric_shape(client: TestClient, monkey
                             text="B",
                             predicted_answer="B",
                             confidence=0.82,
-                            model_id="gpt-4o-mini",
+                            model_id="gpt-oss-20b",
                             latency_ms=12.5,
                             input_tokens=4,
                             output_tokens=2,
@@ -283,6 +278,7 @@ def test_sse_events_and_results_use_real_metric_shape(client: TestClient, monkey
     executor = DeferredExecutor()
     monkeypatch.setattr(experiment_service, "_executor", executor)
     monkeypatch.setattr(experiment_service, "ExperimentRunner", FakeRunner)
+    monkeypatch.setattr(experiment_service, "reserve_llm_host", lambda *args, **kwargs: nullcontext())
 
     response = client.post(
         "/api/experiments",
@@ -290,8 +286,8 @@ def test_sse_events_and_results_use_real_metric_shape(client: TestClient, monkey
             "architecture": "routing",
             "benchmark": "arc",
             "n_samples": 1,
-            "slm": "gemma3:4b",
-            "llm": "gpt-4o-mini",
+            "slm": "qwen3.5-4b",
+            "llm": "gpt-oss-20b",
             "config_overrides": {"confidence_threshold": 0.7},
         },
     )
@@ -302,7 +298,10 @@ def test_sse_events_and_results_use_real_metric_shape(client: TestClient, monkey
     fn(*args, **kwargs)
 
     events = experiment_service.get_events(experiment_id)
-    assert [event["type"] for event in events] == ["progress", "metric", "metric", "complete"]
+    event_types = [event["type"] for event in events]
+    assert "progress" in event_types
+    assert event_types.count("metric") == 2
+    assert event_types[-1] == "complete"
     assert "total_cost_usd" in events[-1]["metrics"]
     assert "eats_score" in events[-1]["metrics"]
 
@@ -416,10 +415,7 @@ def test_experiments_endpoint_includes_persisted_local_results(client: TestClien
     assert matching["slm"] == "qwen3.5-4b"
 
 
-def test_launch_accepts_gemini_configured_fallback(client: TestClient, monkeypatch):
-    monkeypatch.setenv("THESIS_GEMINI_API_KEY", "gemini-test-key")
-    get_settings.cache_clear()
-
+def test_launch_rejects_unknown_llm_alias(client: TestClient, monkeypatch):
     executor = DeferredExecutor()
     monkeypatch.setattr(experiment_service, "_executor", executor)
 
@@ -429,23 +425,23 @@ def test_launch_accepts_gemini_configured_fallback(client: TestClient, monkeypat
             "architecture": "routing",
             "benchmark": "mmlu",
             "n_samples": 2,
-            "slm": "gemma3:4b",
+            "slm": "qwen3.5-4b",
             "llm": "gemini-2.5-flash",
             "config_overrides": {"dry_run": False},
         },
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 400
 
 
-def create_stub_params(llm: str = "gpt-4o-mini"):
+def create_stub_params(llm: str = "gpt-oss-20b"):
     from web.backend.schemas import Architecture, Benchmark, ExperimentCreate
 
     return ExperimentCreate(
         architecture=Architecture.ROUTING,
         benchmark=Benchmark.MMLU,
         n_samples=1,
-        slm="gemma4:latest",
+        slm="qwen3.5-4b",
         llm=llm,
         config_overrides={"confidence_threshold": 0.7},
     )

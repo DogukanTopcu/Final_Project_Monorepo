@@ -118,7 +118,6 @@ cp .env.example .env
 
 Fill at least:
 - `HF_TOKEN`
-- `THESIS_FORCE_VLLM`
 - `MLFLOW_TRACKING_URI`
 - `THESIS_MLFLOW_TRACKING_URI`
 - the `VLLM_*_URL` entries for the models you actually deployed
@@ -266,6 +265,6 @@ Known constraint from current work:
 ## Additional Notes
 
 - The frontend and backend are now aligned to the shared model catalog instead of hardcoded provider assumptions.
-- The system no longer assumes Ollama-first or hosted-API-first operation.
+- The system assumes remote OpenAI-compatible endpoints for all selected aliases.
 - Remote vLLM endpoints are the primary experiment runtime path.
 - Legacy files for monolithic or speculative variants may remain in the repo for reference, but the active experiment surface is `routing`, `multi_agent`, and `ensemble`.

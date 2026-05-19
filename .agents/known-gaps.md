@@ -57,7 +57,6 @@ Bu dosya, repo extraction sırasında görülen yapılacak işleri merkezi olara
 - `.env.example` eklenmeli veya compose `.env` yokken anlamlı çalışmalı.
 - API Dockerfile extra ismi pyproject ile uyumlu hale getirilmeli.
 - Compose'a runner service eklenip eklenmeyeceği netleştirilmeli.
-- API servisinde Ollama base URL compose network'e göre ayarlanmalı.
 - MLflow CMD env expansion davranışı doğrulanmalı.
 
 ## Infrastructure İşleri

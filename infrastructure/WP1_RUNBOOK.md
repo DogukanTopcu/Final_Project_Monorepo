@@ -66,7 +66,6 @@ npm run dev
 
 Create `.env` from `.env.example` and fill:
 - `HF_TOKEN`
-- `THESIS_FORCE_VLLM`
 - `MLFLOW_TRACKING_URI`
 - `THESIS_MLFLOW_TRACKING_URI`
 - the `VLLM_*_URL` values for deployed hosts
@@ -74,7 +73,6 @@ Create `.env` from `.env.example` and fill:
 Current recommended default:
 
 ```env
-THESIS_FORCE_VLLM=1
 MLFLOW_TRACKING_URI=http://127.0.0.1:5000
 THESIS_MLFLOW_TRACKING_URI=http://127.0.0.1:5000
 ```
@@ -211,8 +209,6 @@ Map each deployed endpoint to the alias env vars.
 Example:
 
 ```env
-THESIS_FORCE_VLLM=1
-
 VLLM_QWEN35_4B_URL=http://<L4_QWEN_IP>:8000/v1
 VLLM_GEMMA4_E4B_URL=http://<L4_GEMMA_IP>:8000/v1
 VLLM_LLAMA32_3B_URL=http://<L4_LLAMA_IP>:8000/v1
@@ -240,7 +236,6 @@ curl -fsS http://127.0.0.1:8000/models | jq .
 Expected:
 - runnable SLMs appear under `slm`
 - runnable LLMs appear under `llm`
-- `runtime_mode` reflects `THESIS_FORCE_VLLM`
 
 ## 9. Smoke Tests
 

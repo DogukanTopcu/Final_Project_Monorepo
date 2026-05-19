@@ -13,7 +13,7 @@ import time
 from fastapi import APIRouter, Depends, HTTPException
 
 from core.hosts import get_host_for_model, resolve_base_url
-from core.model_catalog import get_model_spec
+from core.model_catalog import get_expected_runtime_model_ids
 from core.models import get_model, get_model_runtime_status
 from core.token_budget import compute_completion_budget
 from web.backend.dependencies import Settings, get_settings
@@ -39,14 +39,9 @@ def _ensure_alias_active_on_host(model_id: str) -> None:
     if not base_url:
         return
 
-    spec = get_model_spec(model_id)
-    if spec is None:
+    expected = get_expected_runtime_model_ids(model_id)
+    if not expected:
         return
-
-    expected = {spec.provider_model}
-    if spec.openai_compatible_model:
-        expected.add(spec.openai_compatible_model)
-    expected = {e for e in expected if e}
 
     served = fetch_served_model_ids(base_url.rstrip("/"))
     if not served:
