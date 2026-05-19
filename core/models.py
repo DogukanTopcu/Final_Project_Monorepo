@@ -2,7 +2,7 @@
 Model provider abstractions.
 
 All providers implement a common interface:
-    generate(prompt: str, **kwargs) -> tuple[str, float, int, int, float]
+    generate(prompt: str, **kwargs) -> tuple[str, float | None, int, int, float]
     Returns: (text, confidence, input_tokens, output_tokens, cost_usd)
 """
 from __future__ import annotations
@@ -102,7 +102,7 @@ class ModelProvider(ABC):
         self.model_id = model_id
 
     @abstractmethod
-    def generate(self, prompt: str, **kwargs) -> tuple[str, float, int, int, float]:
+    def generate(self, prompt: str, **kwargs) -> tuple[str, float | None, int, int, float]:
         """Returns (text, confidence, input_tokens, output_tokens, cost_usd)."""
 
     def __repr__(self) -> str:
@@ -125,7 +125,7 @@ class OpenAIModel(ModelProvider):
         )
         self.temperature = temperature
 
-    def generate(self, prompt: str, **kwargs) -> tuple[str, float, int, int, float]:
+    def generate(self, prompt: str, **kwargs) -> tuple[str, float | None, int, int, float]:
         import openai
         client = openai.OpenAI(api_key=self.api_key)
         max_tokens = _resolve_max_tokens(self, prompt, kwargs)
@@ -183,7 +183,7 @@ class TogetherModel(ModelProvider):
         )
         self.temperature = temperature
 
-    def generate(self, prompt: str, **kwargs) -> tuple[str, float, int, int, float]:
+    def generate(self, prompt: str, **kwargs) -> tuple[str, float | None, int, int, float]:
         url = "https://api.together.xyz/v1/chat/completions"
         max_tokens = _resolve_max_tokens(self, prompt, kwargs)
         headers = {
@@ -227,7 +227,7 @@ class GeminiModel(ModelProvider):
         self.temperature = temperature
         self.base_url = base_url
 
-    def generate(self, prompt: str, **kwargs) -> tuple[str, float, int, int, float]:
+    def generate(self, prompt: str, **kwargs) -> tuple[str, float | None, int, int, float]:
         import openai
         max_tokens = _resolve_max_tokens(self, prompt, kwargs)
 
@@ -271,7 +271,7 @@ class OpenAICompatibleModel(ModelProvider):
         self.temperature = temperature
         self._local_endpoint = _is_local_or_private_endpoint(self.base_url)
 
-    def generate(self, prompt: str, **kwargs) -> tuple[str, float, int, int, float]:
+    def generate(self, prompt: str, **kwargs) -> tuple[str, float | None, int, int, float]:
         max_tokens = _resolve_max_tokens(self, prompt, kwargs)
         payload = {
             "model": self.model_id,

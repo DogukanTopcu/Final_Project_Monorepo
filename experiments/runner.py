@@ -106,6 +106,10 @@ class ExperimentRunner:
         if cfg.architecture == "routing":
             arch_kwargs["slm_only"] = cfg.slm_only
             arch_kwargs["confidence_threshold"] = cfg.confidence_threshold
+            arch_kwargs["margin_threshold"] = cfg.margin_threshold
+            arch_kwargs["long_input_token_threshold"] = cfg.long_input_token_threshold
+            arch_kwargs["force_escalate"] = cfg.force_escalate
+            arch_kwargs["confidence_method"] = cfg.confidence_method
         elif cfg.architecture == "multi_agent":
             arch_kwargs["arbitrator"] = cfg.arbitrator
             arch_kwargs["n_rounds"] = cfg.n_debate_rounds

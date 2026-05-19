@@ -68,8 +68,10 @@ def compute_metrics(
     p95_idx = int(len(latencies) * 0.95)
     p95 = sorted(latencies)[min(p95_idx, len(latencies) - 1)] if latencies else 0.0
     confidences = [
-        float(s.response.metadata.get("slm_confidence", s.response.confidence))
+        float(conf)
         for s in result.samples
+        for conf in [s.response.metadata.get("slm_confidence", s.response.confidence)]
+        if conf is not None
     ]
     escalated_samples = [
         s for s in result.samples if bool(s.response.metadata.get("escalated", s.response.llm_calls))
@@ -78,12 +80,16 @@ def compute_metrics(
         s for s in result.samples if not bool(s.response.metadata.get("escalated", s.response.llm_calls))
     ]
     escalated_confidences = [
-        float(s.response.metadata.get("slm_confidence", s.response.confidence))
+        float(conf)
         for s in escalated_samples
+        for conf in [s.response.metadata.get("slm_confidence", s.response.confidence)]
+        if conf is not None
     ]
     non_escalated_confidences = [
-        float(s.response.metadata.get("slm_confidence", s.response.confidence))
+        float(conf)
         for s in non_escalated_samples
+        for conf in [s.response.metadata.get("slm_confidence", s.response.confidence)]
+        if conf is not None
     ]
     n_escalated = len(escalated_samples)
     n_total = int(base["n_total"])

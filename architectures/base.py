@@ -25,7 +25,7 @@ class BaseArchitecture(ABC):
 
     def _timed_generate(
         self, provider: ModelProvider, prompt: str, **kwargs
-    ) -> tuple[str, float, int, int, float, float]:
+    ) -> tuple[str, float | None, int, int, float, float]:
         """Wraps generate() with wall-clock timing."""
         t0 = time.perf_counter()
         text, conf, in_tok, out_tok, cost = provider.generate(prompt, **kwargs)

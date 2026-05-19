@@ -18,7 +18,7 @@ class Response:
     query_id: str
     text: str                           # raw model output
     predicted_answer: str | None = None # parsed answer (A/B/C/D or text)
-    confidence: float = 1.0             # 0-1, used by routing arch
+    confidence: float | None = 1.0      # 0-1, used by routing arch
     model_id: str = ""
     latency_ms: float = 0.0
     input_tokens: int = 0
@@ -48,6 +48,10 @@ class ExperimentConfig:
     slm_only: bool = False
     # Arch A params
     confidence_threshold: float = 0.7
+    margin_threshold: float | None = None
+    long_input_token_threshold: int | None = None
+    force_escalate: bool = False
+    confidence_method: str = "existing_model_confidence"
     # Arch B params
     n_debate_rounds: int = 1
     arbitrator: str = "llm"        # "llm" | "slm"

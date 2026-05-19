@@ -22,11 +22,20 @@ class Reporter:
     ) -> Path:
         metrics = compute_metrics(result, full_llm_cost_usd)
         now = datetime.now(timezone.utc).isoformat()
+        config_payload = dataclasses.asdict(result.config)
+        if result.config.architecture == "routing":
+            config_payload["routing_policy"] = {
+                "confidence_threshold": result.config.confidence_threshold,
+                "margin_threshold": result.config.margin_threshold,
+                "long_input_token_threshold": result.config.long_input_token_threshold,
+                "parse_failure_escalates": True,
+                "force_escalate": result.config.force_escalate,
+            }
 
         report = {
             "experiment_id": result.experiment_id,
             "created_at": now,
-            "config": dataclasses.asdict(result.config),
+            "config": config_payload,
             "metrics": metrics,
             "samples": [
                 self._sample_payload(s)
@@ -96,11 +105,44 @@ class Reporter:
     def _sample_payload(sample) -> dict:
         metadata = sample.response.metadata
         escalated = bool(metadata.get("escalated", sample.response.llm_calls))
+        slm_raw_text = metadata.get("slm_raw_text", metadata.get("slm_text"))
+        slm_parsed_answer = metadata.get("slm_parsed_answer")
+        llm_raw_text = metadata.get("llm_raw_text", metadata.get("llm_text"))
+        llm_parsed_answer = metadata.get("llm_parsed_answer")
+        final_raw_text = metadata.get("final_raw_text", sample.response.text)
+        final_parsed_answer = metadata.get(
+            "final_parsed_answer",
+            sample.response.predicted_answer,
+        )
+        slm_parse_status = metadata.get("slm_parse_status")
+        if slm_parse_status is None:
+            slm_parse_status = "parsed" if slm_parsed_answer is not None else "unparseable"
+        llm_parse_status = metadata.get("llm_parse_status")
+        final_answer_source = metadata.get(
+            "final_answer_source",
+            "llm" if escalated else "slm",
+        )
+        routing_decision = metadata.get("routing_decision") or {
+            "accepted_by": "llm" if escalated else "slm",
+            "threshold": metadata.get("confidence_threshold"),
+            "confidence_method": metadata.get("confidence_method"),
+            "signals": {
+                "parse_success": slm_parsed_answer is not None,
+                "confidence": metadata.get("slm_confidence", sample.response.confidence),
+                "top2_margin": metadata.get("top2_margin"),
+                "input_tokens": metadata.get("slm_input_tokens", sample.response.input_tokens),
+                "input_too_long": False,
+                "low_confidence": False,
+                "low_margin": False,
+                "forced_escalation": bool(metadata.get("force_escalate", False)),
+            },
+        }
         payload = {
             "query_id": sample.query.id,
             "query_text": sample.query.text,
+            "query_choices": sample.query.choices,
             "correct": sample.correct,
-            "predicted": sample.response.predicted_answer,
+            "predicted": final_parsed_answer,
             "ground_truth": sample.query.answer,
             "llm_calls": sample.response.llm_calls,
             "confidence": sample.response.confidence,
@@ -116,6 +158,20 @@ class Reporter:
             "escalated": escalated,
             "slm_confidence": metadata.get("slm_confidence", sample.response.confidence),
             "confidence_threshold": metadata.get("confidence_threshold"),
+            "margin_threshold": metadata.get("margin_threshold"),
+            "long_input_token_threshold": metadata.get("long_input_token_threshold"),
+            "confidence_method": metadata.get("confidence_method"),
+            "slm_raw_text": slm_raw_text,
+            "slm_parsed_answer": slm_parsed_answer,
+            "slm_parse_status": slm_parse_status,
+            "llm_raw_text": llm_raw_text,
+            "llm_parsed_answer": llm_parsed_answer,
+            "llm_parse_status": llm_parse_status,
+            "final_raw_text": final_raw_text,
+            "final_parsed_answer": final_parsed_answer,
+            "final_answer_source": final_answer_source,
+            "escalation_reason": metadata.get("escalation_reason"),
+            "routing_decision": routing_decision,
             "slm_latency_ms": metadata.get("slm_latency_ms"),
             "llm_latency_ms": metadata.get("llm_latency_ms"),
             "slm_input_tokens": metadata.get("slm_input_tokens"),
@@ -126,13 +182,8 @@ class Reporter:
             "llm_cost_usd": metadata.get("llm_cost_usd"),
             "resource_estimate": metadata.get("resource_estimate"),
             "inference_steps": metadata.get("inference_steps", []),
+            "prompt_text": metadata.get("prompt_text"),
+            "slm_text": slm_raw_text,
+            "final_text": final_raw_text,
         }
-        if escalated:
-            payload.update(
-                {
-                    "prompt_text": metadata.get("prompt_text"),
-                    "slm_text": metadata.get("slm_text"),
-                    "final_text": sample.response.text,
-                }
-            )
         return payload

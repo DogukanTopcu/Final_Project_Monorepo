@@ -115,9 +115,20 @@ export interface ResultDetail {
   created_at: string;
 }
 
+export interface ResultSampleInferenceStep {
+  role?: string;
+  model_id?: string;
+  latency_ms?: number;
+  input_tokens?: number;
+  output_tokens?: number;
+  api_cost_usd?: number;
+  [key: string]: unknown;
+}
+
 export interface ResultSample {
   query_id: string;
   query_text?: string;
+  query_choices?: string[] | null;
   correct: boolean;
   predicted?: string | null;
   ground_truth?: string | null;
@@ -144,10 +155,11 @@ export interface ResultSample {
   slm_cost_usd?: number | null;
   llm_cost_usd?: number | null;
   resource_estimate?: Record<string, unknown> | null;
-  inference_steps?: Record<string, unknown>[];
+  inference_steps?: ResultSampleInferenceStep[];
   prompt_text?: string | null;
   slm_text?: string | null;
   final_text?: string | null;
+  [key: string]: unknown;
 }
 
 export interface ComparisonResponse {
