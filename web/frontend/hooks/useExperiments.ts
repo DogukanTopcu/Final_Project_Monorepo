@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { ExperimentCreate } from "@/types";
+import type { ExperimentCreate, ResultDetail } from "@/types";
 
 export function useExperiments() {
   return useQuery({
@@ -47,10 +47,31 @@ export function useResults() {
   });
 }
 
-export function useResult(id: string) {
-  return useQuery({
+interface UseResultOptions {
+  expectedSamples?: number | null;
+}
+
+export function useResult(id: string, options?: UseResultOptions) {
+  return useQuery<ResultDetail | null>({
     queryKey: ["results", id],
-    queryFn: () => api.getResult(id),
+    queryFn: async () => {
+      try {
+        return await api.getResult(id);
+      } catch (error) {
+        if (error instanceof Error && error.message.startsWith("API 404:")) {
+          return null;
+        }
+        throw error;
+      }
+    },
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (!data) return 3000;
+      if ((options?.expectedSamples ?? 0) > 0 && data.samples.length === 0) {
+        return 3000;
+      }
+      return false;
+    },
   });
 }
 

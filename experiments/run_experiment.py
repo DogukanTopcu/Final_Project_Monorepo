@@ -48,6 +48,8 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument("--slm_only", action="store_true")
     p.add_argument("--confidence_threshold", type=float, default=0.7)
+    p.add_argument("--margin_threshold", type=float)
+    p.add_argument("--long-input-token-threshold", dest="long_input_token_threshold", type=int)
     p.add_argument("--arbitrator", choices=["slm", "llm"], default="slm")
     p.add_argument("--n_models", type=int, default=3)
     p.add_argument("--voting", choices=["majority", "weighted"], default="majority")
@@ -75,6 +77,8 @@ def build_config(args: argparse.Namespace, architecture: str) -> ExperimentConfi
         llm_max_tokens=args.llm_max_tokens,
         slm_only=args.slm_only,
         confidence_threshold=args.confidence_threshold,
+        margin_threshold=args.margin_threshold,
+        long_input_token_threshold=args.long_input_token_threshold,
         arbitrator=args.arbitrator,
         n_models=args.n_models,
         voting=args.voting,

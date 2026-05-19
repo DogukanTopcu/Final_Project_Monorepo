@@ -74,6 +74,9 @@ class EnsembleArchitecture(BaseArchitecture):
         total_cost = total_latency = 0.0
         inference_steps: list[dict[str, object]] = []
         member_models: list[str] = []
+        member_responses: list[dict[str, object]] = []
+        llm_tiebreak_text: str | None = None
+        llm_tiebreak_parsed: str | None = None
 
         for idx, member in enumerate(self.slms):
             slm_budget = compute_completion_budget(
@@ -94,6 +97,26 @@ class EnsembleArchitecture(BaseArchitecture):
             total_cost += cost
             total_latency += lat
             member_models.append(member.model_id)
+            parsed = (
+                parse_mcq_answer(text)
+                if self.task_type == "mcq"
+                else parse_open_answer(text)
+            )
+            member_responses.append(
+                {
+                    "member_index": idx + 1,
+                    "role": f"ensemble_member_{idx + 1}",
+                    "model_id": member.model_id,
+                    "raw_text": text,
+                    "parsed_answer": parsed,
+                    "parse_status": "parsed" if parsed is not None else "unparseable",
+                    "confidence": conf,
+                    "input_tokens": in_t,
+                    "output_tokens": out_t,
+                    "latency_ms": lat,
+                    "cost_usd": cost,
+                }
+            )
             inference_steps.append(
                 {
                     "role": f"ensemble_member_{idx + 1}",
@@ -104,23 +127,22 @@ class EnsembleArchitecture(BaseArchitecture):
                     "api_cost_usd": cost,
                 }
             )
-            parsed = (
-                parse_mcq_answer(text)
-                if self.task_type == "mcq"
-                else parse_open_answer(text)
-            )
             if parsed:
                 votes.append(parsed)
                 confidences.append(conf)
 
         llm_calls = 0
         final_answer: str | None = None
+        final_answer_source = "none"
+        final_model_id = self.slms[0].model_id
 
         if votes:
             if self.voting == "weighted":
                 final_answer = self._weighted_vote(votes, confidences)
             else:
                 final_answer = self._majority_vote(votes)
+            if final_answer is not None:
+                final_answer_source = "ensemble_vote"
 
         # Tiebreaker: no clear majority across SLMs
         if final_answer is None and self.llm_tiebreak and self.llm is not None:
@@ -137,6 +159,12 @@ class EnsembleArchitecture(BaseArchitecture):
                 temperature=self.llm_temperature,
                 max_tokens=llm_budget,
             )
+            llm_tiebreak_text = llm_text
+            llm_tiebreak_parsed = (
+                parse_mcq_answer(llm_text)
+                if self.task_type == "mcq"
+                else parse_open_answer(llm_text)
+            )
             total_in += l_in
             total_out += l_out
             total_cost += l_cost
@@ -152,17 +180,21 @@ class EnsembleArchitecture(BaseArchitecture):
                     "api_cost_usd": l_cost,
                 }
             )
-            final_answer = (
-                parse_mcq_answer(llm_text)
-                if self.task_type == "mcq"
-                else parse_open_answer(llm_text)
-            )
+            final_answer = llm_tiebreak_parsed
+            final_answer_source = "llm_tiebreak" if llm_tiebreak_parsed is not None else "none"
+            final_model_id = self.llm.model_id
 
         avg_conf = sum(confidences) / len(confidences) if confidences else 0.5
+        vote_counts = Counter(votes)
+        member_summary_text = "\n".join(
+            f"{member['member_index']}. {member['model_id']}: {member['raw_text']}"
+            for member in member_responses
+        )
+        final_text = str(final_answer) if final_answer is not None else ""
 
         return Response(
             query_id=query.id,
-            text=str(final_answer),
+            text=final_text,
             predicted_answer=final_answer,
             confidence=avg_conf,
             model_id=self.slms[0].model_id,
@@ -172,12 +204,26 @@ class EnsembleArchitecture(BaseArchitecture):
             cost_usd=total_cost,
             llm_calls=llm_calls,
             metadata={
+                "prompt_text": prompt,
+                "slm_text": member_summary_text,
+                "final_text": final_text,
+                "final_model_id": final_model_id,
+                "final_answer_source": final_answer_source,
                 "votes": votes,
+                "vote_counts": dict(vote_counts),
                 "confidences": confidences,
                 "voting_method": self.voting,
                 "n_models": self.n_models,
                 "members": member_models,
+                "ensemble_member_responses": member_responses,
                 "llm_tiebreak": self.llm_tiebreak,
+                "llm_tiebreak_raw_text": llm_tiebreak_text,
+                "llm_tiebreak_parsed_answer": llm_tiebreak_parsed,
+                "llm_tiebreak_parse_status": (
+                    None
+                    if llm_tiebreak_text is None
+                    else ("parsed" if llm_tiebreak_parsed is not None else "unparseable")
+                ),
                 "inference_steps": inference_steps,
             },
         )

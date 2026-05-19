@@ -1,6 +1,8 @@
 """Prompt templates for MCQ and open-ended benchmarks."""
 from __future__ import annotations
 
+import re
+
 from core.types import Query
 
 
@@ -31,7 +33,6 @@ def open_prompt(query: Query) -> str:
 
 def parse_mcq_answer(text: str) -> str | None:
     """Extract single-letter MCQ answer from model output."""
-    import re
     normalized = text.strip().upper()
     if normalized in {"A", "B", "C", "D"}:
         return normalized
@@ -52,10 +53,18 @@ def parse_mcq_answer(text: str) -> str | None:
 
 def parse_open_answer(text: str) -> str | None:
     """Extract numeric answer from open-ended output (GSM8K)."""
-    import re
-    m = re.search(r"Answer:\s*(-?\d[\d,\.]*)", text, re.IGNORECASE)
-    if m:
-        return m.group(1).replace(",", "")
-    # Fallback: last number in text
-    numbers = re.findall(r"-?\d[\d,\.]*", text)
-    return numbers[-1].replace(",", "") if numbers else None
+    stripped = text.strip()
+    if not stripped:
+        return None
+
+    patterns = [
+        r"(?im)^\s*Answer:\s*(-?\d[\d,\.]*)\s*$",
+        r"(?im)^\s*Final Answer:\s*(-?\d[\d,\.]*)\s*$",
+        r"(?im)^\s*The answer is\s*(-?\d[\d,\.]*)\s*$",
+        r"(?im)^\s*(-?\d[\d,\.]*)\s*$",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, stripped)
+        if match:
+            return match.group(1).replace(",", "")
+    return None

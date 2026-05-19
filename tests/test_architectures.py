@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 from core.types import Query, Response
 from core.models import ModelProvider
-from architectures.routing import RoutingArchitecture
+from architectures.routing import RoutingArchitecture, should_escalate
 from architectures.multi_agent import MultiAgentArchitecture
 from architectures.ensemble import EnsembleArchitecture
 
@@ -14,7 +14,12 @@ from architectures.ensemble import EnsembleArchitecture
 class StubModel(ModelProvider):
     """Returns a fixed answer with configurable confidence."""
 
-    def __init__(self, model_id: str, answer: str = "A", confidence: float = 0.9) -> None:
+    def __init__(
+        self,
+        model_id: str,
+        answer: str = "A",
+        confidence: float | None = 0.9,
+    ) -> None:
         super().__init__(model_id)
         self._answer = answer
         self._confidence = confidence
@@ -52,6 +57,79 @@ QUERY = Query(
 
 
 class TestRoutingArchitecture:
+    def test_should_escalate_parse_failure(self):
+        escalate, reason, signals = should_escalate(
+            parsed_answer=None,
+            confidence=0.95,
+            confidence_threshold=0.7,
+        )
+        assert escalate is True
+        assert reason == "parse_failed"
+        assert signals["parse_success"] is False
+
+    def test_should_escalate_low_confidence(self):
+        escalate, reason, _ = should_escalate(
+            parsed_answer="A",
+            confidence=0.4,
+            confidence_threshold=0.7,
+        )
+        assert escalate is True
+        assert reason == "confidence_below_threshold"
+
+    def test_should_accept_high_confidence(self):
+        escalate, reason, _ = should_escalate(
+            parsed_answer="A",
+            confidence=0.9,
+            confidence_threshold=0.7,
+        )
+        assert escalate is False
+        assert reason == "accepted_by_slm_confidence"
+
+    def test_should_escalate_missing_confidence(self):
+        escalate, reason, _ = should_escalate(
+            parsed_answer="A",
+            confidence=None,
+            confidence_threshold=0.7,
+        )
+        assert escalate is True
+        assert reason == "missing_confidence"
+
+    def test_should_escalate_long_input_when_threshold_is_set(self):
+        escalate, reason, signals = should_escalate(
+            parsed_answer="A",
+            confidence=0.9,
+            confidence_threshold=0.7,
+            input_tokens=500,
+            long_input_token_threshold=250,
+        )
+        assert escalate is True
+        assert reason == "input_too_long"
+        assert signals["input_too_long"] is True
+
+    def test_should_escalate_low_margin_when_available(self):
+        escalate, reason, signals = should_escalate(
+            parsed_answer="A",
+            confidence=0.9,
+            confidence_threshold=0.7,
+            top2_margin=0.05,
+            margin_threshold=0.1,
+        )
+        assert escalate is True
+        assert reason == "top2_margin_below_threshold"
+        assert signals["low_margin"] is True
+
+    def test_unavailable_margin_does_not_escalate_by_itself(self):
+        escalate, reason, signals = should_escalate(
+            parsed_answer="A",
+            confidence=0.9,
+            confidence_threshold=0.7,
+            top2_margin=None,
+            margin_threshold=0.1,
+        )
+        assert escalate is False
+        assert reason == "accepted_by_slm_confidence"
+        assert signals["top2_margin"] is None
+
     def test_high_confidence_uses_slm_only(self):
         slm = StubModel("slm", answer="B", confidence=0.9)
         llm = StubModel("llm", answer="B", confidence=0.9)
@@ -75,6 +153,21 @@ class TestRoutingArchitecture:
         resp = arch.run(QUERY)
         assert resp.predicted_answer == "B"
 
+    def test_non_escalated_response_contains_observability_fields(self):
+        slm = StubModel("slm", answer="B", confidence=0.9)
+        llm = StubModel("llm", answer="A", confidence=0.9)
+        arch = RoutingArchitecture(slm=slm, llm=llm, confidence_threshold=0.7)
+        resp = arch.run(QUERY)
+
+        assert resp.metadata["slm_raw_text"] == "B"
+        assert resp.metadata["slm_parsed_answer"] == "B"
+        assert resp.metadata["final_raw_text"] == "B"
+        assert resp.metadata["final_parsed_answer"] == "B"
+        assert resp.metadata["final_answer_source"] == "slm"
+        assert resp.metadata["escalation_reason"] == "accepted_by_slm_confidence"
+        assert resp.metadata["routing_decision"]["accepted_by"] == "slm"
+        assert resp.predicted_answer == resp.metadata["final_parsed_answer"]
+
     def test_unparseable_slm_answer_escalates_even_with_high_confidence(self):
         slm = StubModel("slm", answer="I am not sure", confidence=0.91)
         llm = StubModel("llm", answer="B", confidence=0.9)
@@ -82,6 +175,35 @@ class TestRoutingArchitecture:
         resp = arch.run(QUERY)
         assert resp.llm_calls == 1
         assert resp.model_id == "llm"
+
+    def test_escalated_response_contains_slm_and_llm_observability_fields(self):
+        slm = StubModel("slm", answer="A", confidence=0.3)
+        llm = StubModel("llm", answer="B", confidence=0.9)
+        arch = RoutingArchitecture(slm=slm, llm=llm, confidence_threshold=0.7)
+        resp = arch.run(QUERY)
+
+        assert resp.metadata["slm_raw_text"] == "A"
+        assert resp.metadata["slm_parsed_answer"] == "A"
+        assert resp.metadata["llm_raw_text"] == "B"
+        assert resp.metadata["llm_parsed_answer"] == "B"
+        assert resp.metadata["final_raw_text"] == "B"
+        assert resp.metadata["final_parsed_answer"] == "B"
+        assert resp.metadata["final_answer_source"] == "llm"
+        assert resp.metadata["escalation_reason"] == "confidence_below_threshold"
+        assert resp.metadata["routing_decision"]["accepted_by"] == "llm"
+        assert resp.predicted_answer == resp.metadata["final_parsed_answer"]
+
+    def test_llm_parse_failure_returns_null_final_answer(self):
+        slm = StubModel("slm", answer="A", confidence=0.2)
+        llm = StubModel("llm", answer="not a letter", confidence=0.9)
+        arch = RoutingArchitecture(slm=slm, llm=llm, confidence_threshold=0.7)
+        resp = arch.run(QUERY)
+
+        assert resp.llm_calls == 1
+        assert resp.predicted_answer is None
+        assert resp.metadata["llm_parse_status"] == "unparseable"
+        assert resp.metadata["final_parsed_answer"] is None
+        assert resp.metadata["final_answer_source"] == "none"
 
     def test_routing_passes_per_model_generation_settings(self):
         slm = RecordingStubModel("slm", answer="A", confidence=0.2)
@@ -160,6 +282,10 @@ class TestEnsembleArchitecture:
         resp = arch.run(QUERY)
         assert resp.predicted_answer == "B"
         assert resp.llm_calls == 0
+        assert len(resp.metadata["ensemble_member_responses"]) == 3
+        assert resp.metadata["ensemble_member_responses"][0]["raw_text"] == "B"
+        assert resp.metadata["ensemble_member_responses"][0]["parsed_answer"] == "B"
+        assert resp.metadata["final_answer_source"] == "ensemble_vote"
 
     def test_no_majority_with_llm_tiebreak(self):
         # 3 models all return different answers — simulate by patching
@@ -173,6 +299,9 @@ class TestEnsembleArchitecture:
         )
         resp = arch.run(QUERY)
         assert resp.llm_calls == 1
+        assert resp.metadata["llm_tiebreak_raw_text"] == "B"
+        assert resp.metadata["llm_tiebreak_parsed_answer"] == "B"
+        assert resp.metadata["final_answer_source"] == "llm_tiebreak"
 
     def test_ensemble_uses_slm_and_llm_specific_settings(self):
         slm = SequenceRecordingStubModel("slm", answers=["A", "B"], confidence=0.85)
