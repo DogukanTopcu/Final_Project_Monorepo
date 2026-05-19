@@ -109,7 +109,7 @@ class DecentralizedBlackboardArchitecture(BaseArchitecture):
             id=root_id,
             type="main_query",
             prompt=base_prompt,
-            ttl_expiry=time.time() + 0.60, # 600ms grace period before heavy model wakes up
+            ttl_expiry=time.time() + 3.0, # 600ms grace period before heavy model wakes up
         )
 
         # Active worker loops monitoring the blackboard
@@ -142,49 +142,67 @@ class DecentralizedBlackboardArchitecture(BaseArchitecture):
     async def _worker_loop(
         self, name: str, provider: ModelProvider, compute_penalty: float, blackboard: dict[str, BlackboardTask]
     ):
-        """Standard SLM consumer loop loop acting on the shared state matrix."""
+        """Standard SLM consumer loop acting on the shared state matrix."""
         while True:
             for task_id, task in list(blackboard.items()):
+                # Guard: ONLY evaluate tasks that are strictly OPEN
                 if task.status == TaskStatus.OPEN:
-                    # Step 1: Decentralized Bidding Verification
                     bid = await self._calculate_bid(provider, task.prompt, compute_penalty)
-                    if bid > 0.65:  # Absolute baseline threshold to accept work autonomously
+                    
+                    # Double-check status hasn't changed during the async bid calculation
+                    if bid > 0.75 and task.status == TaskStatus.OPEN:  
                         task.status = TaskStatus.IN_PROGRESS
                         task.assigned_worker = name
+                        print(f"[\u2705 {name}] CLAIMED task: {task.id}!")
                         
-                        # Step 2: Autonomous Execution Mode
                         await self._execute_task(name, provider, task, blackboard)
-            await asyncio.sleep(0.02)
+                    else:
+                        # Log the bid safely without claiming it
+                        print(f"[\u26a1 {name}] bid {bid:.2f} on task: {task.id}")
+            await asyncio.sleep(0.05) # Slipped a fraction higher to ease local CPU thrashing
 
     async def _heavy_sweeper_loop(
         self, name: str, provider: ModelProvider, compute_penalty: float, blackboard: dict[str, BlackboardTask]
     ):
-        """The Lazy Heavyweight loop that intervenes exclusively on timeouts or blocks."""
+        """The Lazy Heavyweight loop that intervenes exclusively on timeouts."""
         while True:
             now = time.time()
             for task_id, task in list(blackboard.items()):
-                # Condition: Task is running out of time, or sub-processes are explicitly deadlocked
-                is_stale = (task.status == TaskStatus.OPEN and now > task.ttl_expiry)
-                is_deadlocked = (task.status == TaskStatus.BLOCKED)
+                is_sweeping_needed = (
+                    task.status in [TaskStatus.OPEN, TaskStatus.BLOCKED] 
+                    and now > task.ttl_expiry
+                )
 
-                if is_stale or is_deadlocked:
+                if is_sweeping_needed:
                     task.status = TaskStatus.IN_PROGRESS
                     task.assigned_worker = name
                     self.llm_calls += 1
+                    print(f"[\U0001f6a8 {name}] SWEEPING stale/blocked task: {task.id}")
                     
+                    # Execute and mark as resolved so the monitor can terminate
                     await self._execute_task(name, provider, task, blackboard)
-            await asyncio.sleep(0.02)
+            await asyncio.sleep(0.05)
 
     async def _calculate_bid(self, provider: ModelProvider, prompt: str, compute_penalty: float) -> float:
-        """Fast capability self-assessment using raw internal logprobs / fast validation."""
-        # Wrap blocking model execution in executor
+        """
+        Entropy-based capability self-assessment.
+        Calculates Shannon entropy from the model's predictive probability to detect uncertainty.
+        """
+        import math
         loop = asyncio.get_running_loop()
         try:
-            # Micro-evaluation: check confidence score returned by provider for the quick analysis
-            _, raw_conf, _, _, _ = await loop.run_in_executor(
-                None, lambda: provider.generate(prompt[:300], max_tokens=1)
+            _, avg_prob, _, _, _ = await loop.run_in_executor(
+                None, lambda: provider.generate(prompt, max_tokens=5)
             )
-            return raw_conf - (self.cost_weight * compute_penalty)
+            
+            safe_prob = max(min(avg_prob, 0.999), 0.001)
+            
+            entropy = -math.log(safe_prob)
+            
+            entropy_penalty_weight = 0.85 
+            bid = safe_prob - (entropy_penalty_weight * entropy) - (self.cost_weight * compute_penalty)
+            
+            return max(bid, 0.0)
         except Exception:
             return 0.0
 
@@ -192,16 +210,18 @@ class DecentralizedBlackboardArchitecture(BaseArchitecture):
         """Executes actual model generation, handling fallback creation dynamically."""
         loop = asyncio.get_running_loop()
         
-        # Inject system instructions mapping down the self-subtasking mechanics
+    # Inject system instructions mapping down the self-subtasking mechanics
         execution_prompt = (
-            f"You are operating within a collaborative decentralized swarm. Evaluate your parameters accurately.\n"
-            f"If you lack information or are completely stuck, format a sub-query exactly as: "
+            f"Solve the following problem step-by-step.\n"
+            f"If you lack the information to solve it, or need a sub-calculation, format a request exactly as: "
             f"SUB_TASK: <query>\n\n"
-            f"Context: {task.prompt}"
+            f"Problem: {task.prompt}"
         )
         
         budget = compute_completion_budget(provider, execution_prompt, task_type="open", role="swarm_node")
-        
+        if "Sweeper" in worker_name:
+            budget = 2048
+            
         # Run blocking network inference inside safe thread pool executor
         text, conf, in_t, out_t, cost, lat = await loop.run_in_executor(
             None, lambda: self._timed_generate(provider, execution_prompt, max_tokens=budget)
