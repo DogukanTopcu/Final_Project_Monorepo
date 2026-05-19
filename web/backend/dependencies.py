@@ -44,6 +44,15 @@ class Settings(BaseSettings):
     together_api_key: str = ""
     force_vllm: bool = False
     hf_token: str = ""
+    rtx6000_autoswitch_enabled: bool = True
+    rtx6000_instance_name: str = "dogukan-topcu-rtx6000-spot"
+    rtx6000_project: str = "hubx-ml-playground"
+    rtx6000_zone: str = "europe-west2-c"
+    rtx6000_switch_script: str = "~/run-mid-llm.sh"
+    rtx6000_switch_command_timeout_s: int = 180
+    rtx6000_switch_poll_timeout_s: int = 1800
+    rtx6000_lock_timeout_s: int = 21600
+    rtx6000_poll_interval_s: int = 5
     results_dir: str = str(REPO_ROOT / "results")
     environment: str = "dev"
     cors_origins: list[str] = ["http://localhost:3000"]

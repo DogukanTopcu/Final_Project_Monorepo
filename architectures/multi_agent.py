@@ -20,6 +20,7 @@ from __future__ import annotations
 from architectures.base import BaseArchitecture
 from core.models import ModelProvider
 from core.prompt import mcq_prompt, open_prompt, parse_mcq_answer, parse_open_answer
+from core.token_budget import compute_completion_budget
 from core.types import Query, Response
 
 
@@ -62,8 +63,8 @@ class MultiAgentArchitecture(BaseArchitecture):
         n_rounds: int = 1,
         slm_temperature: float = 0.0,
         llm_temperature: float = 0.0,
-        slm_max_tokens: int = 8192,
-        llm_max_tokens: int = 8192,
+        slm_max_tokens: int = 0,
+        llm_max_tokens: int = 0,
     ) -> None:
         super().__init__(slm, llm)
         self.arbitrator_role = arbitrator  # "slm" | "llm"
@@ -78,6 +79,20 @@ class MultiAgentArchitecture(BaseArchitecture):
         base_prompt = (
             mcq_prompt(query) if self.task_type == "mcq" else open_prompt(query)
         )
+        proponent_budget = compute_completion_budget(
+            self.slm,
+            _PROPONENT_TEMPLATE.format(question=base_prompt),
+            task_type=self.task_type,
+            role="proponent",
+            requested_max_tokens=self.slm_max_tokens,
+        )
+        opponent_budget = compute_completion_budget(
+            self.slm,
+            _OPPONENT_TEMPLATE.format(proponent_output=""),
+            task_type=self.task_type,
+            role="opponent",
+            requested_max_tokens=self.slm_max_tokens,
+        )
 
         total_in = total_out = 0
         total_cost = total_latency = 0.0
@@ -90,7 +105,7 @@ class MultiAgentArchitecture(BaseArchitecture):
             self.slm,
             prop_prompt,
             temperature=self.slm_temperature,
-            max_tokens=self.slm_max_tokens,
+            max_tokens=proponent_budget,
         )
         total_in += in_t
         total_out += out_t
@@ -113,7 +128,7 @@ class MultiAgentArchitecture(BaseArchitecture):
             self.slm,
             opp_prompt,
             temperature=self.slm_temperature,
-            max_tokens=self.slm_max_tokens,
+            max_tokens=opponent_budget,
         )
         total_in += in_t
         total_out += out_t
@@ -136,12 +151,19 @@ class MultiAgentArchitecture(BaseArchitecture):
             proponent_output=prop_text,
             opponent_output=opp_text,
         )
+        arb_budget = compute_completion_budget(
+            self.llm if self.arbitrator_role == "llm" else self.slm,
+            arb_prompt,
+            task_type=self.task_type,
+            role="arbitrator",
+            requested_max_tokens=self.llm_max_tokens if self.arbitrator_role == "llm" else self.slm_max_tokens,
+        )
         if self.arbitrator_role == "llm":
             arb_text, _, in_t, out_t, cost, lat = self._timed_generate(
                 self.llm,
                 arb_prompt,
                 temperature=self.llm_temperature,
-                max_tokens=self.llm_max_tokens,
+                max_tokens=arb_budget,
             )
             llm_calls = 1
         else:
@@ -149,7 +171,7 @@ class MultiAgentArchitecture(BaseArchitecture):
                 self.slm,
                 arb_prompt,
                 temperature=self.slm_temperature,
-                max_tokens=self.slm_max_tokens,
+                max_tokens=arb_budget,
             )
 
         total_in += in_t

@@ -30,6 +30,13 @@ function valueOrDash(value: number | string | null | undefined): string {
   return value;
 }
 
+function formatTokenBudget(value: number | null | undefined): string {
+  if (value == null || value <= 0) {
+    return "auto";
+  }
+  return formatNumber(value);
+}
+
 export default function ExperimentDetailPage({
   params,
 }: {
@@ -63,10 +70,10 @@ export default function ExperimentDetailPage({
     config.llm_temperature ?? experiment?.config_overrides?.llm_temperature ?? 0,
   );
   const slmMaxTokens = Number(
-    config.slm_max_tokens ?? experiment?.config_overrides?.slm_max_tokens ?? 8192,
+    config.slm_max_tokens ?? experiment?.config_overrides?.slm_max_tokens ?? 0,
   );
   const llmMaxTokens = Number(
-    config.llm_max_tokens ?? experiment?.config_overrides?.llm_max_tokens ?? 8192,
+    config.llm_max_tokens ?? experiment?.config_overrides?.llm_max_tokens ?? 0,
   );
   const llmLabel = experiment?.llm ?? String(config.llm ?? "unknown");
   const slmLabel = experiment?.slm ?? String(config.slm ?? "unknown");
@@ -147,11 +154,11 @@ export default function ExperimentDetailPage({
             </p>
             <p>
               <span className="text-zinc-500">SLM Max Tokens:</span>{" "}
-              {formatNumber(slmMaxTokens)}
+              {formatTokenBudget(slmMaxTokens)}
             </p>
             <p>
               <span className="text-zinc-500">LLM Max Tokens:</span>{" "}
-              {formatNumber(llmMaxTokens)}
+              {formatTokenBudget(llmMaxTokens)}
             </p>
             <p>
               <span className="text-zinc-500">Samples:</span>{" "}

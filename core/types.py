@@ -42,8 +42,8 @@ class ExperimentConfig:
     llm: str = "llama3.3-70b"
     slm_temperature: float = 0.0
     llm_temperature: float = 0.0
-    slm_max_tokens: int = 8192
-    llm_max_tokens: int = 8192
+    slm_max_tokens: int = 0
+    llm_max_tokens: int = 0
     # Arch A params
     confidence_threshold: float = 0.7
     # Arch B params

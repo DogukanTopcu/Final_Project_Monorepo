@@ -13,7 +13,8 @@ def mcq_prompt(query: Query, few_shot: int = 0) -> str:
             lines.append(f"{label}. {choice}")
     lines += [
         "",
-        "Answer with the letter only (A, B, C or D).",
+        "You must answer with exactly one uppercase letter: A, B, C, or D.",
+        "Do not include any explanation.",
     ]
     return "\n".join(lines)
 
@@ -30,13 +31,22 @@ def open_prompt(query: Query) -> str:
 def parse_mcq_answer(text: str) -> str | None:
     """Extract single-letter MCQ answer from model output."""
     import re
-    text = text.strip().upper()
-    # Direct letter
-    if text and text[0] in "ABCD":
-        return text[0]
-    # Pattern: "Answer: B" or "(B)"
-    m = re.search(r"\b([ABCD])\b", text)
-    return m.group(1) if m else None
+    normalized = text.strip().upper()
+    if normalized in {"A", "B", "C", "D"}:
+        return normalized
+
+    patterns = [
+        r"^\s*([ABCD])[\.\)]?\s*$",
+        r"\bANSWER\s*:\s*([ABCD])\b",
+        r"\bFINAL\s+ANSWER\s*:\s*([ABCD])\b",
+        r"\bOPTION\s*([ABCD])\b",
+        r"^\s*\(([ABCD])\)\s*$",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, normalized, re.MULTILINE)
+        if match:
+            return match.group(1)
+    return None
 
 
 def parse_open_answer(text: str) -> str | None:

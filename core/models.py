@@ -16,6 +16,7 @@ from urllib.parse import urlparse
 import requests
 
 from core.model_catalog import get_model_spec
+from core.token_budget import compute_completion_budget
 
 # Per-token costs in USD (approximate, May 2026)
 _APPROX_MODEL_COSTS: dict[str, tuple[float, float]] = {
@@ -31,7 +32,7 @@ _GEMINI_COSTS: dict[str, tuple[float, float]] = {
     "gemini-2.5-flash-lite": (0.10 / 1_000_000, 0.40 / 1_000_000),
 }
 
-_DEFAULT_MAX_TOKENS = 8192
+_DEFAULT_MAX_TOKENS = 512
 
 
 def _get_env(*names: str, default: str = "") -> str:
@@ -81,6 +82,19 @@ def _extract_message_text(message: object) -> str:
     return ""
 
 
+def _resolve_max_tokens(provider: "ModelProvider", prompt: str, kwargs: dict) -> int:
+    requested = kwargs.get("max_tokens", 0)
+    if not isinstance(requested, int):
+        requested = _DEFAULT_MAX_TOKENS
+    return compute_completion_budget(
+        provider,
+        prompt,
+        task_type=str(kwargs.get("task_type", "open")),
+        role=str(kwargs.get("role", "direct")),
+        requested_max_tokens=requested,
+    )
+
+
 class ModelProvider(ABC):
     def __init__(self, model_id: str) -> None:
         self.model_id = model_id
@@ -115,13 +129,14 @@ class OllamaModel(ModelProvider):
 
     def generate(self, prompt: str, **kwargs) -> tuple[str, float, int, int, float]:
         url = f"{self.base_url}/api/generate"
+        max_tokens = _resolve_max_tokens(self, prompt, kwargs)
         payload = {
             "model": self.model_id,
             "prompt": prompt,
             "stream": False,
             "options": {
                 "temperature": kwargs.get("temperature", self.temperature),
-                "num_predict": kwargs.get("max_tokens", _DEFAULT_MAX_TOKENS),
+                "num_predict": max_tokens,
             },
         }
         resp = requests.post(url, json=payload, timeout=120)
@@ -185,12 +200,13 @@ class OpenAIModel(ModelProvider):
     def generate(self, prompt: str, **kwargs) -> tuple[str, float, int, int, float]:
         import openai
         client = openai.OpenAI(api_key=self.api_key)
+        max_tokens = _resolve_max_tokens(self, prompt, kwargs)
 
         resp = client.chat.completions.create(
             model=self.model_id,
             messages=[{"role": "user", "content": prompt}],
             temperature=kwargs.get("temperature", self.temperature),
-            max_tokens=kwargs.get("max_tokens", _DEFAULT_MAX_TOKENS),
+            max_tokens=max_tokens,
             logprobs=True,
             top_logprobs=1,
         )
@@ -241,6 +257,7 @@ class TogetherModel(ModelProvider):
 
     def generate(self, prompt: str, **kwargs) -> tuple[str, float, int, int, float]:
         url = "https://api.together.xyz/v1/chat/completions"
+        max_tokens = _resolve_max_tokens(self, prompt, kwargs)
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -249,7 +266,7 @@ class TogetherModel(ModelProvider):
             "model": self.model_id,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": kwargs.get("temperature", self.temperature),
-            "max_tokens": kwargs.get("max_tokens", _DEFAULT_MAX_TOKENS),
+            "max_tokens": max_tokens,
         }
         resp = requests.post(url, json=payload, headers=headers, timeout=120)
         resp.raise_for_status()
@@ -284,6 +301,7 @@ class GeminiModel(ModelProvider):
 
     def generate(self, prompt: str, **kwargs) -> tuple[str, float, int, int, float]:
         import openai
+        max_tokens = _resolve_max_tokens(self, prompt, kwargs)
 
         client = openai.OpenAI(
             api_key=self.api_key,
@@ -294,7 +312,7 @@ class GeminiModel(ModelProvider):
             model=self.model_id,
             messages=[{"role": "user", "content": prompt}],
             temperature=kwargs.get("temperature", self.temperature),
-            max_tokens=kwargs.get("max_tokens", _DEFAULT_MAX_TOKENS),
+            max_tokens=max_tokens,
         )
 
         choice = response.choices[0]
@@ -326,11 +344,12 @@ class OpenAICompatibleModel(ModelProvider):
         self._local_endpoint = _is_local_or_private_endpoint(self.base_url)
 
     def generate(self, prompt: str, **kwargs) -> tuple[str, float, int, int, float]:
+        max_tokens = _resolve_max_tokens(self, prompt, kwargs)
         payload = {
             "model": self.model_id,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": kwargs.get("temperature", self.temperature),
-            "max_tokens": kwargs.get("max_tokens", _DEFAULT_MAX_TOKENS),
+            "max_tokens": max_tokens,
             "logprobs": True,
             "top_logprobs": 1,
         }
@@ -462,6 +481,7 @@ def assert_model_runnable(model_id: str, timeout: float = 3.0) -> None:
 
     provider = str(status.get("provider", "unknown"))
     base_url = str(status.get("base_url", ""))
+    spec = get_model_spec(model_id)
     try:
         if provider == "ollama":
             resp = requests.get(f"{base_url}/api/tags", timeout=timeout)
@@ -470,9 +490,24 @@ def assert_model_runnable(model_id: str, timeout: float = 3.0) -> None:
         else:
             raise RuntimeError(f"Unsupported provider for {model_id}: {provider}")
         resp.raise_for_status()
+        if provider == "openai_compatible" and spec is not None:
+            payload = resp.json()
+            served = {
+                item.get("id")
+                for item in payload.get("data", [])
+                if isinstance(item, dict) and isinstance(item.get("id"), str)
+            }
+            expected = {spec.provider_model}
+            if spec.openai_compatible_model:
+                expected.add(spec.openai_compatible_model)
+            if served.isdisjoint(expected):
+                raise RuntimeError(
+                    f"{model_id} expects one of {sorted(expected)} at {base_url}, "
+                    f"but the endpoint currently serves {sorted(served) or ['<none>']}."
+                )
     except Exception as exc:
         raise RuntimeError(
-            f"{model_id} is configured for {provider} at {base_url}, but the endpoint is unreachable: {exc}"
+            f"{model_id} is configured for {provider} at {base_url}, but the runtime check failed: {exc}"
         ) from exc
 
 

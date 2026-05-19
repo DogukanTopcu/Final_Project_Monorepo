@@ -35,8 +35,8 @@ export function ExperimentForm() {
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [slmTemperature, setSlmTemperature] = useState(0);
   const [llmTemperature, setLlmTemperature] = useState(0);
-  const [slmMaxTokens, setSlmMaxTokens] = useState(8192);
-  const [llmMaxTokens, setLlmMaxTokens] = useState(8192);
+  const [slmMaxTokens, setSlmMaxTokens] = useState(0);
+  const [llmMaxTokens, setLlmMaxTokens] = useState(0);
   const [dryRun, setDryRun] = useState(false);
 
   useEffect(() => {
@@ -81,10 +81,10 @@ export function ExperimentForm() {
     if (llmTemperature !== 0) {
       configOverrides.llm_temperature = llmTemperature;
     }
-    if (slmMaxTokens !== 8192) {
+    if (slmMaxTokens > 0) {
       configOverrides.slm_max_tokens = slmMaxTokens;
     }
-    if (llmMaxTokens !== 8192) {
+    if (llmMaxTokens > 0) {
       configOverrides.llm_max_tokens = llmMaxTokens;
     }
 
@@ -215,6 +215,7 @@ export function ExperimentForm() {
                 <p className="text-sm font-medium text-zinc-900">Advanced Model Settings</p>
                 <p className="text-xs text-zinc-500">
                   Configure randomness and output ceilings separately for SLM and LLM.
+                  Leave max tokens at 0 to use auto budgeting.
                 </p>
               </div>
               <span className="text-sm text-zinc-500">
@@ -229,6 +230,7 @@ export function ExperimentForm() {
                     <p className="text-sm font-medium text-zinc-900">SLM Settings</p>
                     <p className="text-xs text-zinc-500">
                       Temperature controls determinism. Max tokens sets the output ceiling.
+                      0 means auto budget.
                     </p>
                   </div>
                   <div className="space-y-4">
@@ -251,7 +253,7 @@ export function ExperimentForm() {
                       <input
                         id="slm-max-tokens"
                         type="number"
-                        min={1}
+                        min={0}
                         max={32768}
                         step={1}
                         value={slmMaxTokens}
@@ -267,6 +269,7 @@ export function ExperimentForm() {
                     <p className="text-sm font-medium text-zinc-900">LLM Settings</p>
                     <p className="text-xs text-zinc-500">
                       Temperature controls randomness. Max tokens sets the output ceiling.
+                      0 means auto budget.
                     </p>
                   </div>
                   <div className="space-y-4">
@@ -289,7 +292,7 @@ export function ExperimentForm() {
                       <input
                         id="llm-max-tokens"
                         type="number"
-                        min={1}
+                        min={0}
                         max={32768}
                         step={1}
                         value={llmMaxTokens}

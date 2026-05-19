@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import nullcontext
 from datetime import datetime, timezone
 import json
 from pathlib import Path
@@ -16,6 +17,7 @@ from evaluation.metrics import compute_metrics
 from experiments.runner import ExperimentCancelledError, ExperimentRunner
 from mlops.callbacks import RunnerCallbacks
 from web.backend.dependencies import Settings, get_settings
+from web.backend.services.model_host_service import reserve_llm_host
 from web.backend.schemas import (
     Architecture,
     Benchmark,
@@ -111,17 +113,17 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
 
     slm_temperature = float(overrides.get("slm_temperature", 0.0))
     llm_temperature = float(overrides.get("llm_temperature", 0.0))
-    slm_max_tokens = int(overrides.get("slm_max_tokens", 8192))
-    llm_max_tokens = int(overrides.get("llm_max_tokens", 8192))
+    slm_max_tokens = int(overrides.get("slm_max_tokens", 0))
+    llm_max_tokens = int(overrides.get("llm_max_tokens", 0))
 
     if not 0.0 <= slm_temperature <= 2.0:
         raise ValueError("slm_temperature must be between 0.0 and 2.0")
     if not 0.0 <= llm_temperature <= 2.0:
         raise ValueError("llm_temperature must be between 0.0 and 2.0")
-    if slm_max_tokens < 1 or slm_max_tokens > 32768:
-        raise ValueError("slm_max_tokens must be between 1 and 32768")
-    if llm_max_tokens < 1 or llm_max_tokens > 32768:
-        raise ValueError("llm_max_tokens must be between 1 and 32768")
+    if slm_max_tokens < 0 or slm_max_tokens > 32768:
+        raise ValueError("slm_max_tokens must be between 0 and 32768")
+    if llm_max_tokens < 0 or llm_max_tokens > 32768:
+        raise ValueError("llm_max_tokens must be between 0 and 32768")
 
     return ExperimentConfig(
         architecture=params.architecture.value,
@@ -192,10 +194,23 @@ def _run_experiment(
         _sync_runtime_provider_env(settings)
         config = _build_config(params, settings)
         exp.total = config.n_samples
-        runner = ExperimentRunner(config, callbacks=callbacks)
-        runner.experiment_id = experiment_id
-        result = runner.run()
-        metrics = compute_metrics(result)
+        reservation = (
+            reserve_llm_host(
+                params.llm,
+                settings,
+                on_status=lambda message, status: _push_event(
+                    experiment_id,
+                    {"type": "status", "status": status, "message": message},
+                ),
+            )
+            if not config.dry_run
+            else nullcontext()
+        )
+        with reservation:
+            runner = ExperimentRunner(config, callbacks=callbacks)
+            runner.experiment_id = experiment_id
+            result = runner.run()
+            metrics = compute_metrics(result)
 
         exp.status = ExperimentStatus.COMPLETED
         exp.metrics = metrics

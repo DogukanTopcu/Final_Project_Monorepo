@@ -21,6 +21,8 @@ from typing import Any
 
 import requests
 
+from core.models import OpenAICompatibleModel
+from core.token_budget import compute_completion_budget
 from core.types import Query, Response
 
 
@@ -37,7 +39,15 @@ class VLLMAgent:
         self.base_url = base_url.rstrip("/")
         self.model_name = model_name
 
-    def chat(self, system: str, user: str, max_tokens: int = 8192, temperature: float = 0.0) -> tuple[str, float]:
+    def chat(self, system: str, user: str, max_tokens: int = 0, temperature: float = 0.0) -> tuple[str, float]:
+        provider = OpenAICompatibleModel(model_id=self.model_name, base_url=self.base_url)
+        budget = compute_completion_budget(
+            provider,
+            f"{system}\n\n{user}",
+            task_type="open",
+            role="direct",
+            requested_max_tokens=max_tokens,
+        )
         payload = {
             "model": self.model_name,
             "messages": [
@@ -45,7 +55,7 @@ class VLLMAgent:
                 {"role": "user", "content": user},
             ],
             "temperature": temperature,
-            "max_tokens": max_tokens,
+            "max_tokens": budget,
         }
         resp = requests.post(f"{self.base_url}/chat/completions", json=payload, timeout=120)
         resp.raise_for_status()

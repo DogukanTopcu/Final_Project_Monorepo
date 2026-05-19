@@ -12,6 +12,8 @@ import time
 
 import requests
 
+from core.models import OpenAICompatibleModel
+from core.token_budget import compute_completion_budget
 from core.types import Query, Response
 
 
@@ -23,12 +25,13 @@ class MonolithicArchitecture:
         base_url: str | None = None,
         model_name: str = "meta-llama/Llama-3.3-70B-Instruct",
         temperature: float = 0.0,
-        max_tokens: int = 8192,
+        max_tokens: int = 0,
     ) -> None:
         self.base_url = (base_url or os.environ.get("VLLM_LLAMA33_70B_URL", "http://localhost:8000/v1")).rstrip("/")
         self.model_name = model_name
         self.temperature = temperature
         self.max_tokens = max_tokens
+        self._provider = OpenAICompatibleModel(model_id=model_name, base_url=self.base_url)
 
     @property
     def name(self) -> str:
@@ -36,12 +39,19 @@ class MonolithicArchitecture:
 
     def run(self, query: Query) -> Response:
         prompt = self._build_prompt(query)
+        budget = compute_completion_budget(
+            self._provider,
+            prompt,
+            task_type="mcq" if query.choices else "open",
+            role="llm_fallback",
+            requested_max_tokens=self.max_tokens,
+        )
         t0 = time.perf_counter()
         payload = {
             "model": self.model_name,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": self.temperature,
-            "max_tokens": self.max_tokens,
+            "max_tokens": budget,
             "logprobs": True,
             "top_logprobs": 1,
         }

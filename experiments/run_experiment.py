@@ -34,8 +34,18 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--llm", default="llama3.3-70b")
     p.add_argument("--slm_temperature", type=float, default=0.0)
     p.add_argument("--llm_temperature", type=float, default=0.0)
-    p.add_argument("--slm_max_tokens", type=int, default=8192)
-    p.add_argument("--llm_max_tokens", type=int, default=8192)
+    p.add_argument(
+        "--slm_max_tokens",
+        type=int,
+        default=0,
+        help="0 = auto budget; positive values override completion budget explicitly.",
+    )
+    p.add_argument(
+        "--llm_max_tokens",
+        type=int,
+        default=0,
+        help="0 = auto budget; positive values override completion budget explicitly.",
+    )
     p.add_argument("--confidence_threshold", type=float, default=0.7)
     p.add_argument("--arbitrator", choices=["slm", "llm"], default="slm")
     p.add_argument("--n_models", type=int, default=3)

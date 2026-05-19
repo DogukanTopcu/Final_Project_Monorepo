@@ -22,6 +22,7 @@ from collections import Counter
 from architectures.base import BaseArchitecture
 from core.models import ModelProvider
 from core.prompt import mcq_prompt, open_prompt, parse_mcq_answer, parse_open_answer
+from core.token_budget import compute_completion_budget
 from core.types import Query, Response
 
 
@@ -38,8 +39,8 @@ class EnsembleArchitecture(BaseArchitecture):
         task_type: str = "mcq",
         slm_temperature: float = 0.0,
         llm_temperature: float = 0.0,
-        slm_max_tokens: int = 8192,
-        llm_max_tokens: int = 8192,
+        slm_max_tokens: int = 0,
+        llm_max_tokens: int = 0,
     ) -> None:
         super().__init__(slm, llm)
         self.n_models = n_models
@@ -55,6 +56,13 @@ class EnsembleArchitecture(BaseArchitecture):
         prompt = (
             mcq_prompt(query) if self.task_type == "mcq" else open_prompt(query)
         )
+        slm_budget = compute_completion_budget(
+            self.slm,
+            prompt,
+            task_type=self.task_type,
+            role="ensemble_member",
+            requested_max_tokens=self.slm_max_tokens,
+        )
 
         votes: list[str] = []
         confidences: list[float] = []
@@ -67,7 +75,7 @@ class EnsembleArchitecture(BaseArchitecture):
                 self.slm,
                 prompt,
                 temperature=self.slm_temperature,
-                max_tokens=self.slm_max_tokens,
+                max_tokens=slm_budget,
             )
             total_in += in_t
             total_out += out_t
@@ -103,11 +111,18 @@ class EnsembleArchitecture(BaseArchitecture):
 
         # Tiebreaker: all SLMs disagree (all unique answers)
         if final_answer is None and self.llm_tiebreak:
+            llm_budget = compute_completion_budget(
+                self.llm,
+                prompt,
+                task_type=self.task_type,
+                role="llm_tiebreak",
+                requested_max_tokens=self.llm_max_tokens,
+            )
             llm_text, _, l_in, l_out, l_cost, l_lat = self._timed_generate(
                 self.llm,
                 prompt,
                 temperature=self.llm_temperature,
-                max_tokens=self.llm_max_tokens,
+                max_tokens=llm_budget,
             )
             total_in += l_in
             total_out += l_out
