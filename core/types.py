@@ -44,6 +44,7 @@ class ExperimentConfig:
     llm_temperature: float = 0.0
     slm_max_tokens: int = 0
     llm_max_tokens: int = 0
+    slm_only: bool = False
     # Arch A params
     confidence_threshold: float = 0.7
     # Arch B params

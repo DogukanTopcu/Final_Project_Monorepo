@@ -65,9 +65,11 @@ class ExperimentRunner:
 
         # Build models
         assert_model_runnable(cfg.slm)
-        assert_model_runnable(cfg.llm)
+        llm_required = not (cfg.architecture == "routing" and cfg.slm_only)
+        if llm_required:
+            assert_model_runnable(cfg.llm)
         slm = get_model(cfg.slm)
-        llm = get_model(cfg.llm)
+        llm = get_model(cfg.llm) if llm_required else slm
 
         # Build architecture
         arch_kwargs: dict[str, Any] = {
@@ -80,6 +82,7 @@ class ExperimentRunner:
             arch_kwargs["slm_max_tokens"] = cfg.slm_max_tokens
             arch_kwargs["llm_max_tokens"] = cfg.llm_max_tokens
         if cfg.architecture == "routing":
+            arch_kwargs["slm_only"] = cfg.slm_only
             arch_kwargs["confidence_threshold"] = cfg.confidence_threshold
         elif cfg.architecture == "multi_agent":
             arch_kwargs["arbitrator"] = cfg.arbitrator

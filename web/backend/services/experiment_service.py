@@ -106,6 +106,7 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         "llm_temperature",
         "slm_max_tokens",
         "llm_max_tokens",
+        "slm_only",
     }
     unexpected = sorted(set(overrides) - allowed_override_keys)
     if unexpected:
@@ -135,6 +136,7 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         llm_temperature=llm_temperature,
         slm_max_tokens=slm_max_tokens,
         llm_max_tokens=llm_max_tokens,
+        slm_only=bool(overrides.get("slm_only", False)),
         confidence_threshold=float(overrides.get("confidence_threshold", 0.7)),
         arbitrator=str(overrides.get("arbitrator", "llm")),
         n_debate_rounds=int(overrides.get("n_debate_rounds", 1)),
@@ -290,7 +292,12 @@ def _validate_model_selection(model_id: str, expected_kind: str, *, require_runt
 def launch_experiment(params: ExperimentCreate, settings: Settings) -> ExperimentResponse:
     config = _build_config(params, settings)
     _validate_model_selection(params.slm, "slm", require_runtime=not config.dry_run)
-    _validate_model_selection(params.llm, "llm", require_runtime=not config.dry_run)
+    llm_required = not (config.architecture == "routing" and config.slm_only)
+    _validate_model_selection(
+        params.llm,
+        "llm",
+        require_runtime=(not config.dry_run and llm_required),
+    )
 
     experiment_id = f"exp_{uuid.uuid4().hex[:8]}"
     now = datetime.now(timezone.utc)

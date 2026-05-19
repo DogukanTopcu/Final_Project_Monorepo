@@ -192,6 +192,28 @@ def test_launch_accepts_per_model_runtime_settings(client: TestClient, monkeypat
     assert payload["config_overrides"]["llm_max_tokens"] == 2048
 
 
+def test_launch_accepts_routing_slm_only_without_runnable_llm(client: TestClient, monkeypatch):
+    executor = DeferredExecutor()
+    monkeypatch.setattr(experiment_service, "_executor", executor)
+
+    response = client.post(
+        "/api/experiments",
+        json={
+            "architecture": "routing",
+            "benchmark": "mmlu",
+            "n_samples": 3,
+            "slm": "gemma3:4b",
+            "llm": "gpt-4o-mini",
+            "config_overrides": {
+                "slm_only": True,
+                "dry_run": False,
+            },
+        },
+    )
+
+    assert response.status_code == 200
+
+
 def test_launch_rejects_invalid_runtime_setting_ranges(client: TestClient):
     response = client.post(
         "/api/experiments",

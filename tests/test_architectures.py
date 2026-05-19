@@ -100,6 +100,21 @@ class TestRoutingArchitecture:
         assert slm.calls[0] == {"temperature": 0.15, "max_tokens": 128}
         assert llm.calls[0] == {"temperature": 0.65, "max_tokens": 256}
 
+    def test_routing_slm_only_never_calls_llm(self):
+        slm = RecordingStubModel("slm", answer="B", confidence=0.1)
+        llm = RecordingStubModel("llm", answer="A", confidence=0.9)
+        arch = RoutingArchitecture(
+            slm=slm,
+            llm=llm,
+            confidence_threshold=0.95,
+            slm_only=True,
+        )
+        resp = arch.run(QUERY)
+
+        assert resp.llm_calls == 0
+        assert resp.model_id == "slm"
+        assert llm.calls == []
+
 
 class TestMultiAgentArchitecture:
     def test_all_slm_no_llm_calls(self):

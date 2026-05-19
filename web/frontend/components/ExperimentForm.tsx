@@ -35,8 +35,9 @@ export function ExperimentForm() {
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [slmTemperature, setSlmTemperature] = useState(0);
   const [llmTemperature, setLlmTemperature] = useState(0);
-  const [slmMaxTokens, setSlmMaxTokens] = useState(0);
-  const [llmMaxTokens, setLlmMaxTokens] = useState(0);
+  const [slmMaxTokens, setSlmMaxTokens] = useState(8192);
+  const [llmMaxTokens, setLlmMaxTokens] = useState(8192);
+  const [slmOnly, setSlmOnly] = useState(false);
   const [dryRun, setDryRun] = useState(false);
 
   useEffect(() => {
@@ -65,6 +66,7 @@ export function ExperimentForm() {
 
     if (architecture === "routing") {
       configOverrides.confidence_threshold = confidenceThreshold;
+      configOverrides.slm_only = slmOnly;
     }
     if (architecture === "multi_agent") {
       configOverrides.arbitrator = arbitrator;
@@ -102,7 +104,9 @@ export function ExperimentForm() {
   const canLaunch =
     !!slm &&
     !!llm &&
-    (!models || dryRun || (!!selectedSlmModel?.configured && !!selectedLlmModel?.configured));
+    (!models ||
+      dryRun ||
+      (!!selectedSlmModel?.configured && (slmOnly || !!selectedLlmModel?.configured)));
 
   return (
     <Card>
@@ -317,15 +321,34 @@ export function ExperimentForm() {
           />
 
           {architecture === "routing" && (
-            <Slider
-              label="Confidence Threshold"
-              min={0}
-              max={1}
-              step={0.05}
-              value={confidenceThreshold}
-              onChange={(e) => setConfidenceThreshold(Number(e.target.value))}
-              displayValue={confidenceThreshold.toFixed(2)}
-            />
+            <>
+              <Slider
+                label="Confidence Threshold"
+                min={0}
+                max={1}
+                step={0.05}
+                value={confidenceThreshold}
+                onChange={(e) => setConfidenceThreshold(Number(e.target.value))}
+                displayValue={confidenceThreshold.toFixed(2)}
+              />
+              <div className="flex items-start gap-2 rounded-md border border-zinc-200 bg-zinc-50 px-3 py-3">
+                <input
+                  type="checkbox"
+                  id="slm-only"
+                  checked={slmOnly}
+                  onChange={(e) => setSlmOnly(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-zinc-300"
+                />
+                <div className="space-y-1">
+                  <label htmlFor="slm-only" className="text-sm font-medium text-zinc-700">
+                    SLM-only routing run
+                  </label>
+                  <p className="text-xs text-zinc-500">
+                    Run routing with real SLM inference but never call the fallback LLM.
+                  </p>
+                </div>
+              </div>
+            </>
           )}
 
           {architecture === "multi_agent" && (
@@ -393,7 +416,7 @@ export function ExperimentForm() {
               className="h-4 w-4 rounded border-zinc-300"
             />
             <label htmlFor="dry-run" className="text-sm text-zinc-700">
-              Dry run (validate config without executing)
+              Dry run (validate config without executing any model inference)
             </label>
           </div>
 
@@ -409,7 +432,7 @@ export function ExperimentForm() {
 
           {!canLaunch && (
             <p className="text-sm text-zinc-600">
-              Launch is enabled once both selected endpoints are runnable. Dry run skips endpoint checks.
+              Launch is enabled once required endpoints are runnable. Dry run skips endpoint checks and finishes immediately.
             </p>
           )}
         </form>
