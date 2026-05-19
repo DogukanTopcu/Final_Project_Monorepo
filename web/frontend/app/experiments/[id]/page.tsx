@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useState } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,12 +19,28 @@ import {
   formatPercent,
 } from "@/lib/utils";
 import type {
+  Architecture,
   EnsembleMemberResponse,
   ResultSample,
   ResultSampleInferenceStep,
 } from "@/types";
 
 type Tab = "overview" | "metrics" | "samples" | "inference" | "config";
+type DetailArchitecture = Architecture | "unknown";
+type ScalarValue = string | number | boolean | null | undefined;
+type DetailEntry = [string, ScalarValue];
+type SummaryCard = {
+  label: string;
+  value: ReactNode;
+};
+type DisplayField = {
+  key: string;
+  value: string;
+};
+type DisplayRow = {
+  label: string;
+  value: ReactNode;
+};
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "overview", label: "Overview" },
@@ -34,42 +50,26 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "config", label: "Config" },
 ];
 
-const CORE_TEXT_FIELDS = [
-  "query_text",
-  "prompt_text",
-  "slm_text",
-  "final_text",
-  "predicted",
-  "ground_truth",
-] as const;
+const KNOWN_ARCHITECTURES: Architecture[] = [
+  "monolithic",
+  "routing",
+  "multi_agent",
+  "ensemble",
+  "multi_agent_crew",
+  "speculative",
+];
 
-const SAMPLE_DETAIL_FIELDS = [
-  "correct",
-  "llm_calls",
-  "used_llm",
-  "escalated",
-  "confidence",
-  "slm_confidence",
-  "confidence_threshold",
-  "final_model_id",
-  "latency_ms",
-  "cost_usd",
-  "api_cost_usd",
-  "infra_cost_usd",
-  "energy_kwh",
-  "co2_g",
-  "gpu_power_w",
-  "slm_latency_ms",
-  "llm_latency_ms",
-  "slm_input_tokens",
-  "slm_output_tokens",
-  "llm_input_tokens",
-  "llm_output_tokens",
-  "slm_cost_usd",
-  "llm_cost_usd",
-] as const;
+function isKnownArchitecture(value: string): value is Architecture {
+  return KNOWN_ARCHITECTURES.includes(value as Architecture);
+}
 
-type ScalarValue = string | number | boolean | null | undefined;
+function toDetailArchitecture(value: string): DetailArchitecture {
+  return isKnownArchitecture(value) ? value : "unknown";
+}
+
+function formatArchitectureName(value: string): string {
+  return value.replace(/_/g, " ");
+}
 
 function valueOrDash(value: number | string | null | undefined): string {
   if (value == null) return "—";
@@ -82,19 +82,82 @@ function formatTokenBudget(value: number | null | undefined): string {
   return formatNumber(value);
 }
 
+function hasTextValue(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function hasRenderableScalar(value: ScalarValue): boolean {
+  if (value == null) return false;
+  if (typeof value === "string") return value.trim().length > 0;
+  if (typeof value === "number") return !Number.isNaN(value);
+  return true;
+}
+
+function isScalarValue(value: unknown): value is ScalarValue {
+  return (
+    value == null ||
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function sampleUsesLlm(sample: ResultSample): boolean {
+  return Boolean(sample.used_llm || sample.escalated || (sample.llm_calls ?? 0) > 0);
+}
+
+function hasEnsembleTiebreakEvidence(sample: ResultSample): boolean {
+  return (
+    sample.llm_tiebreak === true ||
+    sampleUsesLlm(sample) ||
+    hasTextValue(sample.llm_tiebreak_raw_text) ||
+    hasTextValue(sample.llm_tiebreak_parsed_answer)
+  );
+}
+
+function shouldShowEnsembleTiebreak(
+  config: Record<string, unknown>,
+  llm: string | null,
+  samples: ResultSample[],
+): boolean {
+  const enabledInConfig = config.llm_tiebreak === true;
+  const hasSampleEvidence = samples.some(hasEnsembleTiebreakEvidence);
+  return enabledInConfig || (hasTextValue(llm) && hasSampleEvidence);
+}
+
+function isArchitectureWithDirectLlm(architecture: DetailArchitecture): boolean {
+  return (
+    architecture === "monolithic" ||
+    architecture === "routing" ||
+    architecture === "multi_agent" ||
+    architecture === "speculative"
+  );
+}
+
 function formatFieldLabel(key: string): string {
   const labels: Record<string, string> = {
-    query_id: "Query ID",
-    query_text: "Query text",
     prompt_text: "Prompt",
     slm_text: "SLM answer",
+    slm_raw_text: "SLM raw answer",
+    llm_raw_text: "LLM raw answer",
     final_text: "Final answer",
+    final_raw_text: "Final raw answer",
     predicted: "Predicted",
     ground_truth: "Ground truth",
+    voting_method: "Voting method",
+    vote_counts: "Vote counts",
+    votes: "Votes",
+    llm_tiebreak: "LLM tiebreak",
     llm_calls: "LLM calls",
     used_llm: "Used LLM",
     escalated: "Escalated",
+    confidence: "Confidence",
     final_model_id: "Final model",
+    final_answer_source: "Decision source",
     slm_confidence: "SLM confidence",
     confidence_threshold: "Confidence threshold",
     latency_ms: "Latency",
@@ -112,6 +175,7 @@ function formatFieldLabel(key: string): string {
     llm_output_tokens: "LLM output tokens",
     slm_cost_usd: "SLM cost",
     llm_cost_usd: "LLM cost",
+    escalation_reason: "Escalation reason",
     resource_estimate: "Resource estimate",
     inference_steps: "Inference steps",
     model_id: "Model",
@@ -120,6 +184,14 @@ function formatFieldLabel(key: string): string {
     input_tokens: "Input tokens",
     output_tokens: "Output tokens",
     role: "Role",
+    accepted_by: "Accepted by",
+    confidence_method: "Confidence method",
+    parse_success: "Parse success",
+    top2_margin: "Top-2 margin",
+    input_too_long: "Input too long",
+    low_confidence: "Low confidence",
+    low_margin: "Low margin",
+    forced_escalation: "Forced escalation",
   };
   if (labels[key]) return labels[key];
 
@@ -136,15 +208,6 @@ function formatFieldLabel(key: string): string {
       return part.charAt(0).toUpperCase() + part.slice(1);
     })
     .join(" ");
-}
-
-function isScalarValue(value: unknown): value is string | number | boolean | null | undefined {
-  return (
-    value == null ||
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean"
-  );
 }
 
 function formatScalarValue(value: ScalarValue, key?: string): string {
@@ -169,24 +232,37 @@ function formatScalarValue(value: ScalarValue, key?: string): string {
   return formatDecimal(value, 4);
 }
 
+function formatDecisionSource(value: unknown): string | null {
+  if (!hasTextValue(value)) return null;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "ensemble_vote") return "Ensemble vote";
+  if (normalized === "llm_tiebreak") return "LLM tiebreak";
+  if (normalized === "slm") return "SLM";
+  if (normalized === "llm") return "LLM";
+  if (normalized === "none") return "No final answer";
+  return value;
+}
+
 function stringifyJson(value: unknown): string {
   return JSON.stringify(value, null, 2);
 }
 
-function getSampleTextValue(sample: ResultSample, field: (typeof CORE_TEXT_FIELDS)[number]): string {
-  const value = sample[field];
-  if (typeof value !== "string") return "Not available";
-  const trimmed = value.trim();
-  return trimmed || "Not available";
+function collectScalarEntries(sample: ResultSample, keys: string[]): DetailEntry[] {
+  const entries: DetailEntry[] = [];
+  for (const key of keys) {
+    const value = sample[key];
+    if (isScalarValue(value) && hasRenderableScalar(value)) {
+      entries.push([key, value]);
+    }
+  }
+  return entries;
 }
 
 function getSampleQuestionPreview(sample: ResultSample): string {
-  const promptText =
-    typeof sample.prompt_text === "string" ? sample.prompt_text.trim() : "";
+  const promptText = hasTextValue(sample.prompt_text) ? sample.prompt_text.trim() : "";
   if (promptText) return promptText;
 
-  const queryText =
-    typeof sample.query_text === "string" ? sample.query_text.trim() : "";
+  const queryText = hasTextValue(sample.query_text) ? sample.query_text.trim() : "";
   const queryChoices = Array.isArray(sample.query_choices)
     ? sample.query_choices.filter((choice): choice is string => typeof choice === "string")
     : [];
@@ -202,35 +278,6 @@ function getSampleQuestionPreview(sample: ResultSample): string {
   return "Not available";
 }
 
-function getSampleDetailEntries(sample: ResultSample): Array<[string, ScalarValue]> {
-  const excluded = new Set<string>([
-    "query_id",
-    ...CORE_TEXT_FIELDS,
-    "resource_estimate",
-    "inference_steps",
-  ]);
-  const preferredKeys = new Set<string>();
-  const entries: Array<[string, ScalarValue]> = [];
-
-  for (const key of SAMPLE_DETAIL_FIELDS) {
-    const value = sample[key];
-    if (value !== undefined && isScalarValue(value)) {
-      preferredKeys.add(key);
-      entries.push([key, value]);
-    }
-  }
-
-  const extraEntries = Object.entries(sample)
-    .filter(
-      ([key, value]) =>
-        !excluded.has(key) && !preferredKeys.has(key) && isScalarValue(value),
-    )
-    .map(([key, value]) => [key, value as ScalarValue] as [string, ScalarValue])
-    .sort(([a], [b]) => a.localeCompare(b));
-
-  return [...entries, ...extraEntries];
-}
-
 function getStepEntries(step: ResultSampleInferenceStep): Array<[string, unknown]> {
   return Object.entries(step).sort(([a], [b]) => a.localeCompare(b));
 }
@@ -239,6 +286,432 @@ function getEnsembleMemberResponses(sample: ResultSample): EnsembleMemberRespons
   return Array.isArray(sample.ensemble_member_responses)
     ? sample.ensemble_member_responses
     : [];
+}
+
+function getSampleTextValue(sample: ResultSample, key: string): string | null {
+  const value = sample[key];
+  return hasTextValue(value) ? value.trim() : null;
+}
+
+function getCoreTextFields(
+  architecture: DetailArchitecture,
+  sample: ResultSample,
+): DisplayField[] {
+  const keysByArchitecture: Record<DetailArchitecture, string[]> = {
+    ensemble: ["prompt_text", "final_text", "predicted", "ground_truth"],
+    monolithic: ["prompt_text", "final_text", "predicted", "ground_truth"],
+    routing: [
+      "prompt_text",
+      "slm_text",
+      "llm_raw_text",
+      "final_text",
+      "predicted",
+      "ground_truth",
+    ],
+    multi_agent: [
+      "prompt_text",
+      "slm_text",
+      "llm_raw_text",
+      "final_text",
+      "predicted",
+      "ground_truth",
+    ],
+    speculative: [
+      "prompt_text",
+      "slm_text",
+      "llm_raw_text",
+      "final_text",
+      "predicted",
+      "ground_truth",
+    ],
+    multi_agent_crew: ["prompt_text", "slm_text", "final_text", "predicted", "ground_truth"],
+    unknown: ["prompt_text", "slm_text", "final_text", "predicted", "ground_truth"],
+  };
+
+  return keysByArchitecture[architecture]
+    .map((key) => {
+      const value = getSampleTextValue(sample, key);
+      return value ? { key, value } : null;
+    })
+    .filter((field): field is DisplayField => field !== null);
+}
+
+function getSampleSummaryCards(
+  architecture: DetailArchitecture,
+  sample: ResultSample,
+): SummaryCard[] {
+  const cards: SummaryCard[] = [
+    {
+      label: "Correct",
+      value: (
+        <Badge variant={sample.correct ? "success" : "destructive"}>
+          {sample.correct ? "correct" : "wrong"}
+        </Badge>
+      ),
+    },
+  ];
+
+  if (architecture === "routing") {
+    cards.push({
+      label: "Escalated",
+      value: (
+        <Badge variant={sampleUsesLlm(sample) ? "warning" : "secondary"}>
+          {sampleUsesLlm(sample) ? "yes" : "no"}
+        </Badge>
+      ),
+    });
+    if (typeof sample.slm_confidence === "number") {
+      cards.push({
+        label: "SLM conf.",
+        value: formatPercent(sample.slm_confidence),
+      });
+    }
+  } else if (architecture === "ensemble") {
+    if (hasRenderableScalar(sample.ground_truth)) {
+      cards.push({
+        label: "Correct answer",
+        value: String(sample.ground_truth),
+      });
+    }
+    const winningVote =
+      (hasTextValue(sample.predicted) && sample.predicted) ||
+      (Array.isArray(sample.votes) && sample.votes.length > 0 ? sample.votes[0] : null);
+    if (hasRenderableScalar(winningVote)) {
+      cards.push({
+        label: "Winning vote",
+        value: String(winningVote),
+      });
+    }
+    const decisionSource = formatDecisionSource(sample.final_answer_source);
+    if (decisionSource) {
+      cards.push({ label: "Decision", value: decisionSource });
+    }
+    if (sample.llm_tiebreak === true || hasEnsembleTiebreakEvidence(sample)) {
+      cards.push({
+        label: "Tiebreak",
+        value: (
+          <Badge variant={sampleUsesLlm(sample) ? "warning" : "secondary"}>
+            {sampleUsesLlm(sample) ? "used" : "enabled"}
+          </Badge>
+        ),
+      });
+    }
+    if (typeof sample.confidence === "number") {
+      cards.push({
+        label: "Confidence",
+        value: formatPercent(sample.confidence),
+      });
+    }
+  } else if (typeof sample.confidence === "number") {
+    cards.push({
+      label: "Confidence",
+      value: formatPercent(sample.confidence),
+    });
+  }
+
+  if (hasRenderableScalar(sample.final_model_id)) {
+    cards.push({
+      label: "Final model",
+      value: valueOrDash(sample.final_model_id as string | null | undefined),
+    });
+  }
+  if (typeof sample.latency_ms === "number") {
+    cards.push({
+      label: "Latency",
+      value: formatDurationMs(sample.latency_ms),
+    });
+  }
+  if (typeof sample.cost_usd === "number") {
+    cards.push({
+      label: "Cost",
+      value: formatCost(sample.cost_usd),
+    });
+  }
+
+  return cards;
+}
+
+function getArchitectureDetailEntries(
+  architecture: DetailArchitecture,
+  sample: ResultSample,
+): DetailEntry[] {
+  if (architecture === "ensemble") {
+    return collectScalarEntries(sample, [
+      "final_answer_source",
+      "final_model_id",
+      "confidence",
+      "latency_ms",
+      "cost_usd",
+      "api_cost_usd",
+      "infra_cost_usd",
+      "energy_kwh",
+      "co2_g",
+      "gpu_power_w",
+    ]);
+  }
+
+  if (architecture === "routing") {
+    return collectScalarEntries(sample, [
+      "final_answer_source",
+      "final_model_id",
+      "confidence",
+      "slm_confidence",
+      "confidence_threshold",
+      "escalated",
+      "llm_calls",
+      "latency_ms",
+      "cost_usd",
+      "api_cost_usd",
+      "infra_cost_usd",
+      "energy_kwh",
+      "co2_g",
+      "gpu_power_w",
+      "slm_latency_ms",
+      "llm_latency_ms",
+      "slm_input_tokens",
+      "slm_output_tokens",
+      "llm_input_tokens",
+      "llm_output_tokens",
+      "slm_cost_usd",
+      "llm_cost_usd",
+      "escalation_reason",
+    ]);
+  }
+
+  if (architecture === "monolithic") {
+    return collectScalarEntries(sample, [
+      "final_model_id",
+      "confidence",
+      "latency_ms",
+      "cost_usd",
+      "api_cost_usd",
+      "infra_cost_usd",
+      "energy_kwh",
+      "co2_g",
+      "gpu_power_w",
+    ]);
+  }
+
+  const hybridEntries = collectScalarEntries(sample, [
+    "final_answer_source",
+    "final_model_id",
+    "confidence",
+    "llm_calls",
+    "latency_ms",
+    "cost_usd",
+    "api_cost_usd",
+    "infra_cost_usd",
+    "energy_kwh",
+    "co2_g",
+    "gpu_power_w",
+    "slm_latency_ms",
+    "llm_latency_ms",
+    "slm_input_tokens",
+    "slm_output_tokens",
+    "llm_input_tokens",
+    "llm_output_tokens",
+    "slm_cost_usd",
+    "llm_cost_usd",
+  ]);
+
+  if (architecture === "multi_agent" || architecture === "speculative") {
+    return hybridEntries;
+  }
+
+  if (architecture === "multi_agent_crew") {
+    const entries = collectScalarEntries(sample, [
+      "final_model_id",
+      "confidence",
+      "latency_ms",
+      "cost_usd",
+      "api_cost_usd",
+      "infra_cost_usd",
+      "energy_kwh",
+      "co2_g",
+      "gpu_power_w",
+    ]);
+    if (sampleUsesLlm(sample)) {
+      entries.push(...collectScalarEntries(sample, ["used_llm", "llm_calls", "llm_latency_ms"]));
+    }
+    return entries;
+  }
+
+  return collectScalarEntries(sample, [
+    "final_answer_source",
+    "final_model_id",
+    "confidence",
+    "latency_ms",
+    "cost_usd",
+    "api_cost_usd",
+    "infra_cost_usd",
+    "energy_kwh",
+    "co2_g",
+    "gpu_power_w",
+  ]);
+}
+
+function getRoutingDecisionData(
+  sample: ResultSample,
+): { decisionEntries: DetailEntry[]; signalEntries: DetailEntry[] } | null {
+  if (!isRecord(sample.routing_decision)) return null;
+
+  const decisionEntries: DetailEntry[] = [];
+  const signalEntries: DetailEntry[] = [];
+  for (const key of ["accepted_by", "threshold", "confidence_method"]) {
+    const value = sample.routing_decision[key];
+    if (isScalarValue(value) && hasRenderableScalar(value)) {
+      decisionEntries.push([key, value]);
+    }
+  }
+
+  const signals = sample.routing_decision.signals;
+  if (isRecord(signals)) {
+    for (const [key, value] of Object.entries(signals)) {
+      if (isScalarValue(value) && hasRenderableScalar(value)) {
+        signalEntries.push([key, value]);
+      }
+    }
+  }
+
+  if (!decisionEntries.length && !signalEntries.length) return null;
+  return { decisionEntries, signalEntries };
+}
+
+function getOverviewRows({
+  architecture,
+  benchmark,
+  slm,
+  llm,
+  ensembleSlms,
+  config,
+  metrics,
+  experiment,
+  resultDetailCreatedAt,
+  showEnsembleTiebreak,
+}: {
+  architecture: DetailArchitecture;
+  benchmark: string;
+  slm: string | null;
+  llm: string | null;
+  ensembleSlms: string[];
+  config: Record<string, unknown>;
+  metrics: Record<string, number> | null;
+  experiment: {
+    n_samples?: number;
+    created_at?: string;
+    completed_at?: string | null;
+  } | null;
+  resultDetailCreatedAt: string | null;
+  showEnsembleTiebreak: boolean;
+}): DisplayRow[] {
+  const rows: DisplayRow[] = [
+    {
+      label: "Architecture",
+      value: <span className="capitalize">{formatArchitectureName(architecture)}</span>,
+    },
+    {
+      label: "Benchmark",
+      value: <span className="uppercase">{benchmark}</span>,
+    },
+  ];
+
+  if (architecture === "ensemble") {
+    rows.push({
+      label: "Ensemble SLMs",
+      value: ensembleSlms.length ? ensembleSlms.join(", ") : "—",
+    });
+    if (showEnsembleTiebreak) {
+      rows.push({
+        label: "LLM tiebreak",
+        value: hasTextValue(llm) ? llm : "configured",
+      });
+    }
+  } else if (architecture === "monolithic") {
+    rows.push({
+      label: "LLM",
+      value: llm ?? "—",
+    });
+  } else if (architecture === "multi_agent_crew") {
+    rows.push({
+      label: "Crew",
+      value: "reasoning / code / factual specialists",
+    });
+  } else {
+    rows.push({
+      label: "SLM",
+      value: slm ?? "—",
+    });
+    if (isArchitectureWithDirectLlm(architecture)) {
+      rows.push({
+        label: "LLM",
+        value: llm ?? "—",
+      });
+    }
+  }
+
+  rows.push({
+    label: "Samples",
+    value: experiment?.n_samples ?? valueOrDash(metrics?.n_total),
+  });
+
+  if (architecture === "routing") {
+    rows.push({
+      label: "Threshold",
+      value: formatPercent(Number(config.confidence_threshold ?? 0.7)),
+    });
+  }
+
+  if (architecture !== "monolithic" && architecture !== "multi_agent_crew") {
+    rows.push({
+      label: "SLM temp / max tokens",
+      value: `${formatDecimal(Number(config.slm_temperature ?? 0))} / ${formatTokenBudget(
+        Number(config.slm_max_tokens ?? 0),
+      )}`,
+    });
+  }
+
+  if (
+    isArchitectureWithDirectLlm(architecture) ||
+    (architecture === "ensemble" && showEnsembleTiebreak)
+  ) {
+    rows.push({
+      label: "LLM temp / max tokens",
+      value: `${formatDecimal(Number(config.llm_temperature ?? 0))} / ${formatTokenBudget(
+        Number(config.llm_max_tokens ?? 0),
+      )}`,
+    });
+  }
+
+  rows.push({
+    label: "Created",
+    value: formatDate(experiment?.created_at ?? resultDetailCreatedAt ?? ""),
+  });
+
+  if (experiment?.completed_at) {
+    rows.push({
+      label: "Completed",
+      value: formatDate(experiment.completed_at),
+    });
+  }
+
+  return rows;
+}
+
+function DetailGrid({ entries }: { entries: DetailEntry[] }) {
+  return (
+    <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+      {entries.map(([key, value]) => (
+        <div key={key} className="rounded-md border border-zinc-200 bg-white px-3 py-2">
+          <div className="text-xs text-zinc-500">{formatFieldLabel(key)}</div>
+          <div className="mt-1 break-words text-sm font-medium text-zinc-900">
+            {key === "final_answer_source"
+              ? formatDecisionSource(value) ?? formatScalarValue(value, key)
+              : formatScalarValue(value, key)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function ExperimentDetailPage({
@@ -261,9 +734,11 @@ export default function ExperimentDetailPage({
     return <p className="text-red-600">Experiment not found.</p>;
   }
 
-  const architecture = String(
+  const architectureId = String(
     experiment?.architecture ?? resultDetail?.architecture ?? "unknown",
   );
+  const architecture = toDetailArchitecture(architectureId);
+  const architectureLabel = formatArchitectureName(architectureId);
   const benchmark = String(experiment?.benchmark ?? resultDetail?.benchmark ?? "—");
   const slm = experiment?.slm ?? (resultDetail?.config?.slm as string | undefined) ?? null;
   const llm = experiment?.llm ?? (resultDetail?.config?.llm as string | undefined) ?? null;
@@ -276,13 +751,10 @@ export default function ExperimentDetailPage({
   const samples = resultDetail?.samples ?? [];
   const config = resultDetail?.config ?? experiment?.config_overrides ?? {};
   const confidenceThreshold = Number(config.confidence_threshold ?? 0.7);
-  const slmTemperature = Number(config.slm_temperature ?? 0);
-  const llmTemperature = Number(config.llm_temperature ?? 0);
-  const slmMaxTokens = Number(config.slm_max_tokens ?? 0);
-  const llmMaxTokens = Number(config.llm_max_tokens ?? 0);
   const nEscalated = Math.round(metrics?.n_escalated ?? 0);
   const llmCallRatio = metrics?.llm_call_ratio ?? 0;
   const hasFallbackCalls = llmCallRatio > 0 || nEscalated > 0;
+  const showEnsembleTiebreak = shouldShowEnsembleTiebreak(config, llm, samples);
 
   const orderedMetricKeys = [
     "accuracy",
@@ -312,6 +784,25 @@ export default function ExperimentDetailPage({
       ]
     : [];
 
+  const overviewRows = getOverviewRows({
+    architecture,
+    benchmark,
+    slm,
+    llm,
+    ensembleSlms,
+    config,
+    metrics,
+    experiment: experiment
+      ? {
+          n_samples: experiment.n_samples,
+          created_at: experiment.created_at,
+          completed_at: experiment.completed_at,
+        }
+      : null,
+    resultDetailCreatedAt: resultDetail?.created_at ?? null,
+    showEnsembleTiebreak,
+  });
+
   function architectureExplainer() {
     if (architecture === "monolithic") {
       return (
@@ -340,9 +831,14 @@ export default function ExperimentDetailPage({
     if (architecture === "ensemble") {
       return (
         <p>
-          {ensembleSlms.length} SLMs voted: <strong>{ensembleSlms.join(", ")}</strong>
-          {config.llm_tiebreak ? (
-            <> · tiebreak <strong>{llm}</strong> was called only when no majority emerged.</>
+          {ensembleSlms.length} SLMs voted:{" "}
+          <strong>{ensembleSlms.length ? ensembleSlms.join(", ") : "configured members"}</strong>
+          {showEnsembleTiebreak ? (
+            <>
+              {" "}
+              · tiebreak <strong>{llm ?? "LLM"}</strong> was available only when no majority
+              emerged.
+            </>
           ) : (
             <> · no LLM tiebreak.</>
           )}
@@ -360,19 +856,19 @@ export default function ExperimentDetailPage({
     if (architecture === "multi_agent_crew") {
       return (
         <p>
-          Domain-routed crew of three specialist SLMs (reasoning / code / factual). The crew
-          self-classifies each query and routes it to the best-fit agent.
+          Domain-routed crew of specialist SLMs (reasoning / code / factual). The crew
+          self-classifies each query and routes it to the best-fit agent without an LLM fallback.
         </p>
       );
     }
-    return <p>Architecture: {architecture}.</p>;
+    return <p>Architecture: {architectureLabel}.</p>;
   }
 
-  const inferenceSteps = samples.flatMap((s, sIdx) =>
-    (s.inference_steps ?? []).map((step, idx) => ({
-      sampleIdx: sIdx,
-      stepIdx: idx,
-      queryId: s.query_id,
+  const inferenceSteps = samples.flatMap((sample, sampleIdx) =>
+    (sample.inference_steps ?? []).map((step, stepIdx) => ({
+      sampleIdx,
+      stepIdx,
+      queryId: sample.query_id,
       role: String(step.role ?? "?"),
       model: String(step.model_id ?? "?"),
       latency: Number(step.latency_ms ?? 0),
@@ -412,7 +908,7 @@ export default function ExperimentDetailPage({
           </Badge>
         )}
         <Badge variant="outline" className="capitalize">
-          {architecture.replace(/_/g, " ")}
+          {architectureLabel}
         </Badge>
         <Badge variant="secondary" className="uppercase">
           {benchmark}
@@ -420,18 +916,18 @@ export default function ExperimentDetailPage({
       </div>
 
       <div className="flex gap-1 border-b border-zinc-200">
-        {TABS.map((t) => (
+        {TABS.map((item) => (
           <button
-            key={t.id}
+            key={item.id}
             type="button"
-            onClick={() => setTab(t.id)}
+            onClick={() => setTab(item.id)}
             className={`px-3 py-2 text-sm font-medium transition ${
-              tab === t.id
+              tab === item.id
                 ? "border-b-2 border-zinc-900 text-zinc-900"
                 : "text-zinc-500 hover:text-zinc-900"
             }`}
           >
-            {t.label}
+            {item.label}
           </button>
         ))}
       </div>
@@ -444,55 +940,11 @@ export default function ExperimentDetailPage({
                 <CardTitle className="text-sm text-zinc-500">Configuration</CardTitle>
               </CardHeader>
               <CardContent className="space-y-1 text-sm">
-                <p>
-                  <span className="text-zinc-500">Architecture:</span>{" "}
-                  <span className="capitalize">{architecture.replace(/_/g, " ")}</span>
-                </p>
-                <p>
-                  <span className="text-zinc-500">Benchmark:</span>{" "}
-                  <span className="uppercase">{benchmark}</span>
-                </p>
-                {architecture === "ensemble" ? (
-                  <p>
-                    <span className="text-zinc-500">Ensemble SLMs:</span>{" "}
-                    {ensembleSlms.length ? ensembleSlms.join(", ") : "—"}
+                {overviewRows.map((row) => (
+                  <p key={row.label}>
+                    <span className="text-zinc-500">{row.label}:</span> {row.value}
                   </p>
-                ) : (
-                  <p>
-                    <span className="text-zinc-500">SLM:</span> {slm ?? "—"}
-                  </p>
-                )}
-                <p>
-                  <span className="text-zinc-500">LLM:</span> {llm ?? "—"}
-                </p>
-                <p>
-                  <span className="text-zinc-500">Samples:</span>{" "}
-                  {experiment?.n_samples ?? valueOrDash(metrics?.n_total)}
-                </p>
-                {architecture === "routing" && (
-                  <p>
-                    <span className="text-zinc-500">Threshold:</span>{" "}
-                    {formatPercent(confidenceThreshold)}
-                  </p>
-                )}
-                <p>
-                  <span className="text-zinc-500">SLM temp / max tokens:</span>{" "}
-                  {formatDecimal(slmTemperature)} / {formatTokenBudget(slmMaxTokens)}
-                </p>
-                <p>
-                  <span className="text-zinc-500">LLM temp / max tokens:</span>{" "}
-                  {formatDecimal(llmTemperature)} / {formatTokenBudget(llmMaxTokens)}
-                </p>
-                <p>
-                  <span className="text-zinc-500">Created:</span>{" "}
-                  {formatDate(experiment?.created_at ?? resultDetail?.created_at ?? "")}
-                </p>
-                {experiment?.completed_at && (
-                  <p>
-                    <span className="text-zinc-500">Completed:</span>{" "}
-                    {formatDate(experiment.completed_at)}
-                  </p>
-                )}
+                ))}
               </CardContent>
             </Card>
 
@@ -510,11 +962,11 @@ export default function ExperimentDetailPage({
                     "total_energy_kwh",
                     "eats_score",
                   ]
-                    .filter((k) => metrics[k] != null)
-                    .map((k) => (
-                      <p key={k}>
-                        <span className="text-zinc-500">{formatMetricLabel(k)}:</span>{" "}
-                        {formatMetricValue(k, metrics[k])}
+                    .filter((key) => metrics[key] != null)
+                    .map((key) => (
+                      <p key={key}>
+                        <span className="text-zinc-500">{formatMetricLabel(key)}:</span>{" "}
+                        {formatMetricValue(key, metrics[key])}
                       </p>
                     ))}
                 </CardContent>
@@ -572,11 +1024,11 @@ export default function ExperimentDetailPage({
               <p className="text-sm text-zinc-500">Metrics not yet available.</p>
             ) : (
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-                {allMetricKeys.map((k) => (
-                  <div key={k} className="rounded-md border border-zinc-100 bg-white p-3">
-                    <div className="text-xs text-zinc-500">{formatMetricLabel(k)}</div>
+                {allMetricKeys.map((key) => (
+                  <div key={key} className="rounded-md border border-zinc-100 bg-white p-3">
+                    <div className="text-xs text-zinc-500">{formatMetricLabel(key)}</div>
                     <div className="text-lg font-semibold text-zinc-900">
-                      {formatMetricValue(k, metrics[k])}
+                      {formatMetricValue(key, metrics[key])}
                     </div>
                   </div>
                 ))}
@@ -599,9 +1051,58 @@ export default function ExperimentDetailPage({
             ) : (
               <div className="space-y-3">
                 {samples.map((sample) => {
-                  const isExpanded = !!expanded[sample.query_id];
-                  const detailEntries = getSampleDetailEntries(sample);
+                  const isExpanded = Boolean(expanded[sample.query_id]);
+                  const summaryCards = getSampleSummaryCards(architecture, sample);
+                  const detailEntries = getArchitectureDetailEntries(architecture, sample);
+                  const textFields = getCoreTextFields(architecture, sample);
                   const memberResponses = getEnsembleMemberResponses(sample);
+                  const routingDecision = architecture === "routing"
+                    ? getRoutingDecisionData(sample)
+                    : null;
+                  const hasInferenceTrace = (sample.inference_steps?.length ?? 0) > 0;
+                  const hasResourceEstimate = isRecord(sample.resource_estimate);
+                  const showEnsembleDecisionSection =
+                    architecture === "ensemble" &&
+                    (
+                      memberResponses.length > 0 ||
+                      Array.isArray(sample.votes) ||
+                      isRecord(sample.vote_counts) ||
+                      hasTextValue(sample.voting_method) ||
+                      sample.llm_tiebreak === true ||
+                      hasEnsembleTiebreakEvidence(sample)
+                    );
+                  const ensembleDecisionEntries: DetailEntry[] = [];
+                  if (hasTextValue(sample.voting_method)) {
+                    ensembleDecisionEntries.push(["voting_method", sample.voting_method]);
+                  }
+                  if (
+                    isRecord(sample.vote_counts) &&
+                    Object.keys(sample.vote_counts).length > 0
+                  ) {
+                    ensembleDecisionEntries.push([
+                      "vote_counts",
+                      Object.entries(sample.vote_counts)
+                        .map(([answer, count]) => `${answer}: ${count}`)
+                        .join(" · "),
+                    ]);
+                  }
+                  if (Array.isArray(sample.votes) && sample.votes.length > 0) {
+                    ensembleDecisionEntries.push(["votes", sample.votes.join(", ")]);
+                  }
+                  if (sample.llm_tiebreak === true || hasEnsembleTiebreakEvidence(sample)) {
+                    ensembleDecisionEntries.push([
+                      "llm_tiebreak",
+                      sampleUsesLlm(sample) ? "used" : "enabled",
+                    ]);
+                  }
+                  const showLegacyEnsembleNote =
+                    architecture === "ensemble" && memberResponses.length === 0;
+                  const showTiebreakAnswer =
+                    architecture === "ensemble" &&
+                    (sample.llm_tiebreak === true || hasEnsembleTiebreakEvidence(sample)) &&
+                    (hasTextValue(sample.llm_tiebreak_raw_text) ||
+                      hasTextValue(sample.llm_tiebreak_parsed_answer));
+
                   return (
                     <Fragment key={sample.query_id}>
                       <div className="rounded-lg border border-zinc-200 bg-white">
@@ -636,336 +1137,249 @@ export default function ExperimentDetailPage({
                           </div>
 
                           <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
-                            <div className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2">
-                              <div className="text-[11px] uppercase tracking-wide text-zinc-500">
-                                Correct
+                            {summaryCards.map((card) => (
+                              <div
+                                key={card.label}
+                                className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2"
+                              >
+                                <div className="text-[11px] uppercase tracking-wide text-zinc-500">
+                                  {card.label}
+                                </div>
+                                <div className="mt-1 break-words text-sm font-medium text-zinc-900">
+                                  {card.value}
+                                </div>
                               </div>
-                              <div className="mt-1">
-                                <Badge variant={sample.correct ? "success" : "destructive"}>
-                                  {sample.correct ? "correct" : "wrong"}
-                                </Badge>
-                              </div>
-                            </div>
-                            <div className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2">
-                              <div className="text-[11px] uppercase tracking-wide text-zinc-500">
-                                Used LLM
-                              </div>
-                              <div className="mt-1">
-                                <Badge
-                                  variant={
-                                    (sample.llm_calls ?? 0) > 0 || sample.escalated
-                                      ? "warning"
-                                      : "secondary"
-                                  }
-                                >
-                                  {(sample.llm_calls ?? 0) > 0 || sample.escalated ? "yes" : "no"}
-                                </Badge>
-                              </div>
-                            </div>
-                            <div className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2">
-                              <div className="text-[11px] uppercase tracking-wide text-zinc-500">
-                                Final model
-                              </div>
-                              <div className="mt-1 break-all text-sm font-medium text-zinc-900">
-                                {valueOrDash(sample.final_model_id)}
-                              </div>
-                            </div>
-                            <div className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2">
-                              <div className="text-[11px] uppercase tracking-wide text-zinc-500">
-                                SLM conf.
-                              </div>
-                              <div className="mt-1 text-sm font-medium text-zinc-900">
-                                {sample.slm_confidence != null
-                                  ? formatPercent(sample.slm_confidence)
-                                  : "—"}
-                              </div>
-                            </div>
-                            <div className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2">
-                              <div className="text-[11px] uppercase tracking-wide text-zinc-500">
-                                Latency
-                              </div>
-                              <div className="mt-1 text-sm font-medium text-zinc-900">
-                                {sample.latency_ms != null
-                                  ? formatDurationMs(sample.latency_ms)
-                                  : "—"}
-                              </div>
-                            </div>
-                            <div className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2">
-                              <div className="text-[11px] uppercase tracking-wide text-zinc-500">
-                                Cost
-                              </div>
-                              <div className="mt-1 text-sm font-medium text-zinc-900">
-                                {sample.cost_usd != null ? formatCost(sample.cost_usd) : "—"}
-                              </div>
-                            </div>
+                            ))}
                           </div>
                         </div>
 
                         {isExpanded && (
                           <div className="border-t border-zinc-200 bg-zinc-50/70 px-4 py-4">
                             <div className="space-y-4">
-                                  {architecture === "ensemble" && (
-                                    <section className="space-y-3">
-                                      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                                        Ensemble decision
-                                      </p>
-                                      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                                        <div className="rounded-md border border-zinc-200 bg-white px-3 py-2">
-                                          <div className="text-xs text-zinc-500">Voting method</div>
-                                          <div className="mt-1 text-sm font-medium text-zinc-900">
-                                            {typeof sample.voting_method === "string"
-                                              ? sample.voting_method
-                                              : "—"}
-                                          </div>
-                                        </div>
-                                        <div className="rounded-md border border-zinc-200 bg-white px-3 py-2">
-                                          <div className="text-xs text-zinc-500">Vote counts</div>
-                                          <div className="mt-1 break-words text-sm font-medium text-zinc-900">
-                                            {sample.vote_counts &&
-                                            typeof sample.vote_counts === "object" &&
-                                            Object.keys(sample.vote_counts).length
-                                              ? Object.entries(sample.vote_counts)
-                                                  .map(([answer, count]) => `${answer}: ${count}`)
-                                                  .join(" · ")
-                                              : "—"}
-                                          </div>
-                                        </div>
-                                        <div className="rounded-md border border-zinc-200 bg-white px-3 py-2">
-                                          <div className="text-xs text-zinc-500">Votes</div>
-                                          <div className="mt-1 break-words text-sm font-medium text-zinc-900">
-                                            {Array.isArray(sample.votes) && sample.votes.length
-                                              ? sample.votes.join(", ")
-                                              : "—"}
-                                          </div>
-                                        </div>
-                                        <div className="rounded-md border border-zinc-200 bg-white px-3 py-2">
-                                          <div className="text-xs text-zinc-500">LLM tiebreak</div>
-                                          <div className="mt-1 text-sm font-medium text-zinc-900">
-                                            {sample.llm_tiebreak ? "enabled" : "disabled"}
-                                          </div>
-                                        </div>
-                                      </div>
+                              {showEnsembleDecisionSection && (
+                                <section className="space-y-3">
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                                    Ensemble decision
+                                  </p>
 
-                                      {!memberResponses.length ? (
-                                        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-800">
-                                          Member-level answers are not available for this run.
-                                          This result only contains call traces, not per-model raw
-                                          answers. It was likely produced before the ensemble
-                                          observability update or by an older backend process.
-                                          Restart the backend and rerun the experiment to capture
-                                          per-model answers here.
-                                        </div>
-                                      ) : (
-                                        <div className="space-y-2">
-                                          {memberResponses.map((member) => (
-                                            <div
-                                              key={`${sample.query_id}-${member.member_index ?? member.model_id}`}
-                                              className="rounded-md border border-zinc-200 bg-white px-3 py-3"
-                                            >
-                                              <div className="flex flex-wrap items-center gap-2">
-                                                <Badge variant="secondary">
-                                                  Member {member.member_index ?? "?"}
-                                                </Badge>
-                                                {member.role && (
-                                                  <Badge variant="outline">{String(member.role)}</Badge>
-                                                )}
-                                                <span className="font-mono text-xs text-zinc-500">
-                                                  {member.model_id ?? "—"}
-                                                </span>
-                                              </div>
-                                              <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-4">
-                                                <div className="rounded-md border border-zinc-100 bg-zinc-50 px-3 py-2">
-                                                  <div className="text-xs text-zinc-500">Parsed</div>
-                                                  <div className="mt-1 text-sm font-medium text-zinc-900">
-                                                    {typeof member.parsed_answer === "string"
-                                                      ? member.parsed_answer
-                                                      : "—"}
-                                                  </div>
-                                                </div>
-                                                <div className="rounded-md border border-zinc-100 bg-zinc-50 px-3 py-2">
-                                                  <div className="text-xs text-zinc-500">Confidence</div>
-                                                  <div className="mt-1 text-sm font-medium text-zinc-900">
-                                                    {typeof member.confidence === "number"
-                                                      ? formatPercent(member.confidence)
-                                                      : "—"}
-                                                  </div>
-                                                </div>
-                                                <div className="rounded-md border border-zinc-100 bg-zinc-50 px-3 py-2">
-                                                  <div className="text-xs text-zinc-500">Latency</div>
-                                                  <div className="mt-1 text-sm font-medium text-zinc-900">
-                                                    {typeof member.latency_ms === "number"
-                                                      ? formatDurationMs(member.latency_ms)
-                                                      : "—"}
-                                                  </div>
-                                                </div>
-                                                <div className="rounded-md border border-zinc-100 bg-zinc-50 px-3 py-2">
-                                                  <div className="text-xs text-zinc-500">Tokens</div>
-                                                  <div className="mt-1 text-sm font-medium text-zinc-900">
-                                                    {typeof member.input_tokens === "number" ||
-                                                    typeof member.output_tokens === "number"
-                                                      ? `${formatNumber(Number(member.input_tokens ?? 0))} / ${formatNumber(Number(member.output_tokens ?? 0))}`
-                                                      : "—"}
-                                                  </div>
-                                                </div>
-                                              </div>
-                                              <div className="mt-2">
-                                                <div className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-                                                  Member answer
-                                                </div>
-                                                <div className="mt-1 whitespace-pre-wrap break-words text-sm leading-5 text-zinc-700">
-                                                  {typeof member.raw_text === "string" && member.raw_text.trim()
-                                                    ? member.raw_text
-                                                    : "Not available"}
-                                                </div>
-                                              </div>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      )}
-
-                                      {sample.llm_tiebreak && (
-                                        <div className="rounded-md border border-zinc-200 bg-white px-3 py-3">
-                                          <div className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-                                            LLM tiebreak answer
-                                          </div>
-                                          <div className="mt-2 whitespace-pre-wrap break-words text-sm leading-5 text-zinc-700">
-                                            {typeof sample.llm_tiebreak_raw_text === "string" &&
-                                            sample.llm_tiebreak_raw_text.trim()
-                                              ? sample.llm_tiebreak_raw_text
-                                              : "Not available"}
-                                          </div>
-                                          <div className="mt-2 text-xs text-zinc-500">
-                                            Parsed:{" "}
-                                            {typeof sample.llm_tiebreak_parsed_answer === "string"
-                                              ? sample.llm_tiebreak_parsed_answer
-                                              : "—"}
-                                          </div>
-                                        </div>
-                                      )}
-                                    </section>
+                                  {ensembleDecisionEntries.length > 0 && (
+                                    <DetailGrid entries={ensembleDecisionEntries} />
                                   )}
 
-                                  <section className="space-y-3">
-                                    <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                                      Core texts
-                                    </p>
+                                  {showLegacyEnsembleNote && (
+                                    <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-800">
+                                      This legacy ensemble result does not include member-level
+                                      observability, so only the available vote outcome is shown.
+                                    </div>
+                                  )}
+
+                                  {memberResponses.length > 0 && (
                                     <div className="space-y-2">
-                                      {CORE_TEXT_FIELDS.map((field) => (
+                                      {memberResponses.map((member) => (
                                         <div
-                                          key={field}
-                                          className="rounded-md border border-zinc-200 bg-white px-3 py-2"
+                                          key={`${sample.query_id}-${member.member_index ?? member.model_id}`}
+                                          className="rounded-md border border-zinc-200 bg-white px-3 py-3"
                                         >
-                                          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-                                            {formatFieldLabel(field)}
-                                          </p>
-                                          <div className="truncate text-xs text-zinc-700">
-                                            {getSampleTextValue(sample, field)}
+                                          <div className="flex flex-wrap items-center gap-2">
+                                            <Badge variant="secondary">
+                                              Member {member.member_index ?? "?"}
+                                            </Badge>
+                                            {member.role && (
+                                              <Badge variant="outline">{String(member.role)}</Badge>
+                                            )}
+                                            <span className="font-mono text-xs text-zinc-500">
+                                              {member.model_id ?? "—"}
+                                            </span>
+                                          </div>
+                                          <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-4">
+                                            {hasRenderableScalar(member.parsed_answer) && (
+                                              <div className="rounded-md border border-zinc-100 bg-zinc-50 px-3 py-2">
+                                                <div className="text-xs text-zinc-500">Parsed</div>
+                                                <div className="mt-1 text-sm font-medium text-zinc-900">
+                                                  {String(member.parsed_answer)}
+                                                </div>
+                                              </div>
+                                            )}
+                                            {typeof member.confidence === "number" && (
+                                              <div className="rounded-md border border-zinc-100 bg-zinc-50 px-3 py-2">
+                                                <div className="text-xs text-zinc-500">Confidence</div>
+                                                <div className="mt-1 text-sm font-medium text-zinc-900">
+                                                  {formatPercent(member.confidence)}
+                                                </div>
+                                              </div>
+                                            )}
+                                            {typeof member.latency_ms === "number" && (
+                                              <div className="rounded-md border border-zinc-100 bg-zinc-50 px-3 py-2">
+                                                <div className="text-xs text-zinc-500">Latency</div>
+                                                <div className="mt-1 text-sm font-medium text-zinc-900">
+                                                  {formatDurationMs(member.latency_ms)}
+                                                </div>
+                                              </div>
+                                            )}
+                                            {(typeof member.input_tokens === "number" ||
+                                              typeof member.output_tokens === "number") && (
+                                              <div className="rounded-md border border-zinc-100 bg-zinc-50 px-3 py-2">
+                                                <div className="text-xs text-zinc-500">Tokens</div>
+                                                <div className="mt-1 text-sm font-medium text-zinc-900">
+                                                  {`${formatNumber(Number(member.input_tokens ?? 0))} / ${formatNumber(Number(member.output_tokens ?? 0))}`}
+                                                </div>
+                                              </div>
+                                            )}
+                                          </div>
+                                          <div className="mt-2">
+                                            <div className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                                              Member answer
+                                            </div>
+                                            <div className="mt-1 whitespace-pre-wrap break-words text-sm leading-5 text-zinc-700">
+                                              {hasTextValue(member.raw_text)
+                                                ? member.raw_text
+                                                : "Not available"}
+                                            </div>
                                           </div>
                                         </div>
                                       ))}
                                     </div>
-                                  </section>
+                                  )}
 
-                                  <section className="space-y-3">
-                                    <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                                      Sample details
-                                    </p>
-                                    {!detailEntries.length ? (
-                                      <p className="text-sm text-zinc-500">
-                                        No scalar sample fields available.
-                                      </p>
-                                    ) : (
-                                      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                                        {detailEntries.map(([key, value]) => (
-                                          <div
-                                            key={key}
-                                            className="rounded-md border border-zinc-200 bg-white px-3 py-2"
-                                          >
-                                            <div className="text-xs text-zinc-500">
-                                              {formatFieldLabel(key)}
-                                            </div>
-                                            <div className="mt-1 break-words text-sm font-medium text-zinc-900">
-                                              {formatScalarValue(value, key)}
-                                            </div>
-                                          </div>
-                                        ))}
+                                  {showTiebreakAnswer && (
+                                    <div className="rounded-md border border-zinc-200 bg-white px-3 py-3">
+                                      <div className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                                        LLM tiebreak answer
                                       </div>
-                                    )}
-                                    {sample.resource_estimate && (
-                                      <div>
-                                        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                                          {formatFieldLabel("resource_estimate")}
+                                      {hasTextValue(sample.llm_tiebreak_raw_text) && (
+                                        <div className="mt-2 whitespace-pre-wrap break-words text-sm leading-5 text-zinc-700">
+                                          {sample.llm_tiebreak_raw_text}
+                                        </div>
+                                      )}
+                                      {hasTextValue(sample.llm_tiebreak_parsed_answer) && (
+                                        <div className="mt-2 text-xs text-zinc-500">
+                                          Parsed: {sample.llm_tiebreak_parsed_answer}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </section>
+                              )}
+
+                              {routingDecision && (
+                                <section className="space-y-3">
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                                    Routing decision
+                                  </p>
+                                  {routingDecision.decisionEntries.length > 0 && (
+                                    <DetailGrid entries={routingDecision.decisionEntries} />
+                                  )}
+                                  {routingDecision.signalEntries.length > 0 && (
+                                    <div className="space-y-2">
+                                      <div className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                                        Decision signals
+                                      </div>
+                                      <DetailGrid entries={routingDecision.signalEntries} />
+                                    </div>
+                                  )}
+                                </section>
+                              )}
+
+                              {textFields.length > 0 && (
+                                <section className="space-y-3">
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                                    Core texts
+                                  </p>
+                                  <div className="space-y-2">
+                                    {textFields.map((field) => (
+                                      <div
+                                        key={field.key}
+                                        className="rounded-md border border-zinc-200 bg-white px-3 py-2"
+                                      >
+                                        <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                                          {formatFieldLabel(field.key)}
                                         </p>
-                                        <pre className="whitespace-pre-wrap break-all rounded-md bg-white p-3 text-xs text-zinc-700">
-                                          {stringifyJson(sample.resource_estimate)}
-                                        </pre>
+                                        <div className="whitespace-pre-wrap break-words text-sm leading-5 text-zinc-700">
+                                          {field.value}
+                                        </div>
                                       </div>
-                                    )}
-                                  </section>
+                                    ))}
+                                  </div>
+                                </section>
+                              )}
 
-                                  <section className="space-y-3">
-                                    <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                                      Inference steps
-                                    </p>
-                                    {(sample.inference_steps?.length ?? 0) === 0 ? (
-                                      <p className="text-sm text-zinc-500">
-                                        No inference step trace available for this sample.
-                                      </p>
-                                    ) : (
-                                      <div className="space-y-3">
-                                        {(sample.inference_steps ?? []).map((step, idx) => (
-                                          <div
-                                            key={idx}
-                                            className="rounded-md border border-zinc-200 bg-white p-3"
-                                          >
-                                            <div className="mb-3 flex flex-wrap items-center gap-2">
-                                              <Badge variant="secondary">Step {idx + 1}</Badge>
-                                              {step.role && (
-                                                <Badge variant="outline">
-                                                  {String(step.role)}
-                                                </Badge>
-                                              )}
-                                              {step.model_id && (
-                                                <span className="font-mono text-xs text-zinc-500">
-                                                  {String(step.model_id)}
-                                                </span>
-                                              )}
-                                            </div>
-                                            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                                              {getStepEntries(step).map(([key, value]) => (
-                                                <div
-                                                  key={key}
-                                                  className="rounded-md border border-zinc-100 bg-zinc-50 px-3 py-2"
-                                                >
-                                                  <div className="text-xs text-zinc-500">
-                                                    {formatFieldLabel(key)}
-                                                  </div>
-                                                  {isScalarValue(value) ? (
-                                                    <div className="mt-1 break-words text-sm font-medium text-zinc-900">
-                                                      {formatScalarValue(value, key)}
-                                                    </div>
-                                                  ) : (
-                                                    <pre className="mt-1 whitespace-pre-wrap break-all text-xs text-zinc-700">
-                                                      {stringifyJson(value)}
-                                                    </pre>
-                                                  )}
+                              {detailEntries.length > 0 && (
+                                <section className="space-y-3">
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                                    Sample details
+                                  </p>
+                                  <DetailGrid entries={detailEntries} />
+                                </section>
+                              )}
+
+                              {hasResourceEstimate && (
+                                <section className="space-y-3">
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                                    {formatFieldLabel("resource_estimate")}
+                                  </p>
+                                  <pre className="whitespace-pre-wrap break-all rounded-md bg-white p-3 text-xs text-zinc-700">
+                                    {stringifyJson(sample.resource_estimate)}
+                                  </pre>
+                                </section>
+                              )}
+
+                              {hasInferenceTrace && (
+                                <section className="space-y-3">
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                                    Inference steps
+                                  </p>
+                                  <div className="space-y-3">
+                                    {(sample.inference_steps ?? []).map((step, idx) => (
+                                      <div
+                                        key={idx}
+                                        className="rounded-md border border-zinc-200 bg-white p-3"
+                                      >
+                                        <div className="mb-3 flex flex-wrap items-center gap-2">
+                                          <Badge variant="secondary">Step {idx + 1}</Badge>
+                                          {step.role && (
+                                            <Badge variant="outline">{String(step.role)}</Badge>
+                                          )}
+                                          {step.model_id && (
+                                            <span className="font-mono text-xs text-zinc-500">
+                                              {String(step.model_id)}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                                          {getStepEntries(step).map(([key, value]) => (
+                                            <div
+                                              key={key}
+                                              className="rounded-md border border-zinc-100 bg-zinc-50 px-3 py-2"
+                                            >
+                                              <div className="text-xs text-zinc-500">
+                                                {formatFieldLabel(key)}
+                                              </div>
+                                              {isScalarValue(value) ? (
+                                                <div className="mt-1 break-words text-sm font-medium text-zinc-900">
+                                                  {formatScalarValue(value, key)}
                                                 </div>
-                                              ))}
+                                              ) : (
+                                                <pre className="mt-1 whitespace-pre-wrap break-all text-xs text-zinc-700">
+                                                  {stringifyJson(value)}
+                                                </pre>
+                                              )}
                                             </div>
-                                          </div>
-                                        ))}
+                                          ))}
+                                        </div>
                                       </div>
-                                    )}
-                                  </section>
+                                    ))}
+                                  </div>
+                                </section>
+                              )}
 
-                                  <section className="space-y-3">
-                                    <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                                      Raw JSON
-                                    </p>
-                                    <pre className="whitespace-pre-wrap break-all rounded-md bg-white p-3 text-xs text-zinc-700">
-                                      {stringifyJson(sample)}
-                                    </pre>
-                                  </section>
+                              <section className="space-y-3">
+                                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                                  Raw JSON
+                                </p>
+                                <pre className="whitespace-pre-wrap break-all rounded-md bg-white p-3 text-xs text-zinc-700">
+                                  {stringifyJson(sample)}
+                                </pre>
+                              </section>
                             </div>
                           </div>
                         )}
@@ -992,10 +1406,10 @@ export default function ExperimentDetailPage({
             ) : (
               <div className="space-y-4">
                 {Array.from(stepsByRole.entries()).map(([role, steps]) => {
-                  const totalLat = steps.reduce((s, x) => s + x.latency, 0);
-                  const totalIn = steps.reduce((s, x) => s + x.tokensIn, 0);
-                  const totalOut = steps.reduce((s, x) => s + x.tokensOut, 0);
-                  const totalCost = steps.reduce((s, x) => s + x.cost, 0);
+                  const totalLat = steps.reduce((sum, entry) => sum + entry.latency, 0);
+                  const totalIn = steps.reduce((sum, entry) => sum + entry.tokensIn, 0);
+                  const totalOut = steps.reduce((sum, entry) => sum + entry.tokensOut, 0);
+                  const totalCost = steps.reduce((sum, entry) => sum + entry.cost, 0);
                   return (
                     <div key={role} className="rounded-md border border-zinc-200 bg-white p-3">
                       <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -1009,7 +1423,7 @@ export default function ExperimentDetailPage({
                         </span>
                       </div>
                       <div className="text-xs text-zinc-500">
-                        Models: {Array.from(new Set(steps.map((s) => s.model))).join(", ")}
+                        Models: {Array.from(new Set(steps.map((step) => step.model))).join(", ")}
                       </div>
                     </div>
                   );
