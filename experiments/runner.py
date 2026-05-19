@@ -74,6 +74,11 @@ class ExperimentRunner:
             "slm": slm,
             "llm": llm,
         }
+        if cfg.architecture in {"routing", "multi_agent", "ensemble"}:
+            arch_kwargs["slm_temperature"] = cfg.slm_temperature
+            arch_kwargs["llm_temperature"] = cfg.llm_temperature
+            arch_kwargs["slm_max_tokens"] = cfg.slm_max_tokens
+            arch_kwargs["llm_max_tokens"] = cfg.llm_max_tokens
         if cfg.architecture == "routing":
             arch_kwargs["confidence_threshold"] = cfg.confidence_threshold
         elif cfg.architecture == "multi_agent":

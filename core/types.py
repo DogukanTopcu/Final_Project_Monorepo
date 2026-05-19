@@ -40,6 +40,10 @@ class ExperimentConfig:
     n_samples: int = 100
     slm: str = "qwen3.5-4b"
     llm: str = "llama3.3-70b"
+    slm_temperature: float = 0.0
+    llm_temperature: float = 0.0
+    slm_max_tokens: int = 8192
+    llm_max_tokens: int = 8192
     # Arch A params
     confidence_threshold: float = 0.7
     # Arch B params

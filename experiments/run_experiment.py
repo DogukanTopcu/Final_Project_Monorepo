@@ -32,6 +32,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--n_samples", type=int, default=100)
     p.add_argument("--slm", default="qwen3.5-4b")
     p.add_argument("--llm", default="llama3.3-70b")
+    p.add_argument("--slm_temperature", type=float, default=0.0)
+    p.add_argument("--llm_temperature", type=float, default=0.0)
+    p.add_argument("--slm_max_tokens", type=int, default=8192)
+    p.add_argument("--llm_max_tokens", type=int, default=8192)
     p.add_argument("--confidence_threshold", type=float, default=0.7)
     p.add_argument("--arbitrator", choices=["slm", "llm"], default="slm")
     p.add_argument("--n_models", type=int, default=3)
@@ -54,6 +58,10 @@ def build_config(args: argparse.Namespace, architecture: str) -> ExperimentConfi
         n_samples=args.n_samples,
         slm=args.slm,
         llm=args.llm,
+        slm_temperature=args.slm_temperature,
+        llm_temperature=args.llm_temperature,
+        slm_max_tokens=args.slm_max_tokens,
+        llm_max_tokens=args.llm_max_tokens,
         confidence_threshold=args.confidence_threshold,
         arbitrator=args.arbitrator,
         n_models=args.n_models,

@@ -158,6 +158,57 @@ def test_launch_dry_run_transitions_to_completed_and_surfaces_metrics(
     assert "total_cost_usd" in payload["metrics"]
 
 
+def test_launch_accepts_per_model_runtime_settings(client: TestClient, monkeypatch):
+    executor = DeferredExecutor()
+    monkeypatch.setattr(experiment_service, "_executor", executor)
+
+    response = client.post(
+        "/api/experiments",
+        json={
+            "architecture": "routing",
+            "benchmark": "mmlu",
+            "n_samples": 3,
+            "slm": "gemma3:4b",
+            "llm": "gpt-4o-mini",
+            "config_overrides": {
+                "dry_run": True,
+                "slm_temperature": 0.15,
+                "llm_temperature": 0.55,
+                "slm_max_tokens": 512,
+                "llm_max_tokens": 2048,
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    experiment_id = response.json()["experiment_id"]
+
+    queued = client.get(f"/api/experiments/{experiment_id}")
+    assert queued.status_code == 200
+    payload = queued.json()
+    assert payload["config_overrides"]["slm_temperature"] == 0.15
+    assert payload["config_overrides"]["llm_temperature"] == 0.55
+    assert payload["config_overrides"]["slm_max_tokens"] == 512
+    assert payload["config_overrides"]["llm_max_tokens"] == 2048
+
+
+def test_launch_rejects_invalid_runtime_setting_ranges(client: TestClient):
+    response = client.post(
+        "/api/experiments",
+        json={
+            "architecture": "routing",
+            "benchmark": "mmlu",
+            "n_samples": 3,
+            "slm": "gemma3:4b",
+            "llm": "gpt-4o-mini",
+            "config_overrides": {"slm_temperature": 2.5},
+        },
+    )
+
+    assert response.status_code == 400
+    assert "slm_temperature" in response.json()["detail"]
+
+
 def test_sse_events_and_results_use_real_metric_shape(client: TestClient, monkeypatch):
     monkeypatch.setenv("THESIS_OPENAI_API_KEY", "test-key")
     get_settings.cache_clear()

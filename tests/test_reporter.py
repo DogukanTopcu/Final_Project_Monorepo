@@ -9,7 +9,14 @@ from evaluation.reporter import Reporter
 def test_reporter_saves_routing_sample_without_escalation(tmp_path):
     result = ExperimentResult(
         experiment_id="exp_no_llm",
-        config=ExperimentConfig(architecture="routing", benchmark="mmlu"),
+        config=ExperimentConfig(
+            architecture="routing",
+            benchmark="mmlu",
+            slm_temperature=0.1,
+            llm_temperature=0.2,
+            slm_max_tokens=512,
+            llm_max_tokens=1024,
+        ),
         samples=[
             SampleResult(
                 query=Query(id="q1", text="What is 2+2?", answer="B"),
@@ -53,7 +60,14 @@ def test_reporter_saves_routing_sample_without_escalation(tmp_path):
 def test_reporter_saves_routing_sample_with_escalation(tmp_path):
     result = ExperimentResult(
         experiment_id="exp_with_llm",
-        config=ExperimentConfig(architecture="routing", benchmark="mmlu"),
+        config=ExperimentConfig(
+            architecture="routing",
+            benchmark="mmlu",
+            slm_temperature=0.05,
+            llm_temperature=0.35,
+            slm_max_tokens=256,
+            llm_max_tokens=2048,
+        ),
         samples=[
             SampleResult(
                 query=Query(id="q2", text="Hard question", answer="A"),
@@ -101,3 +115,29 @@ def test_reporter_saves_routing_sample_with_escalation(tmp_path):
     assert sample["prompt_text"] == "Prompt body"
     assert sample["slm_text"] == "SLM draft"
     assert sample["final_text"] == "A"
+
+
+def test_reporter_includes_model_runtime_settings_in_config_and_markdown(tmp_path):
+    result = ExperimentResult(
+        experiment_id="exp_runtime_settings",
+        config=ExperimentConfig(
+            architecture="routing",
+            benchmark="mmlu",
+            slm_temperature=0.3,
+            llm_temperature=0.6,
+            slm_max_tokens=300,
+            llm_max_tokens=600,
+        ),
+        samples=[],
+    )
+
+    path = Reporter(tmp_path).save(result)
+    payload = json.loads(path.read_text())
+    markdown = (tmp_path / "exp_runtime_settings.md").read_text()
+
+    assert payload["config"]["slm_temperature"] == 0.3
+    assert payload["config"]["llm_temperature"] == 0.6
+    assert payload["config"]["slm_max_tokens"] == 300
+    assert payload["config"]["llm_max_tokens"] == 600
+    assert "| SLM Temperature | 0.3 |" in markdown
+    assert "| LLM Max Tokens | 600 |" in markdown

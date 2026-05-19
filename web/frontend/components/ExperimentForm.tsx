@@ -10,6 +10,11 @@ import { Slider } from "@/components/ui/slider";
 import { useLaunchExperiment, useModels, useBenchmarks } from "@/hooks/useExperiments";
 import type { Architecture, Benchmark } from "@/types";
 
+function parseIntegerInput(value: string, fallback: number) {
+  const next = Number(value);
+  return Number.isFinite(next) ? Math.trunc(next) : fallback;
+}
+
 export function ExperimentForm() {
   const router = useRouter();
   const { data: models } = useModels();
@@ -27,6 +32,11 @@ export function ExperimentForm() {
   const [nModels, setNModels] = useState(3);
   const [voting, setVoting] = useState<"majority" | "weighted">("majority");
   const [llmTiebreak, setLlmTiebreak] = useState(false);
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  const [slmTemperature, setSlmTemperature] = useState(0);
+  const [llmTemperature, setLlmTemperature] = useState(0);
+  const [slmMaxTokens, setSlmMaxTokens] = useState(8192);
+  const [llmMaxTokens, setLlmMaxTokens] = useState(8192);
   const [dryRun, setDryRun] = useState(false);
 
   useEffect(() => {
@@ -64,6 +74,18 @@ export function ExperimentForm() {
       configOverrides.n_models = nModels;
       configOverrides.voting = voting;
       configOverrides.llm_tiebreak = llmTiebreak;
+    }
+    if (slmTemperature !== 0) {
+      configOverrides.slm_temperature = slmTemperature;
+    }
+    if (llmTemperature !== 0) {
+      configOverrides.llm_temperature = llmTemperature;
+    }
+    if (slmMaxTokens !== 8192) {
+      configOverrides.slm_max_tokens = slmMaxTokens;
+    }
+    if (llmMaxTokens !== 8192) {
+      configOverrides.llm_max_tokens = llmMaxTokens;
     }
 
     const result = await launch.mutateAsync({
@@ -182,6 +204,104 @@ export function ExperimentForm() {
               </option>
             )) ?? <option value="llama3.3-70b">Llama 3.3 (70B)</option>}
           </Select>
+
+          <div className="rounded-lg border border-zinc-200 bg-zinc-50">
+            <button
+              type="button"
+              onClick={() => setShowAdvancedSettings((current) => !current)}
+              className="flex w-full items-center justify-between px-4 py-3 text-left"
+            >
+              <div>
+                <p className="text-sm font-medium text-zinc-900">Advanced Model Settings</p>
+                <p className="text-xs text-zinc-500">
+                  Configure randomness and output ceilings separately for SLM and LLM.
+                </p>
+              </div>
+              <span className="text-sm text-zinc-500">
+                {showAdvancedSettings ? "Hide" : "Show"}
+              </span>
+            </button>
+
+            {showAdvancedSettings && (
+              <div className="space-y-4 border-t border-zinc-200 px-4 py-4">
+                <div className="rounded-md border border-zinc-200 bg-white p-4">
+                  <div className="mb-3">
+                    <p className="text-sm font-medium text-zinc-900">SLM Settings</p>
+                    <p className="text-xs text-zinc-500">
+                      Temperature controls determinism. Max tokens sets the output ceiling.
+                    </p>
+                  </div>
+                  <div className="space-y-4">
+                    <Slider
+                      label="SLM Temperature"
+                      min={0}
+                      max={2}
+                      step={0.05}
+                      value={slmTemperature}
+                      onChange={(e) => setSlmTemperature(Number(e.target.value))}
+                      displayValue={slmTemperature.toFixed(2)}
+                    />
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between">
+                        <label htmlFor="slm-max-tokens" className="text-sm font-medium text-zinc-700">
+                          SLM Max Tokens
+                        </label>
+                        <span className="text-sm text-zinc-500">{slmMaxTokens}</span>
+                      </div>
+                      <input
+                        id="slm-max-tokens"
+                        type="number"
+                        min={1}
+                        max={32768}
+                        step={1}
+                        value={slmMaxTokens}
+                        onChange={(e) => setSlmMaxTokens(parseIntegerInput(e.target.value, slmMaxTokens))}
+                        className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-md border border-zinc-200 bg-white p-4">
+                  <div className="mb-3">
+                    <p className="text-sm font-medium text-zinc-900">LLM Settings</p>
+                    <p className="text-xs text-zinc-500">
+                      Temperature controls randomness. Max tokens sets the output ceiling.
+                    </p>
+                  </div>
+                  <div className="space-y-4">
+                    <Slider
+                      label="LLM Temperature"
+                      min={0}
+                      max={2}
+                      step={0.05}
+                      value={llmTemperature}
+                      onChange={(e) => setLlmTemperature(Number(e.target.value))}
+                      displayValue={llmTemperature.toFixed(2)}
+                    />
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between">
+                        <label htmlFor="llm-max-tokens" className="text-sm font-medium text-zinc-700">
+                          LLM Max Tokens
+                        </label>
+                        <span className="text-sm text-zinc-500">{llmMaxTokens}</span>
+                      </div>
+                      <input
+                        id="llm-max-tokens"
+                        type="number"
+                        min={1}
+                        max={32768}
+                        step={1}
+                        value={llmMaxTokens}
+                        onChange={(e) => setLlmMaxTokens(parseIntegerInput(e.target.value, llmMaxTokens))}
+                        className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
           <Slider
             label="Number of Samples"

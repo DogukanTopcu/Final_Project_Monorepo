@@ -56,6 +56,18 @@ export default function ExperimentDetailPage({
   const confidenceThreshold = Number(
     config.confidence_threshold ?? experiment?.config_overrides?.confidence_threshold ?? 0.7,
   );
+  const slmTemperature = Number(
+    config.slm_temperature ?? experiment?.config_overrides?.slm_temperature ?? 0,
+  );
+  const llmTemperature = Number(
+    config.llm_temperature ?? experiment?.config_overrides?.llm_temperature ?? 0,
+  );
+  const slmMaxTokens = Number(
+    config.slm_max_tokens ?? experiment?.config_overrides?.slm_max_tokens ?? 8192,
+  );
+  const llmMaxTokens = Number(
+    config.llm_max_tokens ?? experiment?.config_overrides?.llm_max_tokens ?? 8192,
+  );
   const llmLabel = experiment?.llm ?? String(config.llm ?? "unknown");
   const slmLabel = experiment?.slm ?? String(config.slm ?? "unknown");
   const nEscalated = Math.round(metrics?.n_escalated ?? 0);
@@ -124,6 +136,22 @@ export default function ExperimentDetailPage({
             </p>
             <p>
               <span className="text-zinc-500">LLM:</span> {llmLabel}
+            </p>
+            <p>
+              <span className="text-zinc-500">SLM Temp:</span>{" "}
+              {formatDecimal(slmTemperature)}
+            </p>
+            <p>
+              <span className="text-zinc-500">LLM Temp:</span>{" "}
+              {formatDecimal(llmTemperature)}
+            </p>
+            <p>
+              <span className="text-zinc-500">SLM Max Tokens:</span>{" "}
+              {formatNumber(slmMaxTokens)}
+            </p>
+            <p>
+              <span className="text-zinc-500">LLM Max Tokens:</span>{" "}
+              {formatNumber(llmMaxTokens)}
             </p>
             <p>
               <span className="text-zinc-500">Samples:</span>{" "}

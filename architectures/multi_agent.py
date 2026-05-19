@@ -60,11 +60,19 @@ class MultiAgentArchitecture(BaseArchitecture):
         arbitrator: str = "slm",
         task_type: str = "mcq",
         n_rounds: int = 1,
+        slm_temperature: float = 0.0,
+        llm_temperature: float = 0.0,
+        slm_max_tokens: int = 8192,
+        llm_max_tokens: int = 8192,
     ) -> None:
         super().__init__(slm, llm)
         self.arbitrator_role = arbitrator  # "slm" | "llm"
         self.task_type = task_type
         self.n_rounds = n_rounds
+        self.slm_temperature = slm_temperature
+        self.llm_temperature = llm_temperature
+        self.slm_max_tokens = slm_max_tokens
+        self.llm_max_tokens = llm_max_tokens
 
     def run(self, query: Query) -> Response:
         base_prompt = (
@@ -78,7 +86,12 @@ class MultiAgentArchitecture(BaseArchitecture):
 
         # --- Proponent (SLM) ---
         prop_prompt = _PROPONENT_TEMPLATE.format(question=base_prompt)
-        prop_text, _, in_t, out_t, cost, lat = self._timed_generate(self.slm, prop_prompt)
+        prop_text, _, in_t, out_t, cost, lat = self._timed_generate(
+            self.slm,
+            prop_prompt,
+            temperature=self.slm_temperature,
+            max_tokens=self.slm_max_tokens,
+        )
         total_in += in_t
         total_out += out_t
         total_cost += cost
@@ -96,7 +109,12 @@ class MultiAgentArchitecture(BaseArchitecture):
 
         # --- Opponent (SLM) ---
         opp_prompt = _OPPONENT_TEMPLATE.format(proponent_output=prop_text)
-        opp_text, _, in_t, out_t, cost, lat = self._timed_generate(self.slm, opp_prompt)
+        opp_text, _, in_t, out_t, cost, lat = self._timed_generate(
+            self.slm,
+            opp_prompt,
+            temperature=self.slm_temperature,
+            max_tokens=self.slm_max_tokens,
+        )
         total_in += in_t
         total_out += out_t
         total_cost += cost
@@ -119,10 +137,20 @@ class MultiAgentArchitecture(BaseArchitecture):
             opponent_output=opp_text,
         )
         if self.arbitrator_role == "llm":
-            arb_text, _, in_t, out_t, cost, lat = self._timed_generate(self.llm, arb_prompt)
+            arb_text, _, in_t, out_t, cost, lat = self._timed_generate(
+                self.llm,
+                arb_prompt,
+                temperature=self.llm_temperature,
+                max_tokens=self.llm_max_tokens,
+            )
             llm_calls = 1
         else:
-            arb_text, _, in_t, out_t, cost, lat = self._timed_generate(self.slm, arb_prompt)
+            arb_text, _, in_t, out_t, cost, lat = self._timed_generate(
+                self.slm,
+                arb_prompt,
+                temperature=self.slm_temperature,
+                max_tokens=self.slm_max_tokens,
+            )
 
         total_in += in_t
         total_out += out_t

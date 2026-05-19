@@ -30,10 +30,18 @@ class RoutingArchitecture(BaseArchitecture):
         llm: ModelProvider,
         confidence_threshold: float = 0.7,
         task_type: str = "mcq",
+        slm_temperature: float = 0.0,
+        llm_temperature: float = 0.0,
+        slm_max_tokens: int = 8192,
+        llm_max_tokens: int = 8192,
     ) -> None:
         super().__init__(slm, llm)
         self.threshold = confidence_threshold
         self.task_type = task_type
+        self.slm_temperature = slm_temperature
+        self.llm_temperature = llm_temperature
+        self.slm_max_tokens = slm_max_tokens
+        self.llm_max_tokens = llm_max_tokens
 
     def run(self, query: Query) -> Response:
         prompt = (
@@ -42,7 +50,10 @@ class RoutingArchitecture(BaseArchitecture):
 
         # Step 1: SLM inference
         slm_text, conf, in_tok, out_tok, cost, latency = self._timed_generate(
-            self.slm, prompt
+            self.slm,
+            prompt,
+            temperature=self.slm_temperature,
+            max_tokens=self.slm_max_tokens,
         )
         slm_parsed = (
             parse_mcq_answer(slm_text)
@@ -81,7 +92,10 @@ class RoutingArchitecture(BaseArchitecture):
         # Step 2: Escalate if low confidence
         if conf < self.threshold:
             llm_text, _, l_in, l_out, l_cost, l_lat = self._timed_generate(
-                self.llm, prompt
+                self.llm,
+                prompt,
+                temperature=self.llm_temperature,
+                max_tokens=self.llm_max_tokens,
             )
             total_in += l_in
             total_out += l_out

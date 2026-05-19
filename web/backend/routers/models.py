@@ -13,26 +13,63 @@ from web.backend.schemas import ModelInfo, ModelListResponse, ModelPingResponse
 router = APIRouter(tags=["models"])
 
 
+async def _probe_runtime_endpoint(
+    provider: str,
+    base_url: str,
+    timeout: float = 1.5,
+) -> tuple[bool, str | None]:
+    base_url = base_url.rstrip("/")
+    if not base_url:
+        return False, "No runtime endpoint configured."
+
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            if provider == "ollama":
+                response = await client.get(f"{base_url}/api/tags")
+            else:
+                response = await client.get(f"{base_url}/models")
+            if response.status_code == 200:
+                return True, None
+            return False, f"Runtime endpoint returned HTTP {response.status_code}."
+    except Exception as exc:
+        return False, f"Runtime endpoint is unreachable: {exc}"
+
+
 @router.get("/models", response_model=ModelListResponse)
 async def list_models(settings: Settings = Depends(get_settings)):
     warnings: list[str] = []
     slm_models: list[ModelInfo] = []
     llm_models: list[ModelInfo] = []
+    reachability_cache: dict[tuple[str, str], tuple[bool, str | None]] = {}
 
     for spec in SELECTED_MODELS:
         status = get_model_runtime_status(spec.id)
+        provider = str(status.get("provider", spec.provider))
+        base_url = str(status.get("base_url", "")).rstrip("/")
+        configured = bool(status.get("available", False))
+        reason = str(status.get("reason", "")) or None
+
+        if configured and base_url:
+            cache_key = (provider, base_url)
+            if cache_key not in reachability_cache:
+                reachability_cache[cache_key] = await _probe_runtime_endpoint(provider, base_url)
+            reachable, runtime_reason = reachability_cache[cache_key]
+            configured = reachable
+            if not reachable and runtime_reason:
+                reason = runtime_reason
+
         model = ModelInfo(
             id=spec.id,
             name=spec.name,
             family=spec.family,
             tier=spec.tier,
             provider=spec.provider,
-            runtime_provider=str(status.get("provider", spec.provider)),
+            runtime_provider=provider,
             type=spec.kind,
-            configured=bool(status.get("available", False)),
-            status="ready" if bool(status.get("available", False)) else "unavailable",
-            base_url=str(status.get("base_url", "")) or None,
-            reason=str(status.get("reason", "")) or None,
+            configured=configured,
+            status="ready" if configured else "unavailable",
+            base_url=base_url or None,
+            reason=reason,
         )
         if spec.kind == "slm":
             slm_models.append(model)

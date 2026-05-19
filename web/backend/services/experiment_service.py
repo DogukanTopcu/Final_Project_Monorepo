@@ -48,10 +48,28 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         "voting",
         "llm_tiebreak",
         "seed",
+        "slm_temperature",
+        "llm_temperature",
+        "slm_max_tokens",
+        "llm_max_tokens",
     }
     unexpected = sorted(set(overrides) - allowed_override_keys)
     if unexpected:
         raise ValueError(f"Unsupported config overrides: {', '.join(unexpected)}")
+
+    slm_temperature = float(overrides.get("slm_temperature", 0.0))
+    llm_temperature = float(overrides.get("llm_temperature", 0.0))
+    slm_max_tokens = int(overrides.get("slm_max_tokens", 8192))
+    llm_max_tokens = int(overrides.get("llm_max_tokens", 8192))
+
+    if not 0.0 <= slm_temperature <= 2.0:
+        raise ValueError("slm_temperature must be between 0.0 and 2.0")
+    if not 0.0 <= llm_temperature <= 2.0:
+        raise ValueError("llm_temperature must be between 0.0 and 2.0")
+    if slm_max_tokens < 1 or slm_max_tokens > 32768:
+        raise ValueError("slm_max_tokens must be between 1 and 32768")
+    if llm_max_tokens < 1 or llm_max_tokens > 32768:
+        raise ValueError("llm_max_tokens must be between 1 and 32768")
 
     return ExperimentConfig(
         architecture=params.architecture.value,
@@ -59,6 +77,10 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         n_samples=params.n_samples,
         slm=params.slm,
         llm=params.llm,
+        slm_temperature=slm_temperature,
+        llm_temperature=llm_temperature,
+        slm_max_tokens=slm_max_tokens,
+        llm_max_tokens=llm_max_tokens,
         confidence_threshold=float(overrides.get("confidence_threshold", 0.7)),
         arbitrator=str(overrides.get("arbitrator", "llm")),
         n_debate_rounds=int(overrides.get("n_debate_rounds", 1)),

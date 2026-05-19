@@ -36,12 +36,20 @@ class EnsembleArchitecture(BaseArchitecture):
         voting: str = "majority",      # "majority" | "weighted"
         llm_tiebreak: bool = False,
         task_type: str = "mcq",
+        slm_temperature: float = 0.0,
+        llm_temperature: float = 0.0,
+        slm_max_tokens: int = 8192,
+        llm_max_tokens: int = 8192,
     ) -> None:
         super().__init__(slm, llm)
         self.n_models = n_models
         self.voting = voting
         self.llm_tiebreak = llm_tiebreak
         self.task_type = task_type
+        self.slm_temperature = slm_temperature
+        self.llm_temperature = llm_temperature
+        self.slm_max_tokens = slm_max_tokens
+        self.llm_max_tokens = llm_max_tokens
 
     def run(self, query: Query) -> Response:
         prompt = (
@@ -55,7 +63,12 @@ class EnsembleArchitecture(BaseArchitecture):
         inference_steps: list[dict[str, object]] = []
 
         for idx in range(self.n_models):
-            text, conf, in_t, out_t, cost, lat = self._timed_generate(self.slm, prompt)
+            text, conf, in_t, out_t, cost, lat = self._timed_generate(
+                self.slm,
+                prompt,
+                temperature=self.slm_temperature,
+                max_tokens=self.slm_max_tokens,
+            )
             total_in += in_t
             total_out += out_t
             total_cost += cost
@@ -91,7 +104,10 @@ class EnsembleArchitecture(BaseArchitecture):
         # Tiebreaker: all SLMs disagree (all unique answers)
         if final_answer is None and self.llm_tiebreak:
             llm_text, _, l_in, l_out, l_cost, l_lat = self._timed_generate(
-                self.llm, prompt
+                self.llm,
+                prompt,
+                temperature=self.llm_temperature,
+                max_tokens=self.llm_max_tokens,
             )
             total_in += l_in
             total_out += l_out
