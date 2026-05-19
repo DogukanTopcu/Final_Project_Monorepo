@@ -9,7 +9,19 @@ These rules are non-negotiable:
 - `HumanEval` means the project's human preference evaluation workflow.
 - `custom_stratified` means the custom coding benchmark track.
 - `eats` is a metric.
-- the active experiment product surface supports `routing`, `multi_agent`, and `ensemble`
+- The experiment product surface is organised into three **modes**:
+  - **Monolithic** — `monolithic`. Required as a baseline.
+  - **Hybrid** — `routing`, `multi_agent`, and experimental `speculative`.
+  - **Ensemble** — `ensemble` and experimental `multi_agent_crew`.
+- The frontend renders all six architectures. The original "active surface"
+  recommendation for thesis runs remains `routing`, `multi_agent`,
+  `ensemble`, plus `monolithic` as a ceiling baseline.
+- Ensemble accepts **multiple distinct SLMs**. Each SLM contributes exactly
+  one vote; `n_models` is derived from the number of selected SLMs. The
+  legacy "one SLM repeated N times" form is still supported but the UI
+  defaults to the multi-SLM path.
+- Monolithic does not take an SLM at all. The runner skips SLM validation
+  and the experiment record stores `slm=None` for monolithic runs.
 
 ## 2. Why the System Uses Remote OpenAI-Compatible Endpoints
 
@@ -99,14 +111,20 @@ Why it is kept:
 - it tests whether redundancy can replace frequent escalation
 - it is easier to reason about than legacy speculative experiments
 
-## 5. Why Legacy Monolithic and Speculative Code Is Not the Primary Surface
+## 5. Status of Monolithic, Speculative, and Multi-Agent Crew
 
-Some legacy files remain in the repo, but they are not the primary experiment surface anymore.
+These architectures are no longer "legacy" — they are first-class entries in
+the architecture catalog (`GET /api/architectures`) and selectable from the
+launch form. Each plays a distinct role:
 
-Reasons:
-- the web UI, backend validation, and experiment form are standardized on the shared model catalog
-- the thesis control plane now centers on the three active orchestration strategies above
-- keeping older prototypes in the repo is acceptable as long as docs and launch surfaces do not present them as the main path
+- `monolithic` is the **required ceiling baseline**: a single LLM with no
+  orchestration. Every thesis comparison should include at least one
+  monolithic run against the same benchmark.
+- `speculative` and `multi_agent_crew` are flagged **experimental** in the
+  UI. They are runnable but the thesis narrative should not depend on them.
+
+Routing / multi_agent / ensemble remain the recommended thesis story; the
+others provide the ceiling baseline and exploratory comparisons.
 
 ## 6. Benchmark Decisions
 
@@ -215,3 +233,32 @@ This is the right compromise between:
 - deployment cost
 - operational simplicity
 - time-to-results
+
+## 11. Shared-Host Lock Semantics
+
+The RTX6000 host and the heavy host both serve **one large model at a time**.
+That makes them a shared resource the experiment runner must serialize.
+
+The implementation:
+- `core/hosts.py` is the static catalog of hosts; each host owns a fixed set
+  of canonical aliases.
+- `web/backend/services/model_host_service.py` holds a process-wide `Lock`
+  per shared host. Any experiment that needs an alias on a shared host
+  acquires the lock before running and releases it on exit.
+- When the lock is acquired, the service probes `/v1/models` on the host. If
+  the currently served model does not match the requested alias, it either
+  (a) runs the RTX6000 autoswitch script — when enabled — or (b) raises a
+  clear error so the operator can switch the container manually.
+- The frontend's `/api/hosts` endpoint surfaces the live lock state and the
+  current served alias so users see who is holding the slot before they
+  launch.
+
+## 12. Playground & Per-Model Inspection
+
+A `POST /api/playground/chat` endpoint sends a one-shot prompt to a single
+model and returns latency, token usage and cost. The frontend `/playground`
+page wraps that endpoint and is the recommended way to:
+
+- verify a freshly deployed alias is actually serving correctly
+- compare two models' raw outputs on the same prompt
+- check that a host switch worked before committing to a long run

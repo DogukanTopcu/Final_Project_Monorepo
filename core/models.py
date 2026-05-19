@@ -20,8 +20,6 @@ from core.token_budget import compute_completion_budget
 
 # Per-token costs in USD (approximate, May 2026)
 _APPROX_MODEL_COSTS: dict[str, tuple[float, float]] = {
-    "moonshotai/Kimi-K2.6": (3.00 / 1_000_000, 12.00 / 1_000_000),
-    "Qwen/Qwen3.5-397B-A17B": (2.20 / 1_000_000, 8.80 / 1_000_000),
     "openai/gpt-oss-120b": (1.80 / 1_000_000, 7.20 / 1_000_000),
     "meta-llama/Llama-3.3-70B-Instruct": (0.90 / 1_000_000, 0.90 / 1_000_000),
     "openai/gpt-oss-20b": (0.40 / 1_000_000, 1.60 / 1_000_000),
@@ -505,6 +503,19 @@ def assert_model_runnable(model_id: str, timeout: float = 3.0) -> None:
                     f"{model_id} expects one of {sorted(expected)} at {base_url}, "
                     f"but the endpoint currently serves {sorted(served) or ['<none>']}."
                 )
+            probe_model_id = spec.openai_compatible_model or spec.provider_model
+            probe_payload = {
+                "model": probe_model_id,
+                "messages": [{"role": "user", "content": "Ping"}],
+                "temperature": 0,
+                "max_tokens": 1,
+            }
+            probe = requests.post(
+                f"{base_url}/chat/completions",
+                json=probe_payload,
+                timeout=max(timeout, 10.0),
+            )
+            probe.raise_for_status()
     except Exception as exc:
         raise RuntimeError(
             f"{model_id} is configured for {provider} at {base_url}, but the runtime check failed: {exc}"

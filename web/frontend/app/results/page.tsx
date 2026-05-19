@@ -74,10 +74,14 @@ export default function ResultsPage() {
                         />
                       </td>
                       <td className="py-3 pr-4 font-mono">{r.experiment_id}</td>
-                      <td className="py-3 pr-4 capitalize">{r.architecture.replace("_", " ")}</td>
+                      <td className="py-3 pr-4 capitalize">{r.architecture.replace(/_/g, " ")}</td>
                       <td className="py-3 pr-4 uppercase">{r.benchmark}</td>
                       <td className="py-3 pr-4">
-                        {r.slm} / {r.llm}
+                        {r.architecture === "monolithic"
+                          ? r.llm ?? "—"
+                          : r.architecture === "ensemble" && r.ensemble_slms?.length
+                            ? `${r.ensemble_slms.join(", ")}${r.llm ? ` → ${r.llm}` : ""}`
+                            : `${r.slm ?? "—"} / ${r.llm ?? "—"}`}
                       </td>
                       <td className="py-3 pr-4">{formatPercent(r.accuracy)}</td>
                       <td className="py-3 pr-4">

@@ -6,14 +6,15 @@ Implements parallel SLM inference + voting from:
   S55 (Cielen et al.): CPU-only ensembles, majority voting
 
 Design:
-  - Multiple SLM instances (same model_id, independent calls) run the same query.
-  - Majority voting determines the final answer.
-  - LLM is a tiebreaker only when all SLMs disagree (optional, default=off).
-  - Weighted voting weights each vote by the SLM's reported confidence.
-  - llm_calls = 0 unless tiebreaker triggers.
-
-Note: Runs sequentially in the default implementation. For concurrent execution
-the ExperimentRunner uses a ThreadPoolExecutor.
+  - One or more SLM providers run the same query.
+  - When a single SLM is supplied, it is invoked `n_models` times (legacy path).
+  - When a list of SLM providers is supplied, each provider votes once and
+    `n_models` is derived from the list length.
+  - Majority voting (default) or weighted-by-confidence voting determines the
+    final answer.
+  - LLM is a tiebreaker only when no clear majority is reached
+    (optional, default=off).
+  - llm_calls = 0 unless the tiebreaker triggers.
 """
 from __future__ import annotations
 
@@ -31,8 +32,9 @@ class EnsembleArchitecture(BaseArchitecture):
 
     def __init__(
         self,
-        slm: ModelProvider,
-        llm: ModelProvider,
+        slm: ModelProvider | None = None,
+        llm: ModelProvider | None = None,
+        slms: list[ModelProvider] | None = None,
         n_models: int = 3,
         voting: str = "majority",      # "majority" | "weighted"
         llm_tiebreak: bool = False,
@@ -42,8 +44,17 @@ class EnsembleArchitecture(BaseArchitecture):
         slm_max_tokens: int = 0,
         llm_max_tokens: int = 0,
     ) -> None:
-        super().__init__(slm, llm)
-        self.n_models = n_models
+        provider_list: list[ModelProvider] = list(slms) if slms else []
+        if not provider_list and slm is not None:
+            provider_list = [slm] * max(int(n_models), 1)
+        if not provider_list:
+            raise ValueError("EnsembleArchitecture requires at least one SLM provider.")
+
+        # The first SLM is treated as the canonical for the base class
+        # (used by some shared helpers).
+        super().__init__(provider_list[0], llm)
+        self.slms = provider_list
+        self.n_models = len(provider_list)
         self.voting = voting
         self.llm_tiebreak = llm_tiebreak
         self.task_type = task_type
@@ -56,23 +67,24 @@ class EnsembleArchitecture(BaseArchitecture):
         prompt = (
             mcq_prompt(query) if self.task_type == "mcq" else open_prompt(query)
         )
-        slm_budget = compute_completion_budget(
-            self.slm,
-            prompt,
-            task_type=self.task_type,
-            role="ensemble_member",
-            requested_max_tokens=self.slm_max_tokens,
-        )
 
         votes: list[str] = []
         confidences: list[float] = []
         total_in = total_out = 0
         total_cost = total_latency = 0.0
         inference_steps: list[dict[str, object]] = []
+        member_models: list[str] = []
 
-        for idx in range(self.n_models):
+        for idx, member in enumerate(self.slms):
+            slm_budget = compute_completion_budget(
+                member,
+                prompt,
+                task_type=self.task_type,
+                role="ensemble_member",
+                requested_max_tokens=self.slm_max_tokens,
+            )
             text, conf, in_t, out_t, cost, lat = self._timed_generate(
-                self.slm,
+                member,
                 prompt,
                 temperature=self.slm_temperature,
                 max_tokens=slm_budget,
@@ -81,10 +93,11 @@ class EnsembleArchitecture(BaseArchitecture):
             total_out += out_t
             total_cost += cost
             total_latency += lat
+            member_models.append(member.model_id)
             inference_steps.append(
                 {
                     "role": f"ensemble_member_{idx + 1}",
-                    "model_id": self.slm.model_id,
+                    "model_id": member.model_id,
                     "latency_ms": lat,
                     "input_tokens": in_t,
                     "output_tokens": out_t,
@@ -109,8 +122,8 @@ class EnsembleArchitecture(BaseArchitecture):
             else:
                 final_answer = self._majority_vote(votes)
 
-        # Tiebreaker: all SLMs disagree (all unique answers)
-        if final_answer is None and self.llm_tiebreak:
+        # Tiebreaker: no clear majority across SLMs
+        if final_answer is None and self.llm_tiebreak and self.llm is not None:
             llm_budget = compute_completion_budget(
                 self.llm,
                 prompt,
@@ -152,7 +165,7 @@ class EnsembleArchitecture(BaseArchitecture):
             text=str(final_answer),
             predicted_answer=final_answer,
             confidence=avg_conf,
-            model_id=self.slm.model_id,
+            model_id=self.slms[0].model_id,
             latency_ms=total_latency,
             input_tokens=total_in,
             output_tokens=total_out,
@@ -163,6 +176,7 @@ class EnsembleArchitecture(BaseArchitecture):
                 "confidences": confidences,
                 "voting_method": self.voting,
                 "n_models": self.n_models,
+                "members": member_models,
                 "llm_tiebreak": self.llm_tiebreak,
                 "inference_steps": inference_steps,
             },

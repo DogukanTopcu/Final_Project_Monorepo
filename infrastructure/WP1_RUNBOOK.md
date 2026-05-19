@@ -141,7 +141,6 @@ Suggested shared script pattern:
 ~/run-mid-llm.sh gemma4-31b
 ~/run-mid-llm.sh qwen3.5-35b-a3b
 ~/run-mid-llm.sh gemma4-26b-a4b
-~/run-mid-llm.sh qwen3.5-122b-a10b
 ```
 
 Verification:
@@ -223,12 +222,9 @@ VLLM_QWEN35_27B_URL=http://<RTX_IP>:8000/v1
 VLLM_GEMMA4_31B_URL=http://<RTX_IP>:8000/v1
 VLLM_QWEN35_35B_A3B_URL=http://<RTX_IP>:8000/v1
 VLLM_GEMMA4_26B_A4B_URL=http://<RTX_IP>:8000/v1
-VLLM_QWEN35_122B_A10B_URL=http://<RTX_IP>:8000/v1
 
 VLLM_LLAMA33_70B_URL=http://<HEAVY_IP>:8000/v1
 VLLM_GPT_OSS_120B_URL=http://<HEAVY_IP>:8000/v1
-VLLM_QWEN35_397B_A17B_URL=http://<HEAVY_IP>:8000/v1
-VLLM_KIMI_K26_1T_URL=http://<HEAVY_IP>:8000/v1
 ```
 
 Restart the backend after changing `.env`.

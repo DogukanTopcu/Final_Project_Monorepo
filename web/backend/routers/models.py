@@ -5,10 +5,12 @@ import time
 import httpx
 from fastapi import APIRouter, Depends
 
+from core.hosts import get_host_for_model
 from core.model_catalog import SELECTED_MODELS
 from core.models import get_model_runtime_status
 from web.backend.dependencies import Settings, get_settings
 from web.backend.schemas import ModelInfo, ModelListResponse, ModelPingResponse
+from web.backend.services.model_host_service import fetch_served_model_ids
 
 router = APIRouter(tags=["models"])
 
@@ -42,6 +44,19 @@ async def list_models(settings: Settings = Depends(get_settings)):
     llm_models: list[ModelInfo] = []
     reachability_cache: dict[tuple[str, str], tuple[bool, str | None]] = {}
 
+    # Per-host probe of currently served model ids (so we know which alias on
+    # a shared host is *actually* loaded right now).
+    served_by_url: dict[str, set[str]] = {}
+
+    def _served_ids_for(provider: str, base_url: str) -> set[str]:
+        if provider == "ollama" or not base_url:
+            return set()
+        if base_url in served_by_url:
+            return served_by_url[base_url]
+        served = fetch_served_model_ids(base_url)
+        served_by_url[base_url] = served
+        return served
+
     for spec in SELECTED_MODELS:
         status = get_model_runtime_status(spec.id)
         provider = str(status.get("provider", spec.provider))
@@ -58,6 +73,16 @@ async def list_models(settings: Settings = Depends(get_settings)):
             if not reachable and runtime_reason:
                 reason = runtime_reason
 
+        host = get_host_for_model(spec.id)
+        is_active_on_host: bool | None = None
+        if host is not None and host.shared and configured and base_url:
+            served = _served_ids_for(provider, base_url)
+            expected = {spec.provider_model}
+            if spec.openai_compatible_model:
+                expected.add(spec.openai_compatible_model)
+            expected = {e for e in expected if e}
+            is_active_on_host = bool(served & expected)
+
         model = ModelInfo(
             id=spec.id,
             name=spec.name,
@@ -70,6 +95,10 @@ async def list_models(settings: Settings = Depends(get_settings)):
             status="ready" if configured else "unavailable",
             base_url=base_url or None,
             reason=reason,
+            host_id=host.host_id if host else None,
+            host_label=host.label if host else None,
+            shared_host=bool(host and host.shared),
+            is_active_on_host=is_active_on_host,
         )
         if spec.kind == "slm":
             slm_models.append(model)

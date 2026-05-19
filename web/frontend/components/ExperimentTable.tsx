@@ -65,10 +65,14 @@ export function ExperimentTable() {
                       {exp.experiment_id}
                     </Link>
                   </td>
-                  <td className="py-3 pr-4 capitalize">{exp.architecture.replace("_", " ")}</td>
+                  <td className="py-3 pr-4 capitalize">{exp.architecture.replace(/_/g, " ")}</td>
                   <td className="py-3 pr-4 uppercase">{exp.benchmark}</td>
                   <td className="py-3 pr-4">
-                    {exp.slm} / {exp.llm}
+                    {exp.architecture === "monolithic"
+                      ? exp.llm ?? "—"
+                      : exp.architecture === "ensemble" && exp.ensemble_slms?.length
+                        ? `${exp.ensemble_slms.join(", ")}${exp.llm ? ` → tiebreak ${exp.llm}` : ""}`
+                        : `${exp.slm ?? "—"} / ${exp.llm ?? "—"}`}
                   </td>
                   <td className="py-3 pr-4">
                     <Badge variant={statusVariant[exp.status]}>{exp.status}</Badge>

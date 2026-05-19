@@ -107,6 +107,16 @@ class MultiAgentCrewArchitecture:
         legacy_code_url: str | None = None,
         legacy_factual_url: str | None = None,
         cross_check: bool = False,
+        # Accept (and ignore) the runner's standard kwargs so it can construct
+        # this architecture with the same signature as the others. The crew
+        # always uses its three dedicated L4 hosts.
+        slm: object = None,
+        llm: object = None,
+        slm_temperature: float | None = None,
+        llm_temperature: float | None = None,
+        slm_max_tokens: int | None = None,
+        llm_max_tokens: int | None = None,
+        task_type: str | None = None,
     ) -> None:
         self.agents: dict[Domain, VLLMAgent] = {
             Domain.REASONING: VLLMAgent(

@@ -12,10 +12,12 @@ The codebase is built around:
 - `HumanEval` in this repository is a project-specific human preference evaluation workflow, not the OpenAI code-generation dataset.
 - `custom_stratified` is intended to be the easy/medium/hard coding benchmark track.
 - `eats` is a metric, not a benchmark.
-- Supported experiment architectures in the active product surface are:
-  - `routing`
-  - `multi_agent`
-  - `ensemble`
+- The experiment surface is organised into three **modes** the UI surfaces directly:
+  - **Monolithic** — a single LLM answers every query. Architecture id: `monolithic`.
+  - **Hybrid** — SLM + LLM cooperation. Architecture ids: `routing`, `multi_agent`,
+    and (experimental) `speculative`.
+  - **Ensemble** — multiple SLMs vote, optional LLM tiebreak. Architecture ids:
+    `ensemble`, and (experimental) `multi_agent_crew`.
 
 ## Current Runtime Topology
 
@@ -25,13 +27,17 @@ The working deployment model from the current experiments is:
 |---|---|---|
 | Control plane | Local machine | FastAPI backend, Next.js frontend, MLflow, experiment runner |
 | SLM tier | GCP L4 hosts | `gemma4-4b`, `qwen3.5-4b`, `llama3.2-3b` |
-| Mid-tier LLM tier | GCP G4 / RTX PRO 6000 shared host | `gpt-oss-20b`, `qwen3.5-27b`, `gemma4-31b`, `qwen3.5-35b-a3b`, `gemma4-26b-a4b`, `qwen3.5-122b-a10b` |
-| Heavy tier | Optional Nebius H100/H200 class host | `llama3.3-70b`, `gpt-oss-120b`, `qwen3.5-397b-a17b`, `kimi-k2.6-1t` |
+| Mid-tier LLM tier | GCP G4 / RTX PRO 6000 shared host | `gpt-oss-20b`, `qwen3.5-27b`, `gemma4-31b`, `qwen3.5-35b-a3b`, `gemma4-26b-a4b` |
+| Heavy tier | Optional Nebius H100/H200 class host | `llama3.3-70b`, `gpt-oss-120b` |
 
 Important operational detail:
 - the RTX6000 host is treated as a shared mid-tier server
 - the heavy host is also treated as a shared server
 - only one large model should be active on a shared host at a time
+- the frontend surfaces the live lock state of every shared host
+  (top bar, plus the **Hosts & lock** page); experiment launches that need a
+  shared-host alias block on a process-wide reservation lock so two runs
+  cannot fight over the slot
 
 ## Canonical Model Aliases
 
@@ -41,16 +47,24 @@ These aliases are the source of truth used by the backend, CLI runner, and front
 |---|---|
 | SLM | `gemma4-4b`, `qwen3.5-4b`, `llama3.2-3b` |
 | Light LLM | `gpt-oss-20b`, `qwen3.5-27b`, `gemma4-31b` |
-| MoE / mid-tier | `qwen3.5-35b-a3b`, `gemma4-26b-a4b`, `qwen3.5-122b-a10b` |
-| Heavy LLM | `llama3.3-70b`, `gpt-oss-120b`, `qwen3.5-397b-a17b`, `kimi-k2.6-1t` |
+| MoE / mid-tier | `qwen3.5-35b-a3b`, `gemma4-26b-a4b` |
+| Heavy LLM | `llama3.3-70b`, `gpt-oss-120b` |
 
 ## Supported Architectures
 
-| Architecture | Repo id | Summary |
+| Mode | Repo id | Summary |
 |---|---|---|
-| Architecture A | `routing` | SLM drafts first, low-confidence cases escalate to the selected LLM |
-| Architecture B | `multi_agent` | Proponent-opponent-arbitrator flow over the same query |
-| Architecture C | `ensemble` | Multiple SLM passes vote; optional LLM tiebreak can be enabled |
+| Monolithic | `monolithic` | A single LLM answers every query directly. Accuracy / cost ceiling baseline. |
+| Hybrid | `routing` | SLM drafts first, low-confidence cases escalate to the selected LLM. |
+| Hybrid | `multi_agent` | Proponent-opponent-arbitrator flow over the same query. |
+| Hybrid (experimental) | `speculative` | Drafter SLM proposes tokens; verifier LLM accepts or rewrites. |
+| Ensemble | `ensemble` | Multiple SLMs vote on the answer; optional LLM tiebreak. |
+| Ensemble (experimental) | `multi_agent_crew` | Domain-routed crew of three specialist SLMs (reasoning / code / factual). |
+
+The frontend surfaces all six. The original "active surface" of `routing`,
+`multi_agent`, and `ensemble` remains the recommended set for thesis-grade
+runs; `monolithic` is required as a baseline; `speculative` and
+`multi_agent_crew` are exposed under an *experimental* tag.
 
 ## Supported Benchmarks
 
@@ -163,14 +177,29 @@ Expected behavior:
 
 ### Web UI
 
-Open:
-- `http://localhost:3000/experiments/new`
+The frontend is organised around the three modes plus a dedicated playground:
 
-Choose:
-- one architecture
-- one benchmark
-- one SLM alias
-- one LLM alias
+- **Dashboard** (`/`) — KPI summary, recent runs, live shared-host lock status.
+- **Playground** (`/playground`) — send a single prompt to one model and see
+  the latency / token / cost breakdown.
+- **Hosts & lock** (`/hosts`) — every physical host, its currently served
+  alias, and the reservation lock state.
+- **Models** (`/models`) — the full alias catalog grouped by SLM and LLM tier
+  with host and endpoint info.
+- **Launch experiment** (`/experiments/new`) — pick a **mode**, then choose
+  the architecture, the benchmark, the model(s), the sample size and the
+  architecture-specific parameters. Ensemble accepts multiple distinct SLMs;
+  monolithic accepts a single LLM and no SLM.
+- **Experiments** (`/experiments`) — list of every run, plus the per-run
+  detail page with tabs for *Overview / Metrics / Samples / Inference steps /
+  Config*.
+- **Results** (`/results`) — pick rows to compare, charts of accuracy vs
+  cost / latency.
+- **Analysis** (`/analysis`) — multi-result view: filter by architecture,
+  benchmark or model, see per-architecture averages and three Pareto
+  scatters (accuracy vs cost, accuracy vs latency, EATS vs LLM-call ratio).
+- **Infrastructure** (`/infrastructure`) — EC2 instance controls and monthly
+  cost estimate (unchanged).
 
 ### CLI
 

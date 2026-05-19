@@ -45,14 +45,20 @@ def _build_persisted_experiment_response(path: Path) -> ExperimentResponse | Non
     benchmark = str(config.get("benchmark", "mmlu"))
 
     try:
+        ensemble_slms_raw = config.get("ensemble_slms") or []
+        if isinstance(ensemble_slms_raw, list):
+            ensemble_slms = [str(x) for x in ensemble_slms_raw]
+        else:
+            ensemble_slms = []
         return ExperimentResponse(
             experiment_id=experiment_id,
             status=ExperimentStatus.COMPLETED,
             architecture=Architecture(architecture),
             benchmark=Benchmark(benchmark),
             n_samples=int(config.get("n_samples", 0)),
-            slm=str(config.get("slm", "")),
-            llm=str(config.get("llm", "")),
+            slm=str(config.get("slm") or "") or None,
+            llm=str(config.get("llm") or "") or None,
+            ensemble_slms=ensemble_slms,
             config_overrides=config,
             created_at=datetime.fromisoformat(
                 data.get("created_at", datetime.now(timezone.utc).isoformat())
@@ -106,6 +112,7 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         "llm_temperature",
         "slm_max_tokens",
         "llm_max_tokens",
+        "speculative_acceptance_threshold",
     }
     unexpected = sorted(set(overrides) - allowed_override_keys)
     if unexpected:
@@ -125,12 +132,18 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
     if llm_max_tokens < 0 or llm_max_tokens > 32768:
         raise ValueError("llm_max_tokens must be between 0 and 32768")
 
+    ensemble_slms = list(params.ensemble_slms or [])
+    # Default n_models to the explicit ensemble count when a list is provided.
+    default_n_models = len(ensemble_slms) if ensemble_slms else 3
+    n_models = int(overrides.get("n_models", default_n_models))
+
     return ExperimentConfig(
         architecture=params.architecture.value,
         benchmark=params.benchmark.value,
         n_samples=params.n_samples,
         slm=params.slm,
         llm=params.llm,
+        ensemble_slms=ensemble_slms,
         slm_temperature=slm_temperature,
         llm_temperature=llm_temperature,
         slm_max_tokens=slm_max_tokens,
@@ -138,9 +151,12 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         confidence_threshold=float(overrides.get("confidence_threshold", 0.7)),
         arbitrator=str(overrides.get("arbitrator", "llm")),
         n_debate_rounds=int(overrides.get("n_debate_rounds", 1)),
-        n_models=int(overrides.get("n_models", 3)),
+        n_models=n_models,
         voting=str(overrides.get("voting", "majority")),
         llm_tiebreak=bool(overrides.get("llm_tiebreak", False)),
+        speculative_acceptance_threshold=float(
+            overrides.get("speculative_acceptance_threshold", 0.7)
+        ),
         dry_run=bool(overrides.get("dry_run", False)),
         seed=int(overrides.get("seed", 42)),
         output_dir=settings.results_dir,
@@ -194,16 +210,40 @@ def _run_experiment(
         _sync_runtime_provider_env(settings)
         config = _build_config(params, settings)
         exp.total = config.n_samples
+        # Identify the single shared-host model this experiment needs (if any).
+        # Only one model on a shared host is allowed per run; we pick the LLM
+        # for monolithic/hybrid and the heaviest SLM/tiebreaker for ensemble.
+        primary_shared_model = None
+        if not config.dry_run:
+            candidates: list[str] = []
+            if params.architecture.value == "ensemble":
+                if params.llm and (params.config_overrides or {}).get("llm_tiebreak"):
+                    candidates.append(params.llm)
+                candidates.extend(params.ensemble_slms or [])
+                if params.slm and not params.ensemble_slms:
+                    candidates.append(params.slm)
+            else:
+                if params.llm:
+                    candidates.append(params.llm)
+                if params.slm:
+                    candidates.append(params.slm)
+            from core.hosts import get_host_for_model
+            for mid in candidates:
+                host = get_host_for_model(mid)
+                if host and host.shared:
+                    primary_shared_model = mid
+                    break
+
         reservation = (
             reserve_llm_host(
-                params.llm,
+                primary_shared_model,
                 settings,
                 on_status=lambda message, status: _push_event(
                     experiment_id,
                     {"type": "status", "status": status, "message": message},
                 ),
             )
-            if not config.dry_run
+            if primary_shared_model
             else nullcontext()
         )
         with reservation:
@@ -287,10 +327,35 @@ def _validate_model_selection(model_id: str, expected_kind: str, *, require_runt
         raise ValueError(str(status.get("reason", f"{model_id} is unavailable.")))
 
 
+def _validate_architecture_models(params: ExperimentCreate, *, require_runtime: bool) -> None:
+    arch = params.architecture.value
+    if arch == "monolithic":
+        if not params.llm:
+            raise ValueError("Monolithic architecture requires an LLM selection.")
+        _validate_model_selection(params.llm, "llm", require_runtime=require_runtime)
+        return
+
+    if arch == "ensemble":
+        ids = params.ensemble_slms or ([params.slm] if params.slm else [])
+        if not ids:
+            raise ValueError("Ensemble requires at least one SLM.")
+        for sid in ids:
+            _validate_model_selection(sid, "slm", require_runtime=require_runtime)
+        # Tiebreak LLM is optional
+        if params.llm and (params.config_overrides or {}).get("llm_tiebreak"):
+            _validate_model_selection(params.llm, "llm", require_runtime=require_runtime)
+        return
+
+    # routing / multi_agent / multi_agent_crew / speculative — need both
+    if not params.slm or not params.llm:
+        raise ValueError(f"{arch} requires both an SLM and an LLM selection.")
+    _validate_model_selection(params.slm, "slm", require_runtime=require_runtime)
+    _validate_model_selection(params.llm, "llm", require_runtime=require_runtime)
+
+
 def launch_experiment(params: ExperimentCreate, settings: Settings) -> ExperimentResponse:
     config = _build_config(params, settings)
-    _validate_model_selection(params.slm, "slm", require_runtime=not config.dry_run)
-    _validate_model_selection(params.llm, "llm", require_runtime=not config.dry_run)
+    _validate_architecture_models(params, require_runtime=not config.dry_run)
 
     experiment_id = f"exp_{uuid.uuid4().hex[:8]}"
     now = datetime.now(timezone.utc)
@@ -303,6 +368,7 @@ def launch_experiment(params: ExperimentCreate, settings: Settings) -> Experimen
         n_samples=params.n_samples,
         slm=params.slm,
         llm=params.llm,
+        ensemble_slms=list(params.ensemble_slms or []),
         config_overrides=params.config_overrides,
         created_at=now,
         total=params.n_samples,

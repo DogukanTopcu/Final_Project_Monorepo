@@ -43,14 +43,22 @@ Blocked or deferred:
 
 Deliverables:
 - backend reads `.env` correctly
-- frontend only exposes launchable architectures and configured models
-- experiment service validates alias and runtime availability
-- remote endpoint model status is visible in `/models` and the launch form
+- frontend exposes every supported architecture (monolithic / routing /
+  multi_agent / ensemble plus experimental: multi_agent_crew, speculative)
+- experiment service validates alias and runtime availability per
+  architecture (monolithic skips SLM validation; ensemble validates the
+  list of SLMs)
+- remote endpoint model status is visible in `/api/models` and the launch
+  form, **and** the per-host lock state is visible at `/api/hosts` and on
+  every page of the UI (top bar + dedicated `/hosts` page)
 
 Exit criteria:
-- `GET /models` shows runnable aliases correctly
+- `GET /api/models` shows runnable aliases correctly
+- `GET /api/hosts` reports the live model on each shared host
 - one routing run succeeds from the web UI
 - one routing run succeeds from the CLI
+- one monolithic run succeeds from the web UI
+- one ensemble run with at least two distinct SLMs succeeds from the web UI
 
 ## WP2 — Automated Benchmark Track
 
@@ -66,9 +74,12 @@ Target architecture matrix:
 
 | Architecture | Minimum operating scenario |
 |---|---|
+| `monolithic` | one LLM endpoint (no SLM) |
 | `routing` | one SLM + one LLM endpoint |
 | `multi_agent` | one SLM alias plus optional LLM arbitrator |
-| `ensemble` | one SLM alias plus optional LLM tiebreak |
+| `ensemble` | two or more SLM aliases (one vote each), optional LLM tiebreak |
+| `multi_agent_crew` (experimental) | three L4 SLM endpoints (reasoning / code / factual) |
+| `speculative` (experimental) | drafter SLM + verifier LLM, both reachable |
 
 Minimum benchmark validation:
 - 5-sample smoke test for every architecture
@@ -84,15 +95,12 @@ Serve one of these at a time on the RTX6000 host:
 - `gemma4-31b`
 - `qwen3.5-35b-a3b`
 - `gemma4-26b-a4b`
-- `qwen3.5-122b-a10b`
 
 ### Heavy host
 
 Serve one of these at a time on the heavy host:
 - `llama3.3-70b`
 - `gpt-oss-120b`
-- `qwen3.5-397b-a17b`
-- `kimi-k2.6-1t`
 
 Operational rule:
 - shared hosts run exactly one large model at a time

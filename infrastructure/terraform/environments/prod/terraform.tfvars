@@ -14,4 +14,4 @@ enabled_vllm_models = ["gpt-oss-20b", "llama3.3-70b"]
 # Examples:
 # enabled_vllm_models = ["llama3.3-70b", "gpt-oss-20b"]
 # enabled_vllm_models = ["gpt-oss-120b"]
-# enabled_vllm_models = ["qwen3.5-397b-a17b"]
+# enabled_vllm_models = ["llama3.3-70b"]

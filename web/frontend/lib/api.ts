@@ -1,13 +1,17 @@
 import type {
+  ArchitectureSpec,
   BenchmarkInfo,
   ComparisonResponse,
   CostEstimate,
   ExperimentCreate,
   ExperimentLaunchResponse,
   ExperimentResponse,
+  HostsResponse,
   InstanceInfo,
   ModelListResponse,
   ModelPingResponse,
+  PlaygroundChatRequest,
+  PlaygroundChatResponse,
   ResultDetail,
   ResultSummary,
 } from "@/types";
@@ -32,6 +36,17 @@ export const api = {
   listModels: () => request<ModelListResponse>("/api/models"),
   pingModel: (modelId: string) =>
     request<ModelPingResponse>(`/api/models/${modelId}/ping`),
+
+  listArchitectures: () =>
+    request<ArchitectureSpec[]>("/api/architectures"),
+
+  listHosts: () => request<HostsResponse>("/api/hosts"),
+
+  playgroundChat: (data: PlaygroundChatRequest) =>
+    request<PlaygroundChatResponse>("/api/playground/chat", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 
   launchExperiment: (data: ExperimentCreate) =>
     request<ExperimentLaunchResponse>("/api/experiments", {

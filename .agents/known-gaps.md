@@ -33,7 +33,7 @@ Bu dosya, repo extraction sırasında görülen yapılacak işleri merkezi olara
 - `ExperimentConfig`, UI preference, vLLM endpoint, model role ve custom dataset alanlarını desteklemeli.
 - `config.py`, bilinmeyen YAML alanlarını sessizce düşürmemeli veya explicit validation yapmalı.
 - Model isimleri frontend/API/core arasında normalize edilmeli.
-- Yeni model havuzunda resmi checkpoint adları ile repo alias'ları (`qwen3.5-397b-a17b`, `gemma4-4b` gibi) karıştırılmamalı.
+- Yeni model havuzunda resmi checkpoint adları ile repo alias'ları (`llama3.3-70b`, `gemma4-4b` gibi) karıştırılmamalı.
 - Prompt parser'ları benchmark bazlı daha sağlam hale getirilmeli.
 
 ## Evaluation and Analysis İşleri
@@ -64,7 +64,6 @@ Bu dosya, repo extraction sırasında görülen yapılacak işleri merkezi olara
 
 - Terraform root/backend yapısı netleştirilmeli.
 - Frontier model host'ları için gerçek bütçe ve quota planı netleştirilmeli.
-- `qwen3.5-122b-a10b` için varsayılan `g6e.48xlarge` yerleşimi pratik benchmark ile doğrulanmalı; gerekirse `p5` override kullanılmalı.
 - Prod API host'u ile ayrı MLflow host gerekip gerekmediği netleştirilmeli.
 - Hangi modellerin self-host yerine hosted/API gateway üzerinden test edileceği deney bazında yazılı hale getirilmeli.
 - MLflow endpoint stratejisi belirlenmeli: local instance, ayrı service veya managed endpoint.

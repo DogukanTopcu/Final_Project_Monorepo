@@ -75,3 +75,18 @@ export function useBenchmarks() {
     queryFn: api.listBenchmarks,
   });
 }
+
+export function useArchitectures() {
+  return useQuery({
+    queryKey: ["architectures"],
+    queryFn: api.listArchitectures,
+  });
+}
+
+export function useHosts() {
+  return useQuery({
+    queryKey: ["hosts"],
+    queryFn: api.listHosts,
+    refetchInterval: 10000,
+  });
+}

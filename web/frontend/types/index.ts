@@ -1,4 +1,13 @@
-export type Architecture = "routing" | "multi_agent" | "ensemble";
+export type Architecture =
+  | "monolithic"
+  | "routing"
+  | "multi_agent"
+  | "ensemble"
+  | "multi_agent_crew"
+  | "speculative";
+
+export type ArchitectureMode = "monolithic" | "hybrid" | "ensemble";
+
 export type Benchmark =
   | "mmlu"
   | "arc"
@@ -6,6 +15,7 @@ export type Benchmark =
   | "gsm8k"
   | "truthfulqa"
   | "custom_stratified";
+
 export type ExperimentStatus =
   | "queued"
   | "running"
@@ -17,8 +27,9 @@ export interface ExperimentCreate {
   architecture: Architecture;
   benchmark: Benchmark;
   n_samples: number;
-  slm: string;
-  llm: string;
+  slm?: string | null;
+  llm?: string | null;
+  ensemble_slms?: string[];
   config_overrides?: Record<string, unknown>;
 }
 
@@ -28,8 +39,9 @@ export interface ExperimentResponse {
   architecture: Architecture;
   benchmark: Benchmark;
   n_samples: number;
-  slm: string;
-  llm: string;
+  slm: string | null;
+  llm: string | null;
+  ensemble_slms: string[];
   config_overrides: Record<string, unknown>;
   created_at: string;
   completed_at: string | null;
@@ -56,6 +68,10 @@ export interface ModelInfo {
   status: string;
   base_url?: string | null;
   reason?: string | null;
+  host_id?: string | null;
+  host_label?: string | null;
+  is_active_on_host?: boolean | null;
+  shared_host: boolean;
 }
 
 export interface ModelListResponse {
@@ -77,8 +93,9 @@ export interface ResultSummary {
   experiment_id: string;
   architecture: string;
   benchmark: string;
-  slm: string;
-  llm: string;
+  slm: string | null;
+  llm: string | null;
+  ensemble_slms: string[];
   accuracy: number;
   avg_latency_ms: number | null;
   eats_score: number | null;
@@ -158,7 +175,7 @@ export interface CostEstimate {
 }
 
 export interface SSEEvent {
-  type: "progress" | "metric" | "complete" | "error";
+  type: "progress" | "metric" | "complete" | "error" | "status";
   completed?: number;
   total?: number;
   current_query?: string;
@@ -177,4 +194,71 @@ export interface BenchmarkInfo {
   categories: string[];
   total_samples: number;
   suggested_sizes: number[];
+}
+
+// --- New: architecture catalog ---
+export interface ArchitectureParamSpec {
+  key: string;
+  label: string;
+  type: "float" | "int" | "bool" | "enum" | "string";
+  default: unknown;
+  min?: number | null;
+  max?: number | null;
+  options?: string[] | null;
+  description?: string | null;
+}
+
+export interface ArchitectureSpec {
+  id: Architecture;
+  name: string;
+  mode: ArchitectureMode;
+  description: string;
+  requires_slm: boolean;
+  requires_llm: boolean;
+  supports_multi_slm: boolean;
+  experimental: boolean;
+  params: ArchitectureParamSpec[];
+}
+
+// --- New: hosts ---
+export interface HostStatus {
+  host_id: string;
+  label: string;
+  base_url?: string | null;
+  shared: boolean;
+  configured_models: string[];
+  active_model_id?: string | null;
+  active_served_ids: string[];
+  is_reachable: boolean;
+  locked: boolean;
+  lock_holder?: string | null;
+  last_probe_latency_ms?: number | null;
+  notes?: string | null;
+}
+
+export interface HostsResponse {
+  hosts: HostStatus[];
+  autoswitch_enabled: boolean;
+}
+
+// --- New: playground ---
+export interface PlaygroundChatRequest {
+  model_id: string;
+  prompt: string;
+  system?: string | null;
+  temperature?: number;
+  max_tokens?: number;
+}
+
+export interface PlaygroundChatResponse {
+  model_id: string;
+  text: string;
+  latency_ms: number;
+  input_tokens: number;
+  output_tokens: number;
+  cost_usd: number;
+  energy_kwh?: number | null;
+  co2_g?: number | null;
+  base_url?: string | null;
+  finish_reason?: string | null;
 }

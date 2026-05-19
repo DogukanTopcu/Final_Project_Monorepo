@@ -146,39 +146,6 @@ locals {
       endpoint_path       = "/v1"
       api_port            = 8000
     }
-    "qwen3.5-122b-a10b" = {
-      instance_type       = "g6e.48xlarge"
-      root_volume_size_gb = 800
-      use_spot            = false
-      spot_price          = ""
-      runtime_args        = ["--ipc=host", "--shm-size=64g", "-v /opt/hf-cache:/root/.cache/huggingface"]
-      command             = "--model Qwen/Qwen3.5-122B-A10B --served-model-name Qwen/Qwen3.5-122B-A10B --port 8000 --tensor-parallel-size 8 --max-model-len 32768 --reasoning-parser qwen3 --language-model-only"
-      endpoint_env        = "VLLM_QWEN35_122B_A10B_URL"
-      endpoint_path       = "/v1"
-      api_port            = 8000
-    }
-    "kimi-k2.6-1t" = {
-      instance_type       = "p5e.48xlarge"
-      root_volume_size_gb = 2000
-      use_spot            = false
-      spot_price          = ""
-      runtime_args        = ["--ipc=host", "--shm-size=64g", "-v /opt/hf-cache:/root/.cache/huggingface"]
-      command             = "--model moonshotai/Kimi-K2.6 --served-model-name moonshotai/Kimi-K2.6 --port 8000 --tensor-parallel-size 8 --mm-encoder-tp-mode data --trust-remote-code --tool-call-parser kimi_k2 --reasoning-parser kimi_k2"
-      endpoint_env        = "VLLM_KIMI_K26_1T_URL"
-      endpoint_path       = "/v1"
-      api_port            = 8000
-    }
-    "qwen3.5-397b-a17b" = {
-      instance_type       = "p5e.48xlarge"
-      root_volume_size_gb = 2000
-      use_spot            = false
-      spot_price          = ""
-      runtime_args        = ["--ipc=host", "--shm-size=64g", "-v /opt/hf-cache:/root/.cache/huggingface"]
-      command             = "--model Qwen/Qwen3.5-397B-A17B --served-model-name Qwen/Qwen3.5-397B-A17B --port 8000 --tensor-parallel-size 8 --max-model-len 32768 --reasoning-parser qwen3 --language-model-only"
-      endpoint_env        = "VLLM_QWEN35_397B_A17B_URL"
-      endpoint_path       = "/v1"
-      api_port            = 8000
-    }
     "gpt-oss-120b" = {
       instance_type       = "p5.4xlarge"
       root_volume_size_gb = 500
@@ -237,15 +204,6 @@ locals {
     } : {},
     contains(var.enabled_vllm_models, "gemma4-26b-a4b") ? {
       VLLM_GEMMA4_26B_A4B_URL = "http://${module.vllm_hosts["gemma4-26b-a4b"].private_ips[0]}:8000/v1"
-    } : {},
-    contains(var.enabled_vllm_models, "qwen3.5-122b-a10b") ? {
-      VLLM_QWEN35_122B_A10B_URL = "http://${module.vllm_hosts["qwen3.5-122b-a10b"].private_ips[0]}:8000/v1"
-    } : {},
-    contains(var.enabled_vllm_models, "kimi-k2.6-1t") ? {
-      VLLM_KIMI_K26_1T_URL = "http://${module.vllm_hosts["kimi-k2.6-1t"].private_ips[0]}:8000/v1"
-    } : {},
-    contains(var.enabled_vllm_models, "qwen3.5-397b-a17b") ? {
-      VLLM_QWEN35_397B_A17B_URL = "http://${module.vllm_hosts["qwen3.5-397b-a17b"].private_ips[0]}:8000/v1"
     } : {},
     contains(var.enabled_vllm_models, "gpt-oss-120b") ? {
       VLLM_GPT_OSS_120B_URL = "http://${module.vllm_hosts["gpt-oss-120b"].private_ips[0]}:8000/v1"

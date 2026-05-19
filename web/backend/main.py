@@ -6,7 +6,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from web.backend.dependencies import get_settings
-from web.backend.routers import benchmarks, experiments, infrastructure, models, results
+from web.backend.routers import (
+    architectures,
+    benchmarks,
+    experiments,
+    hosts,
+    infrastructure,
+    models,
+    playground,
+    results,
+)
 
 
 @asynccontextmanager
@@ -35,6 +44,9 @@ def create_app() -> FastAPI:
     app.include_router(results.router, prefix="/api")
     app.include_router(infrastructure.router, prefix="/api")
     app.include_router(benchmarks.router, prefix="/api")
+    app.include_router(architectures.router, prefix="/api")
+    app.include_router(hosts.router, prefix="/api")
+    app.include_router(playground.router, prefix="/api")
 
     @app.get("/health")
     async def health():

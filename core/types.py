@@ -35,11 +35,12 @@ class Response:
 
 @dataclass
 class ExperimentConfig:
-    architecture: str              # "routing" | "multi_agent" | "ensemble"
+    architecture: str              # "monolithic" | "routing" | "multi_agent" | "ensemble" | "multi_agent_crew" | "speculative"
     benchmark: str                 # "mmlu" | "arc" | "hellaswag" | "gsm8k" | "truthfulqa"
     n_samples: int = 100
-    slm: str = "qwen3.5-4b"
-    llm: str = "llama3.3-70b"
+    slm: str | None = "qwen3.5-4b"  # may be None for monolithic
+    llm: str | None = "llama3.3-70b"  # may be None when not needed
+    ensemble_slms: list[str] = field(default_factory=list)  # multi-SLM ensemble selections
     slm_temperature: float = 0.0
     llm_temperature: float = 0.0
     slm_max_tokens: int = 0
@@ -53,6 +54,8 @@ class ExperimentConfig:
     n_models: int = 3
     voting: str = "majority"       # "majority" | "weighted"
     llm_tiebreak: bool = False
+    # Speculative params
+    speculative_acceptance_threshold: float = 0.7
     # Runtime
     dry_run: bool = False
     seed: int = 42

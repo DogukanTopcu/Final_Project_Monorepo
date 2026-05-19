@@ -10,14 +10,13 @@ Temel soru şudur:
 
 Bu iterasyonda seçilmiş resmi model havuzu şudur:
 
-- Heavy LLM: `kimi-k2.6-1t`, `qwen3.5-397b-a17b`, `gpt-oss-120b`, `llama3.3-70b`
+- Heavy LLM: `gpt-oss-120b`, `llama3.3-70b`
 - Light LLM: `qwen3.5-27b`, `gpt-oss-20b`, `gemma4-31b`
-- MoE: `qwen3.5-122b-a10b`, `gemma4-26b-a4b`, `qwen3.5-35b-a3b`
+- MoE: `gemma4-26b-a4b`, `qwen3.5-35b-a3b`
 - SLM: `gemma4-4b`, `qwen3.5-4b`, `llama3.2-3b`
 
 Normalizasyon notu:
 
-- Kullanıcı kısaltması `Qwen 3.5 (396B)` repo içinde resmi `Qwen/Qwen3.5-397B-A17B` checkpoint'ine normalize edilir.
 - Kullanıcı kısaltması `Gemma 4 (4B)` repo içinde `gemma4-4b` alias'ı ve `google/gemma-4-E4B-it` / `gemma4:e4b` runtime adıyla temsil edilir.
 
 Bu yüzden repo yalnızca model çağıran bir uygulama değildir. Aşağıdaki katmanları birlikte kurmaya çalışır:
@@ -37,7 +36,7 @@ Altyapı notu:
 - Küçük ve orta modeller yerelde Ollama veya tek-GPU vLLM ile çalıştırılabilir.
 - AWS/prod tarafında repo artık tek generic GPU instance varsaymaz.
 - `THESIS_FORCE_VLLM=1` ile aynı repo alias'ları private OpenAI-compatible vLLM endpoint'lerine yönlenebilir.
-- Çok büyük modeller (`qwen3.5-397b-a17b`, `kimi-k2.6-1t`) dedicated ve pahalı host sınıfları gerektirir; bunlar dev ortamının doğal uzantısı değildir.
+- Ağır modeller (`llama3.3-70b`, `gpt-oss-120b`) dedicated ve pahalı host sınıfları gerektirir; bunlar dev ortamının doğal uzantısı değildir.
 
 ## Kritik Kavramlar
 

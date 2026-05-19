@@ -98,14 +98,40 @@ class SpeculativeDecodingArchitecture:
         drafter_model: str = "Qwen/Qwen3.5-4B",
         verifier_model: str = "meta-llama/Llama-3.3-70B-Instruct",
         confidence_threshold: float = 0.75,
+        acceptance_threshold: float | None = None,
         max_tokens: int = 0,
+        # Runner-compatible kwargs: when provided, derive base_url / model_id
+        # from the ModelProvider instances and ignore the legacy *_url args.
+        slm: object | None = None,
+        llm: object | None = None,
+        slm_temperature: float | None = None,
+        llm_temperature: float | None = None,
+        slm_max_tokens: int | None = None,
+        llm_max_tokens: int | None = None,
+        task_type: str | None = None,
     ) -> None:
-        self.drafter_url = (drafter_url or os.environ.get("VLLM_QWEN35_4B_URL", "http://localhost:8001/v1"))
-        self.verifier_url = (verifier_url or os.environ.get("VLLM_LLAMA33_70B_URL", "http://localhost:8000/v1"))
-        self.drafter_model = drafter_model
-        self.verifier_model = verifier_model
-        self.confidence_threshold = confidence_threshold
-        self.max_tokens = max_tokens
+        if slm is not None and getattr(slm, "base_url", None):
+            self.drafter_url = slm.base_url
+            self.drafter_model = getattr(slm, "model_id", drafter_model)
+        else:
+            self.drafter_url = (
+                drafter_url or os.environ.get("VLLM_QWEN35_4B_URL", "http://localhost:8001/v1")
+            )
+            self.drafter_model = drafter_model
+        if llm is not None and getattr(llm, "base_url", None):
+            self.verifier_url = llm.base_url
+            self.verifier_model = getattr(llm, "model_id", verifier_model)
+        else:
+            self.verifier_url = (
+                verifier_url or os.environ.get("VLLM_LLAMA33_70B_URL", "http://localhost:8000/v1")
+            )
+            self.verifier_model = verifier_model
+        self.confidence_threshold = (
+            acceptance_threshold if acceptance_threshold is not None else confidence_threshold
+        )
+        self.max_tokens = (
+            llm_max_tokens if llm_max_tokens is not None else max_tokens
+        )
 
     @property
     def name(self) -> str:

@@ -8,8 +8,17 @@ from pydantic import BaseModel, Field
 
 
 class Architecture(str, Enum):
+    MONOLITHIC = "monolithic"
     ROUTING = "routing"
     MULTI_AGENT = "multi_agent"
+    ENSEMBLE = "ensemble"
+    MULTI_AGENT_CREW = "multi_agent_crew"
+    SPECULATIVE = "speculative"
+
+
+class ArchitectureMode(str, Enum):
+    MONOLITHIC = "monolithic"
+    HYBRID = "hybrid"
     ENSEMBLE = "ensemble"
 
 
@@ -34,8 +43,9 @@ class ExperimentCreate(BaseModel):
     architecture: Architecture
     benchmark: Benchmark
     n_samples: int = Field(default=100, ge=1, le=10000)
-    slm: str = "qwen3.5-4b"
-    llm: str = "llama3.3-70b"
+    slm: str | None = None
+    llm: str | None = None
+    ensemble_slms: list[str] = Field(default_factory=list)
     config_overrides: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -45,8 +55,9 @@ class ExperimentResponse(BaseModel):
     architecture: Architecture
     benchmark: Benchmark
     n_samples: int
-    slm: str
-    llm: str
+    slm: str | None = None
+    llm: str | None = None
+    ensemble_slms: list[str] = Field(default_factory=list)
     config_overrides: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
     completed_at: datetime | None = None
@@ -73,6 +84,10 @@ class ModelInfo(BaseModel):
     status: str = "unknown"
     base_url: str | None = None
     reason: str | None = None
+    host_id: str | None = None
+    host_label: str | None = None
+    is_active_on_host: bool | None = None
+    shared_host: bool = False
 
 
 class ModelListResponse(BaseModel):
@@ -94,8 +109,9 @@ class ResultSummary(BaseModel):
     experiment_id: str
     architecture: str
     benchmark: str
-    slm: str
-    llm: str
+    slm: str | None = None
+    llm: str | None = None
+    ensemble_slms: list[str] = Field(default_factory=list)
     accuracy: float
     avg_latency_ms: float | None = None
     eats_score: float | None = None
@@ -150,3 +166,72 @@ class SSEEvent(BaseModel):
     metrics: dict[str, float] | None = None
     message: str | None = None
     status: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# New schemas: architectures, hosts, playground
+# ---------------------------------------------------------------------------
+
+
+class ArchitectureParamSpec(BaseModel):
+    key: str
+    label: str
+    type: str  # "float" | "int" | "bool" | "enum" | "string"
+    default: Any = None
+    min: float | None = None
+    max: float | None = None
+    options: list[str] | None = None
+    description: str | None = None
+
+
+class ArchitectureSpec(BaseModel):
+    id: Architecture
+    name: str
+    mode: ArchitectureMode
+    description: str
+    requires_slm: bool
+    requires_llm: bool
+    supports_multi_slm: bool = False
+    experimental: bool = False
+    params: list[ArchitectureParamSpec] = Field(default_factory=list)
+
+
+class HostStatus(BaseModel):
+    host_id: str
+    label: str
+    base_url: str | None = None
+    shared: bool
+    configured_models: list[str]
+    active_model_id: str | None = None
+    active_served_ids: list[str] = Field(default_factory=list)
+    is_reachable: bool = False
+    locked: bool = False
+    lock_holder: str | None = None
+    last_probe_latency_ms: float | None = None
+    notes: str | None = None
+
+
+class HostsResponse(BaseModel):
+    hosts: list[HostStatus]
+    autoswitch_enabled: bool = False
+
+
+class PlaygroundChatRequest(BaseModel):
+    model_id: str
+    prompt: str
+    system: str | None = None
+    temperature: float = Field(default=0.0, ge=0.0, le=2.0)
+    max_tokens: int = Field(default=512, ge=1, le=32768)
+
+
+class PlaygroundChatResponse(BaseModel):
+    model_id: str
+    text: str
+    latency_ms: float
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cost_usd: float = 0.0
+    energy_kwh: float | None = None
+    co2_g: float | None = None
+    base_url: str | None = None
+    finish_reason: str | None = None

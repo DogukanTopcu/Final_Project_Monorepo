@@ -1,21 +1,18 @@
 "use client";
 
 import {
-  ScatterChart,
+  CartesianGrid,
+  Legend,
+  ResponsiveContainer,
   Scatter,
+  ScatterChart,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
+  ZAxis,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ResultSummary } from "@/types";
-
-interface MetricsChartProps {
-  results: ResultSummary[];
-}
 
 const ARCH_COLORS: Record<string, string> = {
   monolithic: "#8b5cf6",
@@ -26,16 +23,34 @@ const ARCH_COLORS: Record<string, string> = {
   speculative: "#06b6d4",
 };
 
-export function MetricsChart({ results }: MetricsChartProps) {
-  const architectures = [...new Set(results.map((r) => r.architecture))];
+interface ParetoScatterProps {
+  title: string;
+  xKey: keyof ResultSummary;
+  xLabel: string;
+  yKey: keyof ResultSummary;
+  yLabel: string;
+  results: ResultSummary[];
+  invertX?: boolean;
+}
 
-  const dataByArch = architectures.reduce<Record<string, { accuracy: number; llm_call_ratio: number; name: string }[]>>(
+export function ParetoScatter({
+  title,
+  xKey,
+  xLabel,
+  yKey,
+  yLabel,
+  results,
+  invertX,
+}: ParetoScatterProps) {
+  const architectures = Array.from(new Set(results.map((r) => r.architecture)));
+
+  const dataByArch = architectures.reduce<Record<string, { x: number; y: number; name: string }[]>>(
     (acc, arch) => {
       acc[arch] = results
         .filter((r) => r.architecture === arch)
         .map((r) => ({
-          accuracy: r.accuracy,
-          llm_call_ratio: r.llm_call_ratio ?? 0,
+          x: Number(r[xKey] ?? 0),
+          y: Number(r[yKey] ?? 0),
           name: r.experiment_id,
         }));
       return acc;
@@ -46,32 +61,32 @@ export function MetricsChart({ results }: MetricsChartProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Accuracy vs LLM Call Ratio</CardTitle>
+        <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={350}>
-          <ScatterChart margin={{ top: 10, right: 20, bottom: 10, left: 10 }}>
+        <ResponsiveContainer width="100%" height={300}>
+          <ScatterChart margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis
               type="number"
-              dataKey="llm_call_ratio"
-              name="LLM Call Ratio"
-              domain={[0, 1]}
-              label={{ value: "LLM Call Ratio", position: "bottom" }}
+              dataKey="x"
+              name={xLabel}
+              reversed={invertX}
+              label={{ value: xLabel, position: "bottom", offset: 0 }}
             />
             <YAxis
               type="number"
-              dataKey="accuracy"
-              name="Accuracy"
-              domain={[0, 1]}
-              label={{ value: "Accuracy", angle: -90, position: "insideLeft" }}
+              dataKey="y"
+              name={yLabel}
+              label={{ value: yLabel, angle: -90, position: "insideLeft" }}
             />
+            <ZAxis dataKey="name" range={[60, 60]} />
             <Tooltip cursor={{ strokeDasharray: "3 3" }} />
             <Legend />
             {architectures.map((arch) => (
               <Scatter
                 key={arch}
-                name={arch.replace("_", " ")}
+                name={arch.replace(/_/g, " ")}
                 data={dataByArch[arch]}
                 fill={ARCH_COLORS[arch] ?? "#6b7280"}
               />
