@@ -30,6 +30,8 @@ def _load_in_memory_results() -> dict[str, ResultSummary]:
             eats_score=exp.metrics.get("eats_score"),
             llm_call_ratio=exp.metrics.get("llm_call_ratio"),
             total_cost_usd=exp.metrics.get("total_cost_usd"),
+            total_energy_kwh=exp.metrics.get("total_energy_kwh"),
+            total_infra_cost_usd=exp.metrics.get("total_infra_cost_usd"),
             created_at=exp.created_at,
         )
     return result_map
@@ -62,6 +64,8 @@ def _load_local_result_summaries(settings: Settings) -> dict[str, ResultSummary]
             eats_score=metrics.get("eats_score"),
             llm_call_ratio=metrics.get("llm_call_ratio"),
             total_cost_usd=metrics.get("total_cost_usd"),
+            total_energy_kwh=metrics.get("total_energy_kwh"),
+            total_infra_cost_usd=metrics.get("total_infra_cost_usd"),
             created_at=datetime.fromisoformat(
                 data.get("created_at", datetime.now(timezone.utc).isoformat())
             ),
@@ -94,6 +98,8 @@ def _load_s3_result_summaries(settings: Settings) -> dict[str, ResultSummary]:
             eats_score=metrics.get("eats_score"),
             llm_call_ratio=metrics.get("llm_call_ratio"),
             total_cost_usd=metrics.get("total_cost_usd"),
+            total_energy_kwh=metrics.get("total_energy_kwh"),
+            total_infra_cost_usd=metrics.get("total_infra_cost_usd"),
             created_at=datetime.fromisoformat(
                 data.get("created_at", datetime.now(timezone.utc).isoformat())
             ),
@@ -145,6 +151,8 @@ async def compare_results(
                 "eats_score": result.eats_score,
                 "llm_call_ratio": result.llm_call_ratio,
                 "total_cost_usd": result.total_cost_usd,
+                "total_energy_kwh": result.total_energy_kwh,
+                "total_infra_cost_usd": result.total_infra_cost_usd,
             }.items()
             if value is not None
         }

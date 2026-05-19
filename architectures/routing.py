@@ -15,10 +15,10 @@ The confidence threshold is a hyperparameter (default 0.7) tunable via config.
 """
 from __future__ import annotations
 
+from architectures.base import BaseArchitecture
 from core.models import ModelProvider
 from core.prompt import mcq_prompt, open_prompt, parse_mcq_answer, parse_open_answer
 from core.types import Query, Response
-from architectures.base import BaseArchitecture
 
 
 class RoutingArchitecture(BaseArchitecture):
@@ -67,6 +67,16 @@ class RoutingArchitecture(BaseArchitecture):
         llm_output_tokens = 0
         llm_cost = 0.0
         llm_latency = 0.0
+        inference_steps: list[dict[str, object]] = [
+            {
+                "role": "slm_draft",
+                "model_id": self.slm.model_id,
+                "latency_ms": latency,
+                "input_tokens": in_tok,
+                "output_tokens": out_tok,
+                "api_cost_usd": cost,
+            }
+        ]
 
         # Step 2: Escalate if low confidence
         if conf < self.threshold:
@@ -84,6 +94,16 @@ class RoutingArchitecture(BaseArchitecture):
             llm_output_tokens = l_out
             llm_cost = l_cost
             llm_latency = l_lat
+            inference_steps.append(
+                {
+                    "role": "llm_fallback",
+                    "model_id": self.llm.model_id,
+                    "latency_ms": l_lat,
+                    "input_tokens": l_in,
+                    "output_tokens": l_out,
+                    "api_cost_usd": l_cost,
+                }
+            )
 
         parsed = (
             parse_mcq_answer(final_text)
@@ -121,5 +141,6 @@ class RoutingArchitecture(BaseArchitecture):
                 "llm_input_tokens": llm_input_tokens if llm_calls == 1 else None,
                 "llm_output_tokens": llm_output_tokens if llm_calls == 1 else None,
                 "llm_cost_usd": llm_cost if llm_calls == 1 else None,
+                "inference_steps": inference_steps,
             },
         )

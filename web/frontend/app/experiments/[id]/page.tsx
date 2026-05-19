@@ -69,6 +69,10 @@ export default function ExperimentDetailPage({
     "latency_p50_ms",
     "latency_p95_ms",
     "total_cost_usd",
+    "total_infra_cost_usd",
+    "total_api_cost_usd",
+    "total_energy_kwh",
+    "total_co2_g",
     "total_tokens",
     "eats_score",
   ];

@@ -23,7 +23,12 @@ class Response:
     latency_ms: float = 0.0
     input_tokens: int = 0
     output_tokens: int = 0
-    cost_usd: float = 0.0               # estimated API cost
+    cost_usd: float = 0.0               # total estimated cost (API + infra)
+    api_cost_usd: float = 0.0           # direct provider/API cost
+    infra_cost_usd: float = 0.0         # self-hosted infra estimate
+    energy_kwh: float = 0.0             # estimated or measured energy
+    co2_g: float = 0.0                  # estimated or measured emissions
+    gpu_power_w: float = 0.0            # average estimated/measured GPU power
     llm_calls: int = 0                  # 1 if LLM was invoked, else 0
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -43,6 +48,7 @@ class ExperimentConfig:
     # Arch C params
     n_models: int = 3
     voting: str = "majority"       # "majority" | "weighted"
+    llm_tiebreak: bool = False
     # Runtime
     dry_run: bool = False
     seed: int = 42
@@ -89,12 +95,32 @@ class ExperimentResult:
     def total_cost_usd(self) -> float:
         return sum(s.response.cost_usd for s in self.samples)
 
+    @property
+    def total_api_cost_usd(self) -> float:
+        return sum(s.response.api_cost_usd for s in self.samples)
+
+    @property
+    def total_infra_cost_usd(self) -> float:
+        return sum(s.response.infra_cost_usd for s in self.samples)
+
+    @property
+    def total_energy_kwh(self) -> float:
+        return sum(s.response.energy_kwh for s in self.samples)
+
+    @property
+    def total_co2_g(self) -> float:
+        return sum(s.response.co2_g for s in self.samples)
+
     def to_metrics(self) -> dict[str, float]:
         return {
             "accuracy": self.accuracy,
             "llm_call_ratio": self.llm_call_ratio,
             "avg_latency_ms": self.avg_latency_ms,
             "total_cost_usd": self.total_cost_usd,
+            "total_api_cost_usd": self.total_api_cost_usd,
+            "total_infra_cost_usd": self.total_infra_cost_usd,
+            "total_energy_kwh": self.total_energy_kwh,
+            "total_co2_g": self.total_co2_g,
             "n_total": float(self.n_total),
             "n_correct": float(self.n_correct),
         }

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { MetricsChart } from "@/components/MetricsChart";
 import { EATSGauge } from "@/components/EATSGauge";
 import { useExperiments, useResults } from "@/hooks/useExperiments";
-import { formatPercent, formatCost } from "@/lib/utils";
+import { formatDecimal, formatPercent, formatCost } from "@/lib/utils";
 
 export default function DashboardPage() {
   const { data: experiments } = useExperiments();
@@ -51,7 +51,7 @@ export default function DashboardPage() {
             <CardTitle className="text-sm font-medium text-zinc-500">Avg EATS Score</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{avgEats > 0 ? formatPercent(avgEats) : "—"}</p>
+            <p className="text-3xl font-bold">{avgEats > 0 ? formatDecimal(avgEats, 2) : "—"}</p>
           </CardContent>
         </Card>
 

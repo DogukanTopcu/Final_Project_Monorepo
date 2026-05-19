@@ -19,6 +19,7 @@ class Benchmark(str, Enum):
     HELLASWAG = "hellaswag"
     GSM8K = "gsm8k"
     TRUTHFULQA = "truthfulqa"
+    CUSTOM_STRATIFIED = "custom_stratified"
 
 
 class ExperimentStatus(str, Enum):
@@ -63,17 +64,22 @@ class ExperimentLaunchResponse(BaseModel):
 class ModelInfo(BaseModel):
     id: str
     name: str
+    family: str
+    tier: str
     provider: str
+    runtime_provider: str
     type: str  # "slm" or "llm"
+    configured: bool = False
     status: str = "unknown"
+    base_url: str | None = None
+    reason: str | None = None
 
 
 class ModelListResponse(BaseModel):
     slm: list[ModelInfo]
     llm: list[ModelInfo]
-    ollama_reachable: bool = False
-    openai_configured: bool = False
-    gemini_configured: bool = False
+    runtime_mode: str = "mixed"
+    force_vllm: bool = False
     warnings: list[str] = Field(default_factory=list)
 
 
@@ -95,6 +101,8 @@ class ResultSummary(BaseModel):
     eats_score: float | None = None
     llm_call_ratio: float | None = None
     total_cost_usd: float | None = None
+    total_energy_kwh: float | None = None
+    total_infra_cost_usd: float | None = None
     created_at: datetime
 
 

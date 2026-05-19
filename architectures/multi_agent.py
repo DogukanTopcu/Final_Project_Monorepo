@@ -17,10 +17,10 @@ checkpoint as the arbitrator).
 """
 from __future__ import annotations
 
+from architectures.base import BaseArchitecture
 from core.models import ModelProvider
 from core.prompt import mcq_prompt, open_prompt, parse_mcq_answer, parse_open_answer
 from core.types import Query, Response
-from architectures.base import BaseArchitecture
 
 
 _PROPONENT_TEMPLATE = """{question}
@@ -74,18 +74,43 @@ class MultiAgentArchitecture(BaseArchitecture):
         total_in = total_out = 0
         total_cost = total_latency = 0.0
         llm_calls = 0
+        inference_steps: list[dict[str, object]] = []
 
         # --- Proponent (SLM) ---
         prop_prompt = _PROPONENT_TEMPLATE.format(question=base_prompt)
         prop_text, _, in_t, out_t, cost, lat = self._timed_generate(self.slm, prop_prompt)
-        total_in += in_t; total_out += out_t
-        total_cost += cost; total_latency += lat
+        total_in += in_t
+        total_out += out_t
+        total_cost += cost
+        total_latency += lat
+        inference_steps.append(
+            {
+                "role": "proponent",
+                "model_id": self.slm.model_id,
+                "latency_ms": lat,
+                "input_tokens": in_t,
+                "output_tokens": out_t,
+                "api_cost_usd": cost,
+            }
+        )
 
         # --- Opponent (SLM) ---
         opp_prompt = _OPPONENT_TEMPLATE.format(proponent_output=prop_text)
         opp_text, _, in_t, out_t, cost, lat = self._timed_generate(self.slm, opp_prompt)
-        total_in += in_t; total_out += out_t
-        total_cost += cost; total_latency += lat
+        total_in += in_t
+        total_out += out_t
+        total_cost += cost
+        total_latency += lat
+        inference_steps.append(
+            {
+                "role": "opponent",
+                "model_id": self.slm.model_id,
+                "latency_ms": lat,
+                "input_tokens": in_t,
+                "output_tokens": out_t,
+                "api_cost_usd": cost,
+            }
+        )
 
         # --- Arbitrator (SLM or LLM) ---
         arb_prompt = _ARBITRATOR_TEMPLATE.format(
@@ -99,8 +124,20 @@ class MultiAgentArchitecture(BaseArchitecture):
         else:
             arb_text, _, in_t, out_t, cost, lat = self._timed_generate(self.slm, arb_prompt)
 
-        total_in += in_t; total_out += out_t
-        total_cost += cost; total_latency += lat
+        total_in += in_t
+        total_out += out_t
+        total_cost += cost
+        total_latency += lat
+        inference_steps.append(
+            {
+                "role": "arbitrator",
+                "model_id": self.llm.model_id if llm_calls else self.slm.model_id,
+                "latency_ms": lat,
+                "input_tokens": in_t,
+                "output_tokens": out_t,
+                "api_cost_usd": cost,
+            }
+        )
 
         parsed = (
             parse_mcq_answer(arb_text)
@@ -123,5 +160,6 @@ class MultiAgentArchitecture(BaseArchitecture):
                 "proponent": prop_text,
                 "opponent": opp_text,
                 "arbitrator_role": self.arbitrator_role,
+                "inference_steps": inference_steps,
             },
         )

@@ -115,4 +115,10 @@ def compute_metrics(
             if non_escalated_confidences
             else 0.0
         ),
+        "avg_energy_per_sample_kwh": (
+            base["total_energy_kwh"] / base["n_total"] if base["n_total"] else 0.0
+        ),
+        "avg_co2_per_sample_g": (
+            base["total_co2_g"] / base["n_total"] if base["n_total"] else 0.0
+        ),
     }

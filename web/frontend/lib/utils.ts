@@ -45,6 +45,10 @@ export function formatMetricLabel(key: string): string {
     latency_p50_ms: "Latency P50",
     latency_p95_ms: "Latency P95",
     total_tokens: "Total Tokens",
+    total_energy_kwh: "Total Energy",
+    total_co2_g: "Total CO2",
+    total_api_cost_usd: "API Cost",
+    total_infra_cost_usd: "Infra Cost",
     n_escalated: "Escalated Samples",
     escalation_rate: "Escalation Rate",
     n_slm_only: "SLM-only Samples",
@@ -59,6 +63,12 @@ export function formatMetricLabel(key: string): string {
 export function formatMetricValue(key: string, value: number): string {
   if (key.includes("cost")) {
     return formatCost(value);
+  }
+  if (key.includes("energy")) {
+    return `${value.toFixed(4)} kWh`;
+  }
+  if (key.includes("co2")) {
+    return `${value.toFixed(2)} g`;
   }
   if (key.includes("latency")) {
     return formatDurationMs(value);

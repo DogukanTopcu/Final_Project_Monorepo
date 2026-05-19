@@ -24,6 +24,7 @@ from benchmarks import get_benchmark
 from core.config import load_config
 from core.models import assert_model_runnable, get_model
 from core.types import ExperimentConfig, ExperimentResult, SampleResult
+from evaluation.energy import annotate_response_resource_usage
 from evaluation.metrics import compute_metrics
 from evaluation.reporter import Reporter
 
@@ -126,6 +127,7 @@ class ExperimentRunner:
                     tracker.end_run("FAILED")
                 raise
 
+            response = annotate_response_resource_usage(response)
             correct = benchmark.is_correct(response.predicted_answer, query)
             sample = SampleResult(query=query, response=response, correct=correct)
             result.samples.append(sample)
@@ -146,7 +148,8 @@ class ExperimentRunner:
                 print(
                     f"  [{i}/{len(queries)}] acc={result.accuracy:.3f} "
                     f"llm_ratio={result.llm_call_ratio:.3f} "
-                    f"cost=${result.total_cost_usd:.4f}"
+                    f"cost=${result.total_cost_usd:.4f} "
+                    f"energy={result.total_energy_kwh:.4f}kWh"
                 )
 
         # Save reports

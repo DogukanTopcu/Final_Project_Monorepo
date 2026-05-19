@@ -13,8 +13,12 @@ Usage:
 """
 from __future__ import annotations
 
+import json
+import os
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+
+from core.types import Response
 
 
 @dataclass
@@ -24,6 +28,14 @@ class EnergyReading:
     duration_s: float = 0.0
     gpu_power_w: float = 0.0
     tokens_per_kwh: float = 0.0
+
+
+@dataclass(frozen=True)
+class ResourceProfile:
+    host_label: str
+    hourly_usd: float
+    gpu_power_w: float
+    notes: str = ""
 
 
 class EnergyTracker:
@@ -125,8 +137,44 @@ class EnergyTracker:
 
 
 # ------------------------------------------------------------------
-# Convenience: Active Parameters per Token (AP/T)
+# Resource profile estimates for remote/self-hosted experiments
 # ------------------------------------------------------------------
+
+_DEFAULT_GRID_CO2_G_PER_KWH = 380.0
+
+_DEFAULT_RESOURCE_PROFILES: dict[str, ResourceProfile] = {
+    "gemma4-4b": ResourceProfile("gcp-l4", 0.75, 72.0, "Single L4 host"),
+    "google/gemma-4-E4B-it": ResourceProfile("gcp-l4", 0.75, 72.0, "Single L4 host"),
+    "gemma4:e4b": ResourceProfile("gcp-l4", 0.75, 72.0, "Single L4 host"),
+    "qwen3.5-4b": ResourceProfile("gcp-l4", 0.75, 72.0, "Single L4 host"),
+    "Qwen/Qwen3.5-4B": ResourceProfile("gcp-l4", 0.75, 72.0, "Single L4 host"),
+    "qwen3.5:4b": ResourceProfile("gcp-l4", 0.75, 72.0, "Single L4 host"),
+    "llama3.2-3b": ResourceProfile("gcp-l4", 0.75, 72.0, "Single L4 host"),
+    "meta-llama/Llama-3.2-3B-Instruct": ResourceProfile("gcp-l4", 0.75, 72.0, "Single L4 host"),
+    "llama3.2:3b": ResourceProfile("gcp-l4", 0.75, 72.0, "Single L4 host"),
+    "gpt-oss-20b": ResourceProfile("gcp-g4-rtx6000", 2.35, 320.0, "Shared RTX PRO 6000 host"),
+    "openai/gpt-oss-20b": ResourceProfile("gcp-g4-rtx6000", 2.35, 320.0, "Shared RTX PRO 6000 host"),
+    "qwen3.5-27b": ResourceProfile("gcp-g4-rtx6000", 2.35, 320.0, "Shared RTX PRO 6000 host"),
+    "Qwen/Qwen3.5-27B": ResourceProfile("gcp-g4-rtx6000", 2.35, 320.0, "Shared RTX PRO 6000 host"),
+    "qwen3.5:27b": ResourceProfile("gcp-g4-rtx6000", 2.35, 320.0, "Shared RTX PRO 6000 host"),
+    "gemma4-31b": ResourceProfile("gcp-g4-rtx6000", 2.35, 320.0, "Shared RTX PRO 6000 host"),
+    "nvidia/Gemma-4-31B-IT-NVFP4": ResourceProfile("gcp-g4-rtx6000", 2.35, 320.0, "Shared RTX PRO 6000 host"),
+    "gemma4:31b": ResourceProfile("gcp-g4-rtx6000", 2.35, 320.0, "Shared RTX PRO 6000 host"),
+    "qwen3.5-35b-a3b": ResourceProfile("gcp-g4-rtx6000", 2.35, 320.0, "Shared RTX PRO 6000 host"),
+    "Qwen/Qwen3.5-35B-A3B": ResourceProfile("gcp-g4-rtx6000", 2.35, 320.0, "Shared RTX PRO 6000 host"),
+    "gemma4-26b-a4b": ResourceProfile("gcp-g4-rtx6000", 2.35, 320.0, "Shared RTX PRO 6000 host"),
+    "nvidia/Gemma-4-26B-A4B-NVFP4": ResourceProfile("gcp-g4-rtx6000", 2.35, 320.0, "Shared RTX PRO 6000 host"),
+    "qwen3.5-122b-a10b": ResourceProfile("gcp-g4-rtx6000", 2.35, 320.0, "Shared RTX PRO 6000 host"),
+    "Qwen/Qwen3.5-122B-A10B": ResourceProfile("gcp-g4-rtx6000", 2.35, 320.0, "Shared RTX PRO 6000 host"),
+    "llama3.3-70b": ResourceProfile("nebius-h200", 6.50, 600.0, "Intended heavy host"),
+    "meta-llama/Llama-3.3-70B-Instruct": ResourceProfile("nebius-h200", 6.50, 600.0, "Intended heavy host"),
+    "gpt-oss-120b": ResourceProfile("nebius-h200", 6.50, 600.0, "Intended heavy host"),
+    "openai/gpt-oss-120b": ResourceProfile("nebius-h200", 6.50, 600.0, "Intended heavy host"),
+    "qwen3.5-397b-a17b": ResourceProfile("nebius-h200", 6.50, 600.0, "Intended heavy host"),
+    "Qwen/Qwen3.5-397B-A17B": ResourceProfile("nebius-h200", 6.50, 600.0, "Intended heavy host"),
+    "kimi-k2.6-1t": ResourceProfile("nebius-h200", 6.50, 600.0, "Intended heavy host"),
+    "moonshotai/Kimi-K2.6": ResourceProfile("nebius-h200", 6.50, 600.0, "Intended heavy host"),
+}
 
 _MODEL_PARAMS: dict[str, float] = {
     "moonshotai/Kimi-K2.6": 1_000e9,
@@ -143,6 +191,108 @@ _MODEL_PARAMS: dict[str, float] = {
     "Qwen/Qwen3.5-4B": 4e9,
     "meta-llama/Llama-3.2-3B-Instruct": 3e9,
 }
+
+
+def resolve_resource_profile(model_id: str) -> ResourceProfile | None:
+    overrides = os.getenv("THESIS_MODEL_RESOURCE_OVERRIDES_JSON", "").strip()
+    if overrides:
+        try:
+            payload = json.loads(overrides)
+            if isinstance(payload, dict) and model_id in payload:
+                item = payload[model_id]
+                if isinstance(item, dict):
+                    return ResourceProfile(
+                        host_label=str(item.get("host_label", "custom")),
+                        hourly_usd=float(item.get("hourly_usd", 0.0)),
+                        gpu_power_w=float(item.get("gpu_power_w", 0.0)),
+                        notes=str(item.get("notes", "override")),
+                    )
+        except Exception:
+            pass
+    return _DEFAULT_RESOURCE_PROFILES.get(model_id)
+
+
+def estimate_step_usage(model_id: str, latency_ms: float) -> dict[str, float | str]:
+    profile = resolve_resource_profile(model_id)
+    duration_s = max(latency_ms, 0.0) / 1000.0
+    if profile is None:
+        return {
+            "host_label": "unknown",
+            "duration_s": duration_s,
+            "energy_kwh": 0.0,
+            "co2_g": 0.0,
+            "infra_cost_usd": 0.0,
+            "gpu_power_w": 0.0,
+        }
+
+    duration_h = duration_s / 3600.0
+    energy_kwh = (profile.gpu_power_w / 1000.0) * duration_h
+    grid_factor = float(os.getenv("THESIS_GRID_CO2_G_PER_KWH", _DEFAULT_GRID_CO2_G_PER_KWH))
+    return {
+        "host_label": profile.host_label,
+        "duration_s": duration_s,
+        "energy_kwh": energy_kwh,
+        "co2_g": energy_kwh * grid_factor,
+        "infra_cost_usd": profile.hourly_usd * duration_h,
+        "gpu_power_w": profile.gpu_power_w,
+    }
+
+
+def annotate_response_resource_usage(response: Response) -> Response:
+    steps = response.metadata.get("inference_steps")
+    if not isinstance(steps, list) or not steps:
+        steps = [
+            {
+                "role": "final",
+                "model_id": response.model_id,
+                "latency_ms": response.latency_ms,
+                "api_cost_usd": response.cost_usd,
+            }
+        ]
+
+    total_infra_cost = 0.0
+    total_energy_kwh = 0.0
+    total_co2_g = 0.0
+    weighted_power = 0.0
+    total_duration_s = 0.0
+    enriched_steps: list[dict[str, float | str | bool | None]] = []
+
+    for step in steps:
+        if not isinstance(step, dict):
+            continue
+        model_id = str(step.get("model_id", "") or "")
+        latency_ms = float(step.get("latency_ms", 0.0) or 0.0)
+        usage = estimate_step_usage(model_id, latency_ms)
+        total_infra_cost += float(usage["infra_cost_usd"])
+        total_energy_kwh += float(usage["energy_kwh"])
+        total_co2_g += float(usage["co2_g"])
+        duration_s = float(usage["duration_s"])
+        weighted_power += float(usage["gpu_power_w"]) * duration_s
+        total_duration_s += duration_s
+        enriched_steps.append({**step, **usage})
+
+    response.api_cost_usd = response.cost_usd
+    response.infra_cost_usd = total_infra_cost
+    response.cost_usd = response.api_cost_usd + response.infra_cost_usd
+    response.energy_kwh = total_energy_kwh
+    response.co2_g = total_co2_g
+    response.gpu_power_w = weighted_power / total_duration_s if total_duration_s > 0 else 0.0
+    response.metadata["inference_steps"] = enriched_steps
+    response.metadata["resource_estimate"] = {
+        "api_cost_usd": response.api_cost_usd,
+        "infra_cost_usd": response.infra_cost_usd,
+        "total_cost_usd": response.cost_usd,
+        "energy_kwh": response.energy_kwh,
+        "co2_g": response.co2_g,
+        "gpu_power_w": response.gpu_power_w,
+        "method": "host_profile_estimate",
+    }
+    return response
+
+
+# ------------------------------------------------------------------
+# Convenience: Active Parameters per Token (AP/T)
+# ------------------------------------------------------------------
 
 
 def active_parameters_per_token(model_id: str, total_tokens: int) -> float:

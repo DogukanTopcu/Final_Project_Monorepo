@@ -7,11 +7,11 @@ All providers implement a common interface:
 """
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
+from ipaddress import ip_address
 import math
 import os
-from ipaddress import ip_address
 from urllib.parse import urlparse
-from abc import ABC, abstractmethod
 
 import requests
 
@@ -25,6 +25,58 @@ _APPROX_MODEL_COSTS: dict[str, tuple[float, float]] = {
     "meta-llama/Llama-3.3-70B-Instruct": (0.90 / 1_000_000, 0.90 / 1_000_000),
     "openai/gpt-oss-20b": (0.40 / 1_000_000, 1.60 / 1_000_000),
 }
+
+_GEMINI_COSTS: dict[str, tuple[float, float]] = {
+    "gemini-2.5-flash": (0.30 / 1_000_000, 2.50 / 1_000_000),
+    "gemini-2.5-flash-lite": (0.10 / 1_000_000, 0.40 / 1_000_000),
+}
+
+
+def _get_env(*names: str, default: str = "") -> str:
+    """Return the first non-empty environment variable from the given names."""
+    for name in names:
+        value = os.getenv(name, "").strip()
+        if value:
+            return value
+    return default
+
+
+def _extract_message_text(message: object) -> str:
+    """Normalize OpenAI-compatible message payloads into plain text.
+
+    Some reasoning-capable models return `message.content=None` and place the
+    visible answer in a structured content list instead of a raw string.
+    """
+    if isinstance(message, str):
+        return message.strip()
+    if not isinstance(message, dict):
+        return ""
+
+    content = message.get("content")
+    if isinstance(content, str):
+        return content.strip()
+    if isinstance(content, list):
+        parts: list[str] = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+                continue
+            if not isinstance(item, dict):
+                continue
+            text = item.get("text")
+            if isinstance(text, str) and text.strip():
+                parts.append(text)
+                continue
+            nested_text = item.get("content")
+            if isinstance(nested_text, str) and nested_text.strip():
+                parts.append(nested_text)
+        return "\n".join(part.strip() for part in parts if part and part.strip()).strip()
+
+    refusal = message.get("refusal")
+    if isinstance(refusal, str):
+        return refusal.strip()
+
+    return ""
 
 
 class ModelProvider(ABC):
@@ -201,7 +253,7 @@ class TogetherModel(ModelProvider):
         resp.raise_for_status()
         data = resp.json()
 
-        text = data["choices"][0]["message"]["content"].strip()
+        text = _extract_message_text(data["choices"][0]["message"])
         in_tok = data.get("usage", {}).get("prompt_tokens", 0)
         out_tok = data.get("usage", {}).get("completion_tokens", 0)
         in_cost, out_cost = _APPROX_MODEL_COSTS.get(self.model_id, (0.0, 0.0))
@@ -294,7 +346,7 @@ class OpenAICompatibleModel(ModelProvider):
         data = resp.json()
 
         choice = data["choices"][0]
-        text = choice["message"]["content"].strip()
+        text = _extract_message_text(choice["message"])
         usage = data.get("usage", {})
         in_tok = usage.get("prompt_tokens", 0)
         out_tok = usage.get("completion_tokens", 0)

@@ -32,7 +32,7 @@ from pathlib import Path
 from datasets import load_dataset
 
 from core.types import Query
-from benchmarks.base import Benchmark
+from benchmarks.base import BaseBenchmark
 
 
 _INSTRUCTION = (
@@ -41,7 +41,7 @@ _INSTRUCTION = (
 )
 
 
-class HumanEvalBenchmark(Benchmark):
+class HumanEvalBenchmark(BaseBenchmark):
     name = "humaneval"
 
     def __init__(self, split: str = "test", max_samples: int | None = None) -> None:
@@ -50,7 +50,7 @@ class HumanEvalBenchmark(Benchmark):
         self._queries: list[Query] = []
 
     def load(self) -> list[Query]:
-        ds = load_dataset("openai/openai_humaneval", split=self.split, trust_remote_code=True)
+        ds = load_dataset("openai/openai_humaneval", split=self.split)
         queries: list[Query] = []
         for i, row in enumerate(ds):
             if self.max_samples and i >= self.max_samples:

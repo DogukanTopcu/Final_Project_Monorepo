@@ -35,7 +35,7 @@ from enum import Enum
 from datasets import load_dataset
 
 from core.types import Query
-from benchmarks.base import Benchmark
+from benchmarks.base import BaseBenchmark
 
 
 class Difficulty(str, Enum):
@@ -80,7 +80,7 @@ def _gsm8k_difficulty(answer: str) -> Difficulty:
     return Difficulty.HARD
 
 
-class CustomStratifiedBenchmark(Benchmark):
+class CustomStratifiedBenchmark(BaseBenchmark):
     name = "custom_stratified"
 
     def __init__(self, seed: int = _SEED) -> None:
@@ -92,7 +92,7 @@ class CustomStratifiedBenchmark(Benchmark):
         buckets: dict[Difficulty, list[Query]] = {d: [] for d in Difficulty}
 
         # --- MMLU ---
-        ds_mmlu = load_dataset("cais/mmlu", "all", split="test", trust_remote_code=True)
+        ds_mmlu = load_dataset("cais/mmlu", "all", split="test")
         choices_map = ["A", "B", "C", "D"]
         for i, row in enumerate(ds_mmlu):
             choices = row["choices"]
@@ -109,7 +109,7 @@ class CustomStratifiedBenchmark(Benchmark):
             buckets[diff].append(q)
 
         # --- GSM8K ---
-        ds_gsm = load_dataset("openai/gsm8k", "main", split="test", trust_remote_code=True)
+        ds_gsm = load_dataset("openai/gsm8k", "main", split="test")
         for i, row in enumerate(ds_gsm):
             raw_answer = row["answer"]
             parts = raw_answer.split("####")

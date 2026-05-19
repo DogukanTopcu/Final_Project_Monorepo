@@ -1,5 +1,11 @@
 export type Architecture = "routing" | "multi_agent" | "ensemble";
-export type Benchmark = "mmlu" | "arc" | "hellaswag" | "gsm8k" | "truthfulqa";
+export type Benchmark =
+  | "mmlu"
+  | "arc"
+  | "hellaswag"
+  | "gsm8k"
+  | "truthfulqa"
+  | "custom_stratified";
 export type ExperimentStatus =
   | "queued"
   | "running"
@@ -41,17 +47,22 @@ export interface ExperimentLaunchResponse {
 export interface ModelInfo {
   id: string;
   name: string;
+  family: string;
+  tier: string;
   provider: string;
+  runtime_provider: string;
   type: "slm" | "llm";
+  configured: boolean;
   status: string;
+  base_url?: string | null;
+  reason?: string | null;
 }
 
 export interface ModelListResponse {
   slm: ModelInfo[];
   llm: ModelInfo[];
-  ollama_reachable: boolean;
-  openai_configured: boolean;
-  gemini_configured: boolean;
+  runtime_mode: string;
+  force_vllm: boolean;
   warnings: string[];
 }
 
@@ -73,6 +84,8 @@ export interface ResultSummary {
   eats_score: number | null;
   llm_call_ratio: number | null;
   total_cost_usd: number | null;
+  total_energy_kwh: number | null;
+  total_infra_cost_usd: number | null;
   created_at: string;
 }
 
@@ -97,6 +110,11 @@ export interface ResultSample {
   confidence?: number;
   latency_ms?: number;
   cost_usd?: number;
+  api_cost_usd?: number;
+  infra_cost_usd?: number;
+  energy_kwh?: number;
+  co2_g?: number;
+  gpu_power_w?: number;
   final_model_id?: string | null;
   used_llm?: boolean;
   escalated?: boolean;
@@ -110,6 +128,8 @@ export interface ResultSample {
   llm_output_tokens?: number | null;
   slm_cost_usd?: number | null;
   llm_cost_usd?: number | null;
+  resource_estimate?: Record<string, unknown> | null;
+  inference_steps?: Record<string, unknown>[];
   prompt_text?: string | null;
   slm_text?: string | null;
   final_text?: string | null;

@@ -1,337 +1,217 @@
 # Design Decisions
-## Model Selection, Architecture Rationale, and Benchmark Strategy
+## System, Model, Benchmark, and Measurement Rationale
 
-> This document records *why* each component was chosen, grounded in the Systematic Literature Review (SLR) findings. Every decision traces back to a specific RQ, SLR study reference, or empirical gap identified in the literature.
+This document records the current design choices implemented in the repo, not an older aspirational architecture.
 
----
+## 1. Canonical Semantics
 
-## 1. Experimental Scope
+These rules are non-negotiable:
+- `HumanEval` means the project's human preference evaluation workflow.
+- `custom_stratified` means the custom coding benchmark track.
+- `eats` is a metric.
+- the active experiment product surface supports `routing`, `multi_agent`, and `ensemble`
 
-| Dimension | Choice | Rationale |
-|-----------|--------|-----------|
-| Domain | General-purpose | Domain-agnostic evaluation isolates architecture effects from domain-specific fine-tuning artifacts |
-| Inference mode | Blackbox (string in → string out) | Allows clean comparison across all three architectures without leaking internals |
-| System type | Cloud-hosted | No VRAM constraints; enables fair comparison at production-realistic scale |
-| SLM parameter ceiling | ≤ 7B | Matches the SLR's own definition of "small language model" (< 7B params, Sections 4.1–4.2) |
+## 2. Why the System Uses Remote OpenAI-Compatible Endpoints
 
----
+The project needs reproducible experiments across multiple model tiers without hardwiring the control plane to a single inference backend.
 
-## 2. Small Language Models (SLM)
+That leads to three decisions:
+- use canonical model aliases in `core/model_catalog.py`
+- resolve each alias to either Ollama or an OpenAI-compatible endpoint
+- make the frontend read the same runtime status as the backend and CLI
 
-All three SLMs are open-weight, locally runnable, and publicly available through Hugging Face and/or Ollama. The combination spans three different families while staying inside the "small" deployment class used by the thesis.
+Practical consequence:
+- the local machine acts as the control plane
+- the model hosts are external and swappable
+- the experiment runner stays provider-agnostic
 
-### Selection Table
+## 3. Hosting Strategy by Tier
 
-| Model | Params | Family | Why Selected | Repo alias |
-|-------|--------|--------|-------------|------------|
-| **Gemma 4 E4B** | 4.5B effective | Google | Strong compact reasoning/coding checkpoint; good cross-family control against Qwen | `gemma4-4b` |
-| **Qwen 3.5 4B** | 4B | Qwen | Default routing/ensemble SLM baseline; same family as the 27B/35B/122B/397B comparison set | `qwen3.5-4b` |
-| **Llama 3.2 3B** | 3B | Meta | Lightweight open-weight control from a third family; useful for multi-agent diversity | `llama3.2-3b` |
+### SLM tier
 
-### Why This Combination
+Chosen deployment:
+- one GCP L4 host per small model
 
-Using Qwen 3.5 at both SLM and larger LLM/MoE scales lets us answer: *does orchestration still dominate when the same family is available from 4B all the way to 397B-A17B?* Gemma 4 E4B and Llama 3.2 3B act as cross-family controls.
+Rationale:
+- stable
+- simple to debug
+- enough for `gemma4-4b`, `qwen3.5-4b`, and `llama3.2-3b`
 
----
+### Mid-tier LLM tier
 
-## 3. Large Language Models (LLM — Baseline)
+Chosen deployment:
+- one shared GCP G4 / RTX PRO 6000 host
 
-LLMs serve two roles: (1) the monolithic **Setup A baseline**, and (2) the escalation target in routing and speculative architectures. The repo now centers on open-weight or OpenAI-compatible checkpoints so they can be self-hosted with vLLM when needed.
+Rationale:
+- mid-tier runs do not need multiple hosts at once
+- the same public endpoint can be reused while the active model changes
+- this keeps experimentation cheaper than provisioning one GPU host per mid-tier model
 
-### Selection Table
+Operational implication:
+- only one mid-tier model should run on that host at a time
 
-| Model | Deployment class | Why Selected | Repo alias |
-|-------|------------------|-------------|------------|
-| **Kimi K2.6 (1T)** | Heavy LLM | Highest-capability frontier anchor in the selected set | `kimi-k2.6-1t` |
-| **Qwen 3.5 397B-A17B** | Heavy LLM | Open-weight flagship for the Qwen family; normalized form of the user's "396B" shorthand | `qwen3.5-397b-a17b` |
-| **GPT OSS 120B** | Heavy LLM | Open-weight OpenAI-family comparison point | `gpt-oss-120b` |
-| **Llama 3.3 70B** | Heavy LLM | Default monolithic baseline and verifier model because it remains the lightest reproducibly self-hosted heavy baseline in the selected set | `llama3.3-70b` |
-| **Qwen 3.5 27B / GPT OSS 20B / Gemma 4 31B** | Light LLM | Mid-tier models for lower-cost escalation experiments | `qwen3.5-27b`, `gpt-oss-20b`, `gemma4-31b` |
-| **Qwen 3.5 122B-A10B / Gemma 4 26B-A4B / Qwen 3.5 35B-A3B** | MoE | Active-parameter-efficient comparison set for architecture-level efficiency analysis | `qwen3.5-122b-a10b`, `gemma4-26b-a4b`, `qwen3.5-35b-a3b` |
+### Heavy tier
 
-### Why Llama 3.3 70B Is the Default Baseline
+Chosen deployment:
+- one optional Nebius heavy host, ideally H200, otherwise H100 fallback
 
-Among the selected heavy models, `llama3.3-70b` is still the most practical heavy baseline to self-host without jumping directly to the most expensive multi-H100/H200 classes. It therefore remains the default monolithic baseline and speculative verifier, while the rest of the selected heavy/light/MoE pool is exposed through the shared model catalog for routing and benchmark sweeps.
+Rationale:
+- heavy models are expensive enough that a shared host is the only practical default
+- spot availability is the real bottleneck, not code support
 
-### Infrastructure Consequence
+Operational implication:
+- heavy-tier experiments are capacity-dependent
+- the codebase must remain usable even when the heavy host is unavailable
 
-The repo no longer assumes a single generic GPU production host. The selected model pool spans at least three deployment classes:
+## 4. Architecture Choices
 
-| Deployment class | Typical AWS host | Models |
-|------------------|------------------|--------|
-| Small/medium single-GPU | `g5.2xlarge`, `g6e.4xlarge` | `qwen3.5-4b`, `gemma4-4b`, `llama3.2-3b`, `gpt-oss-20b`, `qwen3.5-27b`, `gemma4-31b`, `qwen3.5-35b-a3b`, `gemma4-26b-a4b` |
-| Large but still practical self-host | `g6e.12xlarge`, `p5.4xlarge`, `g6e.48xlarge` | `llama3.3-70b`, `gpt-oss-120b`, `qwen3.5-122b-a10b` |
-| Frontier, very expensive | `p5e.48xlarge` class | `qwen3.5-397b-a17b`, `kimi-k2.6-1t` |
+## Architecture A — `routing`
 
-This is why prod Terraform was changed to an opt-in `enabled_vllm_models` design with one dedicated host per selected model instead of one shared GPU box.
+Flow:
+- SLM answers first
+- confidence is inspected
+- low-confidence cases escalate to the chosen LLM
 
----
+Why this remains the default first experiment:
+- it is the lowest-friction way to compare orchestration against direct LLM reliance
+- it exposes a clean tradeoff between accuracy and escalation rate
+- it produces the clearest EATS story
 
-## 4. Architecture Designs
+## Architecture B — `multi_agent`
 
-The three architectures are not alternatives chosen arbitrarily — each one tests a distinct design hypothesis about *where* the intelligence should live in a hybrid system.
+Flow:
+- proponent response
+- opponent critique
+- arbitrator final answer
 
-### Architecture Overview
+Why it is kept:
+- it tests whether structure and disagreement improve output quality
+- it is still compatible with the same `Query -> Response` contract
 
-| Architecture | Design Hypothesis | LLM Role | Blackbox Compliant |
-|-------------|-------------------|----------|-------------------|
-| **A — Confidence-Based Routing** | Routing decisions can replace most LLM calls | Optional (fallback only) | Yes |
-| **B — Proponent-Opponent-Arbitrator** | Multi-agent debate improves quality beyond single large model | Optional (arbitrator only) | Yes |
-| **C — SLM Ensemble + Voting** | Ensemble agreement approximates LLM-level accuracy | Optional (tiebreaker only) | Yes |
+## Architecture C — `ensemble`
 
-### Architecture A — Confidence-Based Query Routing
+Flow:
+- multiple SLM passes
+- majority or weighted vote
+- optional LLM tiebreak
 
-```
-Query → SLM → confidence score
-              ├── score ≥ θ  →  SLM answer returned
-              └── score < θ  →  LLM answers (escalation)
-```
+Why it is kept:
+- it tests whether redundancy can replace frequent escalation
+- it is easier to reason about than legacy speculative experiments
 
-| Attribute | Value |
-|-----------|-------|
-| Hyperparameter | Confidence threshold θ (default 0.75, tuned via pilot study) |
-| LLM call ratio | ~10–30% of queries (depending on θ) |
-| Key metric | EATS (Efficiency-Accuracy Trade-off Score) |
-| Strength | Simplest implementation; most interpretable trade-off curve |
-| Weakness | Confidence calibration quality depends on SLM's log-prob reliability |
-| SLR evidence | S49 reports >80% cost reduction; S10 demonstrates instance-level model selection |
-| **Primary reference** | S49 (She et al., Token Level Routing), S10 (Alabbasi et al.) |
+## 5. Why Legacy Monolithic and Speculative Code Is Not the Primary Surface
 
-### Architecture B — Proponent-Opponent-Arbitrator (Multi-Agent)
+Some legacy files remain in the repo, but they are not the primary experiment surface anymore.
 
-```
-Query → Proponent SLM  →  initial answer
-      → Opponent SLM   →  critique
-      → Arbitrator (SLM or LLM)  →  synthesized final answer
-```
-
-| Attribute | Value |
-|-----------|-------|
-| Agent count | 3 (proponent, opponent, arbitrator) |
-| Models used | Selected SLM pool by role; default crew setup uses Qwen 3.5 4B, Gemma 4 E4B, and Llama 3.2 3B |
-| LLM call ratio | 0% if arbitrator=SLM; 1 call/query if arbitrator=LLM |
-| Strength | Debate mechanism catches errors that a single SLM would miss |
-| Weakness | 3× inference cost vs single-pass; latency is additive |
-| SLR evidence | S43 shows 0.5B + 1.5B debate outperforms single-agent GPT-3.5 baseline |
-| **Primary reference** | S43 (Erak et al.) |
-
-### Architecture C — SLM Ensemble with Majority Voting
-
-```
-Query → SLM instance 1  ─┐
-Query → SLM instance 2  ──→  majority vote  →  final answer
-Query → SLM instance 3  ─┘       └── tie  →  LLM tiebreaker (optional)
-```
-
-| Attribute | Value |
-|-----------|-------|
-| Ensemble size | 3 (configurable) |
-| Voting strategy | Majority vote; weighted vote (by confidence) optional |
-| LLM call ratio | ~0–5% (tiebreaker only) |
-| Strength | Parallelizable; no sequential dependency; lowest latency of the three |
-| Weakness | No correction mechanism — wrong unanimous consensus is fatal |
-| SLR evidence | S51 (TextNeX) and S55 (Cielen et al.) show ensemble SLMs competitive with single LLM baselines |
-| **Primary reference** | S51, S55 |
-
-### The Central Thesis Connection
-
-The SLR's Cross-RQ Synthesis concludes:
-> *"orchestration, not model size, drives performance."*
-
-These three architectures operationalize that claim:
-- **A** tests whether routing intelligence (knowing *when* to escalate) beats brute-force LLM use
-- **B** tests whether debate-based orchestration beats scale
-- **C** tests whether redundancy-based orchestration beats scale
-
-The experimental design is constructed so that all three run on the same benchmarks with the same SLMs, meaning any accuracy difference is attributable solely to orchestration strategy.
-
----
-
-## 5. Benchmarks
-
-### Standard Benchmarks
-
-| Benchmark | Task type | Split | Samples | Why Included | SLR Reference |
-|-----------|-----------|-------|---------|-------------|---------------|
-| **MMLU** | Multiple-choice, 57 subjects | test | 1,000 (stratified) | Domain-agnostic breadth; most cited benchmark across SLR | Used as primary metric throughout SLR |
-| **GSM8K** | Grade-school math, chain-of-thought | test | 500 | Tests multi-step reasoning; relevant to energy-per-token analysis (longer CoT = more tokens = more cost) | S4 (Wilhelm et al., energy-per-token) |
-| **HumanEval (project-specific)** | Human preference evaluation | UI-collected | Target: 100-200 prepared prompts + live user prompts | Measures which architecture users prefer when answers are judged by humans instead of exact-match labels | Supports LLM Arena and live chat evaluation |
-| **ARC-Challenge** | Abstract reasoning, adversarially filtered | test | 500 | Routing test: questions intentionally hard for retrieval — forces genuine reasoning vs pattern match | S43, S29 |
-| **HellaSwag** | Commonsense completion | validation | 500 | SLMs tend to fail commonsense; reveals where confidence routing correctly escalates | Common SLM evaluation |
-| **TruthfulQA** | Hallucination resistance | validation | 500 | Measures whether multi-agent debate (Arch B) reduces hallucination vs single-pass | S33 (uncertainty estimation) |
-
-### HumanEval — Human Preference Evaluation
-
-This project's HumanEval is **not** the OpenAI HumanEval code-generation dataset. It is a UI-backed human evaluation workflow with two surfaces:
-
-| Surface | Prompt Source | Evaluation Method | Output |
-|---------|---------------|-------------------|--------|
-| **LLM Arena** | Prepared prompt bank | Users compare anonymized model/architecture answers | Pairwise win/tie/lose records |
-| **Live Chat Evaluation** | User-written questions | Multiple architectures answer the same user prompt; the user selects the better answer | Real-world preference records |
-
-Recommended safeguards:
-- Randomize answer order so users do not know which architecture produced which answer.
-- Include **tie** and **skip/unsafe** options so forced choices do not pollute labels.
-- Store latency, cost, token count, architecture ID, and model IDs with each answer.
-- Use at least 3 independent votes per prepared Arena prompt when possible.
-- Keep live-chat votes separate from prepared-prompt votes because prompt distribution differs.
+Reasons:
+- the web UI, backend validation, and experiment form are standardized on the shared model catalog
+- the thesis control plane now centers on the three active orchestration strategies above
+- keeping older prototypes in the repo is acceptable as long as docs and launch surfaces do not present them as the main path
 
-### Custom Benchmark — Stratified Coding Difficulty Set
-
-| Tier | Count | Source | Criteria |
-|------|-------|--------|----------|
-| Easy | 50 minimum / 100 ideal | Team-authored tasks, MBPP-style beginner problems | Single function, one core concept, direct unit tests |
-| Medium | 50 minimum / 100 ideal | MBPP/APPS introductory tasks, rewritten LeetCode-style tasks | Multiple conditions, data structures, edge cases |
-| Hard | 50 minimum / 100 ideal | APPS/interview-style tasks, team-authored composites | Multi-step algorithmic reasoning, hidden edge cases |
-| **Total** | **150 minimum / 300 ideal** | Curated coding set | Fixed split and versioned JSONL for reproducibility |
-
-**Why this matters:** Standard benchmarks report aggregate accuracy. The stratified coding set reveals *at which programming difficulty level* each architecture diverges. Hypothesis: routing should work well on easy tasks, multi-agent/domain-routing should help on medium and code-specialized tasks, and harder tasks should expose when escalation or verification is necessary.
+## 6. Benchmark Decisions
 
-Recommended record format:
-
-```json
-{
-  "id": "coding_easy_001",
-  "difficulty": "easy",
-  "topic": "strings",
-  "language": "python",
-  "prompt": "Write a function ...",
-  "starter_code": "def solve(...):",
-  "public_tests": ["assert solve(...) == ..."],
-  "hidden_tests": ["assert solve(...) == ..."],
-  "scoring_type": "unit_tests",
-  "source": "team_authored",
-  "constraints": "No external packages."
-}
-```
-
----
-
-## 6. Primary Evaluation Metric — EATS
-
-### Gap in Literature
-
-The SLR's RQ2 analysis finds:
-> *"cost and energy remain far less reported than accuracy — only 34% of studies include latency and 18% include energy metrics."*
-
-Standard benchmarks (MMLU accuracy, pass@1) only measure *output quality*, not *architectural efficiency*. A system that gets 80% MMLU accuracy by calling a heavy model like Kimi K2.6 or Qwen 3.5 397B on every query is not comparable to one that achieves 78% by routing only 15% of queries to an LLM — yet standard metrics treat them equivalently.
-
-### EATS Formula
-
-```
-EATS = Accuracy / (LLM_call_ratio × normalized_cost + ε)
-
-where:
-  ε = 0.01  (prevents division by zero for pure-SLM systems)
-  normalized_cost = cost_usd / max_cost_in_run  (scales to [0,1])
-  LLM_call_ratio = llm_calls / total_queries    (scales to [0,1])
-```
-
-### Interpretation
-
-| Scenario | EATS | Interpretation |
-|----------|------|----------------|
-| Pure SLM, accuracy=0.70 | 70.0 | Extremely efficient; no LLM cost |
-| 10% LLM routing, accuracy=0.75 | ~7.4 | Good efficiency-accuracy balance |
-| 50% LLM routing, accuracy=0.80 | ~1.6 | Moderate; accuracy gain doesn't justify cost |
-| Full LLM (monolithic baseline), accuracy=0.82 | ~0.81 | Lowest EATS; highest accuracy, highest cost |
-
-Higher EATS = better efficiency per unit of accuracy. This metric directly fills the gap identified in the SLR's RQ2.
-
-### Secondary Metrics
-
-| Metric | What it measures | Tool |
-|--------|-----------------|------|
-| **p50 / p95 latency** | Median and tail response time | Wall-clock timing per query |
-| **Energy (kWh)** | Total GPU energy consumed per experiment | CodeCarbon v2.3.4 |
-| **CO₂ equivalent (g)** | Carbon footprint of inference | CodeCarbon |
-| **Tokens/kWh** | Throughput efficiency | `total_tokens / energy_kwh` |
-| **AP/T** | Active Parameters per Token | `model_params / total_tokens` |
-| **LLM call ratio** | Fraction of queries escalated | `llm_calls / n_queries` |
-| **Cost (USD)** | API cost or compute-equivalent | Token-based pricing |
-
----
-
-## 7. Fine-Tuning Decision
-
-### Decision Framework
-
-| Factor | Fine-tune | Don't fine-tune |
-|--------|-----------|-----------------|
-| Research goal | Maximize routing accuracy | Isolate architecture effects |
-| Variable control | Adds model-change variable | Keeps model constant across architectures |
-| Computational cost | Requires QLoRA run (~4–8 hours) | None |
-| Reproducibility | Lower (weights differ from base) | Higher (base models are public) |
-| Applicable when | Escalation rate > 40% after pilot study | Escalation rate reasonable (10–30%) |
-
-### Recommendation
-
-**Do not fine-tune in the primary experiment by default.** The primary research question is about orchestration strategy, not model optimization. Fine-tuning would confound the architecture comparison if mixed directly into the main benchmark matrix.
-
-Fine-tuning is now treated as a separate ablation track under `training/`. This keeps the main experiment clean while still allowing the thesis to test whether domain-specialized SLM orchestration can beat a larger LLM on quality/cost/latency/energy tradeoffs.
-
-**Exception trigger:** If the pilot study (100 queries) shows that Architecture A's SLM escalates > 40% of queries to the LLM (indicating poor confidence calibration), apply QLoRA to Qwen 3.5 4B with an instruction-following dataset to improve calibration. This should be reported as a separate ablation, not the primary experiment.
-
-### If Fine-Tuning Is Needed
-
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Model | Qwen 3.5 4B | Default routing SLM and the cleanest calibration target in the selected pool |
-| Method | QLoRA (4-bit + LoRA r=16) | Cloud-compatible; minimizes VRAM; well-documented |
-| Dataset | OpenHermes 2.5 | General instruction-following; improves confidence expression without domain bias |
-| Objective | Reduce LLM escalation rate | Target: < 20% escalation on pilot set |
-| References | S9 (distillation), S59 (mixed distillation), S17 (fine-tuning + RAG) | |
-
----
-
-## 8. Decision Summary
-
-```
-                    ┌─────────────────────────────────────────┐
-                    │         SLR GAP IDENTIFIED               │
-                    │  "orchestration > model size"            │
-                    │  "cost rarely reported (18%)"            │
-                    └──────────────┬──────────────────────────┘
-                                   │
-              ┌────────────────────┼────────────────────┐
-              ↓                    ↓                    ↓
-     ┌────────────────┐  ┌─────────────────┐  ┌────────────────────┐
-     │  Architecture  │  │    Benchmark    │  │    Metric (EATS)   │
-     │                │  │                 │  │                    │
-     │ A: Routing     │  │ MMLU (breadth)  │  │ Accuracy /         │
-     │ B: Multi-Agent │  │ GSM8K (math)    │  │ (LLM_ratio × cost) │
-     │ C: Ensemble    │  │ HumanEval (UI)  │  │                    │
-     │                │  │ Coding (diff.)  │  │ Fills RQ2 gap      │
-     └────────────────┘  └─────────────────┘  └────────────────────┘
-              │                    │                    │
-              └────────────────────┴────────────────────┘
-                                   │
-                    ┌──────────────▼──────────────────────────┐
-                    │         THESIS CONTRIBUTION              │
-                    │  First systematic comparison of SLM      │
-                    │  orchestration strategies using a        │
-                    │  unified efficiency-accuracy metric      │
-                    │  (EATS) across 3 architectures,          │
-                    │  3 benchmarks, 4 SLMs                    │
-                    └─────────────────────────────────────────┘
-```
-
----
-
-## 9. References (SLR Study IDs)
-
-| ID | Citation | Used for |
-|----|----------|----------|
-| S4 | Wilhelm et al. — energy-per-token analysis | Energy metrics justification |
-| S9 | Llama distillation study | Fine-tuning reference |
-| S10 | Alabbasi et al. — Customer Reviews instance selection | Architecture A evidence |
-| S13 | Hao et al. — Hybrid SLM-LLM Edge-Cloud | 70B-class monolithic baseline justification |
-| S17 | Alabbasi et al. — TeleOracle | Large-model calibration precedent |
-| S29 | Abstract reasoning routing study | ARC benchmark justification |
-| S33 | Uncertainty estimation study | TruthfulQA benchmark justification |
-| S43 | Erak et al. — Proponent-Opponent-Arbitrator | Architecture B design + Qwen selection |
-| S49 | She et al. — Token Level Routing | Architecture A evidence (>80% cost reduction) |
-| S51 | TextNeX ensemble study | Architecture C evidence |
-| S52 | Mehandru et al. — BioAgents | Compact-model selection precedent |
-| S55 | Cielen et al. — ensemble vs LLM | Architecture C evidence |
-| S59 | Mixed distillation study | Fine-tuning reference |
+### Automated benchmarks
+
+The active automated benchmark set is:
+- `mmlu`
+- `arc`
+- `hellaswag`
+- `gsm8k`
+- `truthfulqa`
+- `custom_stratified`
+
+Why this mix:
+- it covers MCQ reasoning, commonsense, math, and hallucination resistance
+- it keeps the benchmark runner within a single automated pipeline
+
+### HumanEval
+
+HumanEval is intentionally separate.
+
+Why:
+- it is a UI-backed preference workflow
+- it measures subjective preference, not exact-match correctness
+- mixing it into the normal benchmark launcher would blur the evaluation contract
+
+### Custom stratified coding benchmark
+
+Intended meaning:
+- easy / medium / hard coding tasks
+
+Current implementation note:
+- the codebase still contains a legacy proxy loader until the final coding dataset is dropped in
+- this must be replaced before thesis-grade coding conclusions are claimed
+
+## 7. Measurement Decisions
+
+## Response-level fields
+
+The response object now carries:
+- latency
+- token counts
+- API cost
+- infra cost
+- total cost
+- energy estimate
+- CO2 estimate
+- GPU power estimate
+
+Why:
+- raw accuracy alone is not enough for this thesis
+- orchestration quality must be judged alongside escalation and resource use
+
+## Host-profile energy estimation
+
+Why estimation is used:
+- many experiments run against remote hosts rather than a single local GPU
+- direct power counters are not uniformly available from the control plane
+- the experiment loop still needs comparable infra and energy numbers
+
+Current policy:
+- estimate remote infra cost and energy from model-to-host profiles
+- attach the estimate to `metadata["inference_steps"]`
+- aggregate it into experiment summaries and MLflow
+
+This is a pragmatic compromise:
+- more faithful than reporting zero
+- less brittle than pretending all experiments share the same local hardware
+
+## 8. Frontend and Backend Alignment
+
+A major design choice in the current revision is that the frontend no longer invents model/provider state.
+
+Backend responsibilities:
+- discover model runtime status from the shared catalog
+- validate experiment selections
+- reject unrunnable combinations unless `dry_run`
+
+Frontend responsibilities:
+- display runnable SLM and LLM aliases
+- expose only supported benchmark and architecture combinations
+- show which runtime provider and endpoint each selected alias resolves to
+
+Why this matters:
+- it prevents launching experiments against stale or imaginary configurations
+
+## 9. Documentation Policy
+
+The docs should reflect the real system, not historical prototypes.
+
+That means:
+- no claiming HumanEval is the OpenAI benchmark
+- no describing EATS as a benchmark
+- no presenting the codebase as AWS-only if the working path is GCP remote serving
+- no presenting unsupported architectures as the default experiment flow
+
+## 10. Practical Thesis Baseline
+
+Given the currently validated infrastructure, the most reliable baseline stack is:
+- SLMs on GCP L4
+- mid-tier LLMs on the shared RTX6000 host
+- heavy-tier optional when capacity exists
+
+This is the right compromise between:
+- scientific comparability
+- deployment cost
+- operational simplicity
+- time-to-results

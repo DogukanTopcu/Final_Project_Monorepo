@@ -22,7 +22,7 @@ class MMLUBenchmark(BaseBenchmark):
     def _load_all(self) -> list[Query]:
         from datasets import load_dataset  # type: ignore
 
-        ds = load_dataset("cais/mmlu", _SUBJECT, split="test", trust_remote_code=True)
+        ds = load_dataset("cais/mmlu", _SUBJECT, split="test")
         queries: list[Query] = []
         for i, row in enumerate(ds):
             label = chr(65 + int(row["answer"]))  # 0→A, 1→B, ...

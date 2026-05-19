@@ -30,7 +30,7 @@ class GSM8KBenchmark(BaseBenchmark):
     def _load_all(self) -> list[Query]:
         from datasets import load_dataset  # type: ignore
 
-        ds = load_dataset("openai/gsm8k", "main", split="test", trust_remote_code=True)
+        ds = load_dataset("openai/gsm8k", "main", split="test")
         queries: list[Query] = []
         for i, row in enumerate(ds):
             answer = _extract_answer(row["answer"])

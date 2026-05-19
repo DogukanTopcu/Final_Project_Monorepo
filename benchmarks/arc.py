@@ -19,7 +19,7 @@ class ARCBenchmark(BaseBenchmark):
     def _load_all(self) -> list[Query]:
         from datasets import load_dataset  # type: ignore
 
-        ds = load_dataset("allenai/ai2_arc", "ARC-Challenge", split="test", trust_remote_code=True)
+        ds = load_dataset("allenai/ai2_arc", "ARC-Challenge", split="test")
         queries: list[Query] = []
         for i, row in enumerate(ds):
             choices = row["choices"]

@@ -44,10 +44,18 @@ class MLflowTracker:
         response: Any,
     ) -> None:
         mlflow.log_metric("sample_correct", int(correct), step=self._sample_idx)
-        if hasattr(response, "latency"):
-            mlflow.log_metric("sample_latency", response.latency, step=self._sample_idx)
-        if hasattr(response, "cost"):
-            mlflow.log_metric("sample_cost", response.cost, step=self._sample_idx)
+        if hasattr(response, "latency_ms"):
+            mlflow.log_metric("sample_latency_ms", response.latency_ms, step=self._sample_idx)
+        if hasattr(response, "cost_usd"):
+            mlflow.log_metric("sample_cost_usd", response.cost_usd, step=self._sample_idx)
+        if hasattr(response, "infra_cost_usd"):
+            mlflow.log_metric("sample_infra_cost_usd", response.infra_cost_usd, step=self._sample_idx)
+        if hasattr(response, "api_cost_usd"):
+            mlflow.log_metric("sample_api_cost_usd", response.api_cost_usd, step=self._sample_idx)
+        if hasattr(response, "energy_kwh"):
+            mlflow.log_metric("sample_energy_kwh", response.energy_kwh, step=self._sample_idx)
+        if hasattr(response, "co2_g"):
+            mlflow.log_metric("sample_co2_g", response.co2_g, step=self._sample_idx)
         self._sample_idx += 1
 
     def log_final_metrics(self, metrics: dict[str, float]) -> None:

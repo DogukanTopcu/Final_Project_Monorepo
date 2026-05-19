@@ -1,130 +1,130 @@
-# Thesis Experiment Platform — Monorepo
+# Thesis Experiment Platform
 
-An end-to-end platform for running, tracking, and comparing SLM/LLM experiments across three architectures (Routing, Multi-Agent, Ensemble), automated benchmarks, UI-backed human preference evaluation, and full AWS/MLOps infrastructure.
+Monorepo for running thesis experiments that compare multiple SLM/LLM orchestration architectures over a shared benchmark and measurement stack.
 
-## Architecture Overview
+The codebase is built around:
+- a local control plane: FastAPI backend, Next.js frontend, MLflow
+- remote OpenAI-compatible inference endpoints: vLLM hosts on GCP and optional heavy hosts elsewhere
+- a shared experiment contract: every architecture receives the same `Query` and returns the same `Response`
 
-```
-Local Machine                          AWS Cloud
-┌────────────────────┐                ┌─────────────────────────┐
-│  Next.js Frontend  │───────────────▶│  EC2 (CPU) — API/MLflow │
-│  FastAPI Backend   │                │  EC2 (GPU) — model hosts│
-│  ExperimentRunner  │                │  S3 — results/artifacts │
-│  MLflow (local)    │                │  ECR — Docker images    │
-│  Docker Compose    │                │  DynamoDB — metadata    │
-│  Ollama + vLLM     │                │  CloudWatch — monitoring│
-└────────────────────┘                │  Secrets Manager        │
-                                      └─────────────────────────┘
-```
+## Repo Truths
 
-## Selected Model Pool
+- `HumanEval` in this repository is a project-specific human preference evaluation workflow, not the OpenAI code-generation dataset.
+- `custom_stratified` is intended to be the easy/medium/hard coding benchmark track.
+- `eats` is a metric, not a benchmark.
+- Supported experiment architectures in the active product surface are:
+  - `routing`
+  - `multi_agent`
+  - `ensemble`
 
-The repo is normalized around the following canonical aliases:
+## Current Runtime Topology
 
-| Tier | Repo alias | Runtime checkpoint |
-|------|------------|--------------------|
-| Heavy LLM | `kimi-k2.6-1t` | `moonshotai/Kimi-K2.6` |
-| Heavy LLM | `qwen3.5-397b-a17b` | `Qwen/Qwen3.5-397B-A17B` |
-| Heavy LLM | `gpt-oss-120b` | `openai/gpt-oss-120b` |
-| Heavy LLM | `llama3.3-70b` | `meta-llama/Llama-3.3-70B-Instruct` |
-| Light LLM | `qwen3.5-27b` | `qwen3.5:27b` |
-| Light LLM | `gpt-oss-20b` | `openai/gpt-oss-20b` |
-| Light LLM | `gemma4-31b` | `gemma4:31b` |
-| MoE | `qwen3.5-122b-a10b` | `qwen3.5:122b` |
-| MoE | `gemma4-26b-a4b` | `gemma4:26b` |
-| MoE | `qwen3.5-35b-a3b` | `qwen3.5:35b` |
-| SLM | `gemma4-4b` | `gemma4:e4b` |
-| SLM | `qwen3.5-4b` | `qwen3.5:4b` |
-| SLM | `llama3.2-3b` | `llama3.2:3b` |
+The working deployment model from the current experiments is:
 
-Notes:
-- User shorthand `Qwen 3.5 (396B)` is normalized to the official checkpoint `Qwen/Qwen3.5-397B-A17B`.
-- User shorthand `Gemma 4 (4B)` is normalized to the effective-parameter checkpoint `gemma4:e4b` / `google/gemma-4-E4B-it`.
-- Local development can keep using Ollama for the smaller aliases.
-- Production/AWS can switch the same aliases to OpenAI-compatible vLLM endpoints by setting `THESIS_FORCE_VLLM=1`.
+| Layer | Runtime | Purpose |
+|---|---|---|
+| Control plane | Local machine | FastAPI backend, Next.js frontend, MLflow, experiment runner |
+| SLM tier | GCP L4 hosts | `gemma4-4b`, `qwen3.5-4b`, `llama3.2-3b` |
+| Mid-tier LLM tier | GCP G4 / RTX PRO 6000 shared host | `gpt-oss-20b`, `qwen3.5-27b`, `gemma4-31b`, `qwen3.5-35b-a3b`, `gemma4-26b-a4b`, `qwen3.5-122b-a10b` |
+| Heavy tier | Optional Nebius H100/H200 class host | `llama3.3-70b`, `gpt-oss-120b`, `qwen3.5-397b-a17b`, `kimi-k2.6-1t` |
+
+Important operational detail:
+- the RTX6000 host is treated as a shared mid-tier server
+- the heavy host is also treated as a shared server
+- only one large model should be active on a shared host at a time
+
+## Canonical Model Aliases
+
+These aliases are the source of truth used by the backend, CLI runner, and frontend.
+
+| Tier | Alias |
+|---|---|
+| SLM | `gemma4-4b`, `qwen3.5-4b`, `llama3.2-3b` |
+| Light LLM | `gpt-oss-20b`, `qwen3.5-27b`, `gemma4-31b` |
+| MoE / mid-tier | `qwen3.5-35b-a3b`, `gemma4-26b-a4b`, `qwen3.5-122b-a10b` |
+| Heavy LLM | `llama3.3-70b`, `gpt-oss-120b`, `qwen3.5-397b-a17b`, `kimi-k2.6-1t` |
+
+## Supported Architectures
+
+| Architecture | Repo id | Summary |
+|---|---|---|
+| Architecture A | `routing` | SLM drafts first, low-confidence cases escalate to the selected LLM |
+| Architecture B | `multi_agent` | Proponent-opponent-arbitrator flow over the same query |
+| Architecture C | `ensemble` | Multiple SLM passes vote; optional LLM tiebreak can be enabled |
+
+## Supported Benchmarks
+
+Launchable automated benchmarks:
+- `mmlu`
+- `arc`
+- `hellaswag`
+- `gsm8k`
+- `truthfulqa`
+- `custom_stratified`
+
+Special case:
+- `humaneval` is reserved for the UI-backed human preference workflow and is intentionally not part of the normal automated benchmark launcher.
+
+## Measurement Model
+
+Each `Response` now carries both output quality and resource data:
+- `latency_ms`
+- `input_tokens`
+- `output_tokens`
+- `llm_calls`
+- `api_cost_usd`
+- `infra_cost_usd`
+- `cost_usd`
+- `energy_kwh`
+- `co2_g`
+- `gpu_power_w`
+
+Current energy and infra reporting policy:
+- direct API costs are taken from provider-specific token pricing when applicable
+- self-hosted remote runs estimate infra cost and energy from host profiles
+- host-profile estimation is attached through `metadata["inference_steps"]`
+- experiment-level summaries aggregate these values and log them to MLflow and JSON/Markdown reports
 
 ## Quick Start
 
-### Prerequisites
-
-- Python 3.11+
-- Node.js 20+
-- Docker & Docker Compose
-- AWS CLI (configured, optional for local dev)
-- Terraform >= 1.5 (for infrastructure)
-
-### Local Development
+### 1. Install Python dependencies
 
 ```bash
-# Start all services (API, frontend, MLflow, Ollama)
-make dev
-
-# Open the web UI
-make web        # http://localhost:3000
-
-# Open MLflow UI
-make mlflow-ui  # http://localhost:5000
-
-# Stop everything
-make dev-down
+python3.11 -m venv .venv
+source .venv/bin/activate
+pip install -U pip
+pip install -e ".[dev]"
 ```
 
-### Manual Setup (without Docker)
+### 2. Configure environment
 
 ```bash
-# Backend
-./venv/bin/uvicorn web.backend.main:app --reload --host 127.0.0.1 --port 8000
-
-# Frontend
-cd web/frontend && npm install
-cd web/frontend && npm run dev
-
-# MLflow
-mlflow server --host 0.0.0.0 --port 5000
+cp .env.example .env
 ```
 
-### Manual Web Run: Ollama SLM + Gemini Fallback
+Fill at least:
+- `HF_TOKEN`
+- `THESIS_FORCE_VLLM`
+- `MLFLOW_TRACKING_URI`
+- `THESIS_MLFLOW_TRACKING_URI`
+- the `VLLM_*_URL` entries for the models you actually deployed
 
-This is the simplest local workflow if you want to:
-
-- run a local Ollama model such as Gemma,
-- use the web UI to launch a `routing` experiment,
-- and use Gemini as the remote fallback LLM.
-
-1. Create a root `.env` file:
-
-```env
-THESIS_GEMINI_API_KEY=your_gemini_api_key
-THESIS_OLLAMA_BASE_URL=http://localhost:11434
-THESIS_MLFLOW_TRACKING_URI=http://localhost:5000
-THESIS_RESULTS_DIR=results
-```
-
-2. Start Ollama:
+### 3. Start MLflow
 
 ```bash
-ollama serve
+mlflow server --host 127.0.0.1 --port 5000
 ```
 
-3. Make sure your local model exists:
+### 4. Start the backend
 
 ```bash
-ollama list
+source .venv/bin/activate
+uvicorn web.backend.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-If Gemma is not installed yet, pull one first:
+The backend loads the repo-root `.env` automatically.
 
-```bash
-ollama pull gemma3:4b
-```
-
-4. Start the backend from the repo root:
-
-```bash
-./venv/bin/uvicorn web.backend.main:app --reload --host 127.0.0.1 --port 8000
-```
-
-5. Start the frontend in a second terminal:
+### 5. Start the frontend
 
 ```bash
 cd web/frontend
@@ -132,187 +132,111 @@ npm install
 npm run dev
 ```
 
-6. Open the app:
+Frontend:
+- `http://localhost:3000`
 
-```text
-http://localhost:3000
-```
+Backend OpenAPI:
+- `http://127.0.0.1:8000/docs`
 
-7. In the web form:
+MLflow:
+- `http://127.0.0.1:5000`
 
-- choose your local Ollama SLM, for example `gemma3:4b`,
-- choose `Gemini 2.5 Flash` or `Gemini 2.5 Flash-Lite` as the fallback LLM,
-- keep architecture as `routing`,
-- then launch the experiment.
+## Validate Remote Model Endpoints
 
-Notes:
-
-- The backend reads `.env` from the repo root.
-- `dry_run` does not require a Gemini key.
-- Real fallback calls require `THESIS_GEMINI_API_KEY`.
-- If you change `.env`, restart the backend.
-
-## Project Structure
-
-```
-├── web/
-│   ├── backend/           # FastAPI API server
-│   │   ├── main.py        # App factory, CORS, lifespan
-│   │   ├── routers/       # experiments, models, results, infrastructure, benchmarks
-│   │   ├── services/      # experiment_service, aws_service, mlflow_service
-│   │   ├── schemas.py     # Pydantic v2 models
-│   │   └── dependencies.py
-│   └── frontend/          # Next.js 14 App Router
-│       ├── app/           # Pages: dashboard, experiments, results, infrastructure
-│       ├── components/    # UI components + shadcn
-│       ├── hooks/         # React Query + SSE hooks
-│       └── lib/           # API client, utilities
-├── mlops/
-│   ├── tracking.py        # MLflowTracker class
-│   ├── callbacks.py       # RunnerCallbacks for SSE integration
-│   └── registry.py        # Model registration helpers
-├── training/
-│   ├── config.py          # LoRA/QLoRA training config schema
-│   ├── datasets.py        # SFT JSONL preparation and split CLI
-│   ├── train_lora.py      # Optional LoRA/QLoRA fine-tuning CLI
-│   ├── registry.py        # Fine-tuned adapter registry
-│   └── configs/           # Coding/domain pilot training configs
-├── infrastructure/
-│   └── terraform/
-│       ├── modules/       # vpc, ec2, s3, ecr, dynamodb, iam, cloudwatch, secrets
-│       └── environments/  # dev (t3.micro), prod (CPU API + optional model-specific GPU hosts)
-├── docker/
-│   ├── Dockerfile.api
-│   ├── Dockerfile.runner
-│   ├── Dockerfile.mlflow
-│   └── docker-compose.yml
-├── .github/workflows/
-│   ├── ci.yml             # Test + lint + terraform validate
-│   ├── deploy.yml         # Build → ECR → Terraform apply
-│   └── nightly.yml        # Scheduled benchmark runs
-└── Makefile               # dev, tf-*, ecr-login, push-*
-```
-
-## Web UI
-
-| Page | Description |
-|------|-------------|
-| **Dashboard** | Summary cards, EATS gauge, accuracy vs LLM call ratio scatter plot |
-| **Experiments** | List all runs, launch new experiments with config form |
-| **Live Progress** | SSE-powered real-time progress bar and metric updates |
-| **Results** | Browse and compare up to 4 experiments side-by-side |
-| **Infrastructure** | EC2 instance management, cost estimates |
-
-## Benchmark Scope
-
-| Benchmark | Purpose |
-|-----------|---------|
-| **MMLU / GSM8K / ARC / HellaSwag / TruthfulQA** | Automated accuracy benchmarks for reasoning, math, commonsense, and truthfulness |
-| **HumanEval (project-specific)** | UI-backed human preference benchmark: prepared-prompt LLM Arena plus live user chat comparisons |
-| **Custom Stratified Coding** | Easy/medium/hard coding problem set with versioned prompts, tests, and difficulty labels |
-
-## Fine-Tuning Scope
-
-Fine-tuning is kept as a separate ablation track under `training/`. The primary architecture experiments should keep base models fixed; fine-tuned SLMs are compared separately against base SLMs, orchestration variants, and LLM baselines.
+First check the backend model catalog view:
 
 ```bash
-pip install -e ".[training]"
-python -m training.datasets prepare-sft --input training/data/raw/coding_pilot.jsonl --output-dir training/data/processed/coding_pilot
-python -m training.train_lora --config training/configs/qlora_coding_pilot.yaml
+curl -fsS http://127.0.0.1:8000/models | jq .
 ```
 
-## AWS Infrastructure
-
-All infrastructure is managed via Terraform with remote state in S3 + DynamoDB locking.
+Then check an endpoint directly:
 
 ```bash
-make tf-init    # Initialize Terraform
-make tf-plan    # Preview changes
-make tf-apply   # Apply (with confirmation)
-make tf-destroy # Destroy (with warning)
+curl -fsS http://<HOST_IP>:8000/v1/models | jq .
 ```
 
-### Environments
+Expected behavior:
+- the backend returns runnable SLM and LLM aliases
+- the frontend launch form uses the same runtime status
 
-| | Dev | Prod |
-|---|---|---|
-| EC2 | `t3.micro` runner | `t3.large` API host + opt-in GPU model hosts |
-| NAT Gateway | No | Yes |
-| AZs | 1 | 2 |
-| Spot | No | Disabled by default for serving hosts |
+## Run Experiments
 
-### Prod Model Hosts
+### Web UI
 
-Enable only the models you need in `infrastructure/terraform/environments/prod/terraform.tfvars` via `enabled_vllm_models`.
+Open:
+- `http://localhost:3000/experiments/new`
 
-| Model alias | Default prod host |
+Choose:
+- one architecture
+- one benchmark
+- one SLM alias
+- one LLM alias
+
+### CLI
+
+Example:
+
+```bash
+python -m experiments.run_experiment \
+  --architecture routing \
+  --benchmark mmlu \
+  --n_samples 100 \
+  --slm qwen3.5-4b \
+  --llm gpt-oss-20b \
+  --confidence_threshold 0.95 \
+  --mlflow_uri http://127.0.0.1:5000
+```
+
+Results are written to:
+- `results/exp_<id>.json`
+- `results/exp_<id>.md`
+
+## Working Deployment Notes
+
+### GCP L4 hosts
+
+Known working pattern:
+- one model per host
+- use vLLM OpenAI-compatible serving
+- expose `:8000/v1`
+
+### GCP G4 / RTX6000 shared host
+
+Known working image family:
+- `common-cu129-ubuntu-2404-nvidia-580`
+
+Known working behavior:
+- use a single shared container name
+- switch the active mid-tier model when needed
+- keep `.env` mapped to the current public IP
+
+### Nebius heavy host
+
+Heavy-tier provisioning remains optional.
+
+Known constraint from current work:
+- H200 spot capacity may fail with `NotEnoughResources`
+- if that happens, retry later or fall back to H100
+
+## Key Files
+
+| Path | Purpose |
 |---|---|
-| `qwen3.5-4b` | `g5.2xlarge` |
-| `gemma4-4b` | `g5.2xlarge` |
-| `llama3.2-3b` | `g5.2xlarge` |
-| `gpt-oss-20b` | `g5.2xlarge` |
-| `qwen3.5-27b` | `g6e.4xlarge` |
-| `gemma4-31b` | `g6e.4xlarge` |
-| `qwen3.5-35b-a3b` | `g6e.4xlarge` |
-| `gemma4-26b-a4b` | `g6e.4xlarge` |
-| `llama3.3-70b` | `g6e.12xlarge` |
-| `gpt-oss-120b` | `p5.4xlarge` |
-| `qwen3.5-122b-a10b` | `g6e.48xlarge` |
-| `qwen3.5-397b-a17b` | `p5e.48xlarge` |
-| `kimi-k2.6-1t` | `p5e.48xlarge` |
+| `core/model_catalog.py` | Canonical aliases and endpoint env names |
+| `core/models.py` | Provider adapters and runtime selection |
+| `architectures/` | Architecture implementations |
+| `benchmarks/` | Automated benchmark loaders |
+| `experiments/runner.py` | Main execution loop |
+| `evaluation/metrics.py` | Accuracy, latency, EATS, energy summary metrics |
+| `evaluation/energy.py` | Host-profile resource estimation |
+| `mlops/tracking.py` | MLflow logging |
+| `web/backend/` | FastAPI control plane |
+| `web/frontend/` | Next.js dashboard and launcher |
+| `infrastructure/WP1_RUNBOOK.md` | Infra bring-up checklist and host notes |
 
-## CI/CD Pipeline
+## Additional Notes
 
-- **Every push/PR**: Python tests + linting, frontend lint + typecheck, Terraform validate
-- **Push to main**: Build Docker images → push to ECR → Terraform apply
-- **Nightly (2am UTC)**: Run full benchmark suite, upload to S3, Slack notification
-
-## API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/health` | Health check |
-| GET | `/api/models` | List available SLMs/LLMs |
-| POST | `/api/experiments` | Launch experiment |
-| GET | `/api/experiments` | List all experiments |
-| GET | `/api/experiments/{id}/stream` | SSE progress stream |
-| GET | `/api/results/compare?ids=a,b,c` | Compare experiments |
-| GET | `/api/infrastructure/instances` | List EC2 instances |
-| GET | `/api/infrastructure/costs` | Cost estimates |
-
-## Environment Variables
-
-Create a `.env` file in the project root:
-
-```env
-THESIS_OPENAI_API_KEY=sk-...
-THESIS_GEMINI_API_KEY=...
-THESIS_TOGETHER_API_KEY=...
-THESIS_AWS_REGION=eu-west-1
-THESIS_S3_RESULTS_BUCKET=thesis-results-dev
-THESIS_MLFLOW_TRACKING_URI=http://localhost:5000
-THESIS_OLLAMA_BASE_URL=http://localhost:11434
-THESIS_FORCE_VLLM=0
-VLLM_LLAMA33_70B_URL=http://localhost:8000/v1
-VLLM_QWEN35_4B_URL=http://localhost:8001/v1
-VLLM_GEMMA4_E4B_URL=http://localhost:8002/v1
-VLLM_LLAMA32_3B_URL=http://localhost:8003/v1
-VLLM_QWEN35_27B_URL=http://localhost:8004/v1
-VLLM_GPT_OSS_20B_URL=http://localhost:8005/v1
-VLLM_GEMMA4_31B_URL=http://localhost:8006/v1
-VLLM_QWEN35_35B_A3B_URL=http://localhost:8007/v1
-VLLM_GEMMA4_26B_A4B_URL=http://localhost:8008/v1
-VLLM_QWEN35_122B_A10B_URL=http://localhost:8009/v1
-VLLM_KIMI_K26_1T_URL=http://localhost:8010/v1
-VLLM_QWEN35_397B_A17B_URL=http://localhost:8011/v1
-VLLM_GPT_OSS_120B_URL=http://localhost:8012/v1
-THESIS_RESULTS_DIR=results
-```
-
-## Docker Images
-
-```bash
-make ecr-login    # Authenticate with ECR
-make push-api     # Build and push API image
-make push-runner  # Build and push runner image
-```
+- The frontend and backend are now aligned to the shared model catalog instead of hardcoded provider assumptions.
+- The system no longer assumes Ollama-first or hosted-API-first operation.
+- Remote vLLM endpoints are the primary experiment runtime path.
+- Legacy files for monolithic or speculative variants may remain in the repo for reference, but the active experiment surface is `routing`, `multi_agent`, and `ensemble`.

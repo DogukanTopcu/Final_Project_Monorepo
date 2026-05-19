@@ -24,7 +24,7 @@ class HellaSwagBenchmark(BaseBenchmark):
     def _load_all(self) -> list[Query]:
         from datasets import load_dataset  # type: ignore
 
-        ds = load_dataset("Rowan/hellaswag", split="validation", trust_remote_code=True)
+        ds = load_dataset("Rowan/hellaswag", split="validation")
         queries: list[Query] = []
         for i, row in enumerate(ds):
             ctx = _clean(row["ctx"])

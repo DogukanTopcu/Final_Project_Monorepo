@@ -101,6 +101,11 @@ class Reporter:
             "confidence": sample.response.confidence,
             "latency_ms": sample.response.latency_ms,
             "cost_usd": sample.response.cost_usd,
+            "api_cost_usd": sample.response.api_cost_usd,
+            "infra_cost_usd": sample.response.infra_cost_usd,
+            "energy_kwh": sample.response.energy_kwh,
+            "co2_g": sample.response.co2_g,
+            "gpu_power_w": sample.response.gpu_power_w,
             "final_model_id": metadata.get("final_model_id", sample.response.model_id),
             "used_llm": escalated,
             "escalated": escalated,
@@ -114,6 +119,8 @@ class Reporter:
             "llm_output_tokens": metadata.get("llm_output_tokens"),
             "slm_cost_usd": metadata.get("slm_cost_usd"),
             "llm_cost_usd": metadata.get("llm_cost_usd"),
+            "resource_estimate": metadata.get("resource_estimate"),
+            "inference_steps": metadata.get("inference_steps", []),
         }
         if escalated:
             payload.update(

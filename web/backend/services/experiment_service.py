@@ -7,13 +7,14 @@ from datetime import datetime, timezone
 from threading import Event
 from typing import Any
 
+from core.model_catalog import get_model_spec
+from core.models import get_model_runtime_status
 from core.types import ExperimentConfig
 from evaluation.metrics import compute_metrics
 from experiments.runner import ExperimentCancelledError, ExperimentRunner
 from mlops.callbacks import RunnerCallbacks
 from web.backend.dependencies import Settings
 from web.backend.schemas import (
-    Architecture,
     ExperimentCreate,
     ExperimentResponse,
     ExperimentStatus,
@@ -38,12 +39,19 @@ def get_events(experiment_id: str) -> list[dict[str, Any]]:
 
 def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentConfig:
     overrides = params.config_overrides or {}
-    allowed_override_keys = {"confidence_threshold", "dry_run"}
+    allowed_override_keys = {
+        "confidence_threshold",
+        "dry_run",
+        "arbitrator",
+        "n_debate_rounds",
+        "n_models",
+        "voting",
+        "llm_tiebreak",
+        "seed",
+    }
     unexpected = sorted(set(overrides) - allowed_override_keys)
     if unexpected:
-        raise ValueError(
-            f"Unsupported config overrides for web routing: {', '.join(unexpected)}"
-        )
+        raise ValueError(f"Unsupported config overrides: {', '.join(unexpected)}")
 
     return ExperimentConfig(
         architecture=params.architecture.value,
@@ -52,7 +60,13 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         slm=params.slm,
         llm=params.llm,
         confidence_threshold=float(overrides.get("confidence_threshold", 0.7)),
+        arbitrator=str(overrides.get("arbitrator", "llm")),
+        n_debate_rounds=int(overrides.get("n_debate_rounds", 1)),
+        n_models=int(overrides.get("n_models", 3)),
+        voting=str(overrides.get("voting", "majority")),
+        llm_tiebreak=bool(overrides.get("llm_tiebreak", False)),
         dry_run=bool(overrides.get("dry_run", False)),
+        seed=int(overrides.get("seed", 42)),
         output_dir=settings.results_dir,
         mlflow_tracking_uri=settings.mlflow_tracking_uri,
     )
@@ -69,6 +83,7 @@ def _sync_runtime_provider_env(settings: Settings) -> None:
         "GEMINI_API_KEY": settings.gemini_api_key,
         "THESIS_TOGETHER_API_KEY": settings.together_api_key,
         "TOGETHER_API_KEY": settings.together_api_key,
+        "THESIS_FORCE_VLLM": "1" if settings.force_vllm else "",
     }
     for key, value in env_map.items():
         if value:
@@ -168,25 +183,25 @@ def _handle_sample_complete(
     )
 
 
-def _llm_provider_is_configured(llm_model_id: str, settings: Settings) -> bool:
-    if llm_model_id.startswith("gpt-"):
-        return bool(settings.openai_api_key)
-    if llm_model_id.startswith("gemini-"):
-        return bool(settings.gemini_api_key)
-    if llm_model_id in {"llama-3.1-70b", "llama3-70b"}:
-        return bool(settings.together_api_key)
-    return False
+def _validate_model_selection(model_id: str, expected_kind: str, *, require_runtime: bool) -> None:
+    spec = get_model_spec(model_id)
+    if spec is None:
+        raise ValueError(f"Unknown model alias: {model_id}")
+    if spec.kind != expected_kind:
+        raise ValueError(f"{model_id} is not a valid {expected_kind.upper()} selection.")
+
+    if not require_runtime:
+        return
+
+    status = get_model_runtime_status(model_id)
+    if not bool(status.get("available")):
+        raise ValueError(str(status.get("reason", f"{model_id} is unavailable.")))
 
 
 def launch_experiment(params: ExperimentCreate, settings: Settings) -> ExperimentResponse:
     config = _build_config(params, settings)
-    if params.architecture is not Architecture.ROUTING:
-        raise ValueError("Web launch currently supports routing only.")
-    if not config.dry_run and not _llm_provider_is_configured(params.llm, settings):
-        raise ValueError(
-            f"The selected fallback model `{params.llm}` is not configured. "
-            "Set the matching API key in `.env`."
-        )
+    _validate_model_selection(params.slm, "slm", require_runtime=not config.dry_run)
+    _validate_model_selection(params.llm, "llm", require_runtime=not config.dry_run)
 
     experiment_id = f"exp_{uuid.uuid4().hex[:8]}"
     now = datetime.now(timezone.utc)

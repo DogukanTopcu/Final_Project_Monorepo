@@ -9,7 +9,6 @@ from fastapi.responses import StreamingResponse
 
 from web.backend.dependencies import Settings, get_settings
 from web.backend.schemas import (
-    Architecture,
     ExperimentCreate,
     ExperimentLaunchResponse,
     ExperimentResponse,
@@ -25,11 +24,6 @@ async def launch_experiment(
     params: ExperimentCreate,
     settings: Settings = Depends(get_settings),
 ):
-    if params.architecture is not Architecture.ROUTING:
-        raise HTTPException(
-            status_code=400,
-            detail="Web launch currently supports routing only.",
-        )
     try:
         exp = experiment_service.launch_experiment(params, settings)
     except ValueError as exc:

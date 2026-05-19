@@ -9,12 +9,7 @@ BENCHMARKS = [
         "id": "mmlu",
         "name": "MMLU",
         "description": "Massive Multitask Language Understanding",
-        "categories": [
-            "stem",
-            "humanities",
-            "social_sciences",
-            "other",
-        ],
+        "categories": ["stem", "humanities", "social_sciences", "other"],
         "total_samples": 14042,
         "suggested_sizes": [50, 100, 200, 500, 1000],
     },
@@ -22,7 +17,7 @@ BENCHMARKS = [
         "id": "arc",
         "name": "ARC",
         "description": "AI2 Reasoning Challenge",
-        "categories": ["easy", "challenge"],
+        "categories": ["science", "mcq", "challenge"],
         "total_samples": 7787,
         "suggested_sizes": [50, 100, 200, 500],
     },
@@ -51,20 +46,12 @@ BENCHMARKS = [
         "suggested_sizes": [25, 50, 100, 200],
     },
     {
-        "id": "gsm8k",
-        "name": "GSM8K",
-        "description": "Grade-school math word problems",
-        "categories": ["math", "reasoning"],
-        "total_samples": 1319,
-        "suggested_sizes": [50, 100, 200, 500],
-    },
-    {
-        "id": "truthfulqa",
-        "name": "TruthfulQA",
-        "description": "Hallucination resistance and truthfulness benchmark",
-        "categories": ["truthfulness", "safety"],
-        "total_samples": 817,
-        "suggested_sizes": [50, 100, 200, 500],
+        "id": "custom_stratified",
+        "name": "Custom Stratified Coding",
+        "description": "Difficulty-bucketed coding benchmark (easy/medium/hard).",
+        "categories": ["coding", "easy", "medium", "hard"],
+        "total_samples": 1000,
+        "suggested_sizes": [30, 50, 100, 150, 300],
     },
 ]
 
@@ -76,7 +63,7 @@ async def list_benchmarks():
 
 @router.get("/benchmarks/{benchmark_id}")
 async def get_benchmark(benchmark_id: str):
-    for b in BENCHMARKS:
-        if b["id"] == benchmark_id:
-            return b
+    for benchmark in BENCHMARKS:
+        if benchmark["id"] == benchmark_id:
+            return benchmark
     return {"error": "Benchmark not found"}

@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { useLaunchExperiment, useModels, useBenchmarks } from "@/hooks/useExperiments";
-import type { Benchmark } from "@/types";
+import type { Architecture, Benchmark } from "@/types";
 
 export function ExperimentForm() {
   const router = useRouter();
@@ -16,11 +16,17 @@ export function ExperimentForm() {
   const { data: benchmarks } = useBenchmarks();
   const launch = useLaunchExperiment();
 
+  const [architecture, setArchitecture] = useState<Architecture>("routing");
   const [benchmark, setBenchmark] = useState<Benchmark>("mmlu");
   const [nSamples, setNSamples] = useState(100);
   const [slm, setSlm] = useState("");
-  const [llm, setLlm] = useState("gpt-4o-mini");
+  const [llm, setLlm] = useState("");
   const [confidenceThreshold, setConfidenceThreshold] = useState(0.7);
+  const [arbitrator, setArbitrator] = useState<"slm" | "llm">("llm");
+  const [nDebateRounds, setNDebateRounds] = useState(1);
+  const [nModels, setNModels] = useState(3);
+  const [voting, setVoting] = useState<"majority" | "weighted">("majority");
+  const [llmTiebreak, setLlmTiebreak] = useState(false);
   const [dryRun, setDryRun] = useState(false);
 
   useEffect(() => {
@@ -28,32 +34,40 @@ export function ExperimentForm() {
       return;
     }
     if (models.slm.length > 0 && !models.slm.some((model) => model.id === slm)) {
-      setSlm(models.slm[0].id);
+      const preferredSlm = models.slm.find((model) => model.configured) ?? models.slm[0];
+      setSlm(preferredSlm.id);
     }
-    if (!llm && models.llm.some((model) => model.id === "gpt-4o-mini")) {
-      setLlm("gpt-4o-mini");
-    } else if (models.llm.length > 0 && !models.llm.some((model) => model.id === llm)) {
-      const preferredModel =
-        models.llm.find((model) => model.id === "gpt-4o-mini") ?? models.llm[0];
-      setLlm(preferredModel.id);
+    if (models.llm.length > 0 && !models.llm.some((model) => model.id === llm)) {
+      const preferredLlm =
+        models.llm.find((model) => model.id === "gpt-oss-20b" && model.configured) ??
+        models.llm.find((model) => model.configured) ??
+        models.llm[0];
+      setLlm(preferredLlm.id);
     }
   }, [llm, models, slm]);
 
+  const selectedSlmModel = models?.slm.find((model) => model.id === slm);
   const selectedLlmModel = models?.llm.find((model) => model.id === llm);
-  const selectedLlmConfigured =
-    !models ||
-    !selectedLlmModel ||
-    (selectedLlmModel.provider === "openai" && models.openai_configured) ||
-    (selectedLlmModel.provider === "google" && models.gemini_configured) ||
-    selectedLlmModel.provider === "together";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const configOverrides: Record<string, unknown> = { dry_run: dryRun };
-    configOverrides.confidence_threshold = confidenceThreshold;
+
+    if (architecture === "routing") {
+      configOverrides.confidence_threshold = confidenceThreshold;
+    }
+    if (architecture === "multi_agent") {
+      configOverrides.arbitrator = arbitrator;
+      configOverrides.n_debate_rounds = nDebateRounds;
+    }
+    if (architecture === "ensemble") {
+      configOverrides.n_models = nModels;
+      configOverrides.voting = voting;
+      configOverrides.llm_tiebreak = llmTiebreak;
+    }
 
     const result = await launch.mutateAsync({
-      architecture: "routing",
+      architecture,
       benchmark,
       n_samples: nSamples,
       slm,
@@ -66,7 +80,7 @@ export function ExperimentForm() {
   const canLaunch =
     !!slm &&
     !!llm &&
-    (!models || dryRun || (models.ollama_reachable && selectedLlmConfigured));
+    (!models || dryRun || (!!selectedSlmModel?.configured && !!selectedLlmModel?.configured));
 
   return (
     <Card>
@@ -77,25 +91,24 @@ export function ExperimentForm() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <Select
             label="Architecture"
-            value="routing"
-            disabled
+            value={architecture}
+            onChange={(e) => setArchitecture(e.target.value as Architecture)}
           >
             <option value="routing">Arch A — Routing</option>
+            <option value="multi_agent">Arch B — Multi-Agent</option>
+            <option value="ensemble">Arch C — Ensemble</option>
           </Select>
 
           <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
             <div className="flex flex-wrap gap-2">
-              <Badge variant={models?.ollama_reachable ? "success" : "warning"}>
-                Ollama {models?.ollama_reachable ? "reachable" : "not reachable"}
+              <Badge variant={models?.force_vllm ? "success" : "secondary"}>
+                Runtime: {models?.runtime_mode ?? "unknown"}
               </Badge>
-              <Badge variant={models?.slm.length ? "success" : "warning"}>
-                {models?.slm.length ? `${models.slm.length} local SLMs found` : "No local SLM found"}
+              <Badge variant={models?.slm.some((model) => model.configured) ? "success" : "warning"}>
+                {models?.slm.filter((model) => model.configured).length ?? 0} runnable SLMs
               </Badge>
-              <Badge variant={models?.openai_configured ? "success" : "warning"}>
-                OpenAI key {models?.openai_configured ? "configured" : "missing"}
-              </Badge>
-              <Badge variant={models?.gemini_configured ? "success" : "warning"}>
-                Gemini key {models?.gemini_configured ? "configured" : "missing"}
+              <Badge variant={models?.llm.some((model) => model.configured) ? "success" : "warning"}>
+                {models?.llm.filter((model) => model.configured).length ?? 0} runnable LLMs
               </Badge>
             </div>
             {models?.warnings.map((warning) => (
@@ -103,9 +116,16 @@ export function ExperimentForm() {
                 {warning}
               </p>
             ))}
-            {!selectedLlmConfigured && (
+            {selectedSlmModel && (
               <p className="text-sm text-zinc-600">
-                Non-dry runs need the API key for the selected fallback model.
+                SLM runtime: {selectedSlmModel.runtime_provider}
+                {selectedSlmModel.base_url ? ` @ ${selectedSlmModel.base_url}` : ""}
+              </p>
+            )}
+            {selectedLlmModel && (
+              <p className="text-sm text-zinc-600">
+                LLM runtime: {selectedLlmModel.runtime_provider}
+                {selectedLlmModel.base_url ? ` @ ${selectedLlmModel.base_url}` : ""}
               </p>
             )}
           </div>
@@ -115,9 +135,9 @@ export function ExperimentForm() {
             value={benchmark}
             onChange={(e) => setBenchmark(e.target.value as Benchmark)}
           >
-            {benchmarks?.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name} — {b.description}
+            {benchmarks?.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name} — {item.description}
               </option>
             )) ?? (
               <>
@@ -126,6 +146,7 @@ export function ExperimentForm() {
                 <option value="hellaswag">HellaSwag</option>
                 <option value="gsm8k">GSM8K</option>
                 <option value="truthfulqa">TruthfulQA</option>
+                <option value="custom_stratified">Custom Stratified Coding</option>
               </>
             )}
           </Select>
@@ -136,26 +157,28 @@ export function ExperimentForm() {
             onChange={(e) => setSlm(e.target.value)}
           >
             {models?.slm.length ? (
-              models.slm.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name} ({m.provider})
+              models.slm.map((model) => (
+                <option key={model.id} value={model.id}>
+                  {model.name} ({model.runtime_provider}
+                  {model.configured ? "" : " — unavailable"})
                 </option>
               ))
             ) : (
               <option value="" disabled>
-                No local Ollama model available
+                No configured SLM available
               </option>
             )}
           </Select>
 
           <Select
-            label="LLM (Large Language Model)"
+            label="LLM (Fallback / Verifier / Arbitrator)"
             value={llm}
             onChange={(e) => setLlm(e.target.value)}
           >
-            {models?.llm.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name} ({m.provider})
+            {models?.llm.map((model) => (
+              <option key={model.id} value={model.id}>
+                {model.name} ({model.runtime_provider}
+                {model.configured ? "" : " — unavailable"})
               </option>
             )) ?? <option value="llama3.3-70b">Llama 3.3 (70B)</option>}
           </Select>
@@ -170,15 +193,73 @@ export function ExperimentForm() {
             displayValue={String(nSamples)}
           />
 
-          <Slider
-            label="Confidence Threshold"
-            min={0}
-            max={1}
-            step={0.05}
-            value={confidenceThreshold}
-            onChange={(e) => setConfidenceThreshold(Number(e.target.value))}
-            displayValue={confidenceThreshold.toFixed(2)}
-          />
+          {architecture === "routing" && (
+            <Slider
+              label="Confidence Threshold"
+              min={0}
+              max={1}
+              step={0.05}
+              value={confidenceThreshold}
+              onChange={(e) => setConfidenceThreshold(Number(e.target.value))}
+              displayValue={confidenceThreshold.toFixed(2)}
+            />
+          )}
+
+          {architecture === "multi_agent" && (
+            <>
+              <Select
+                label="Arbitrator"
+                value={arbitrator}
+                onChange={(e) => setArbitrator(e.target.value as "slm" | "llm")}
+              >
+                <option value="llm">LLM arbitrator</option>
+                <option value="slm">SLM arbitrator</option>
+              </Select>
+              <Slider
+                label="Debate Rounds"
+                min={1}
+                max={3}
+                step={1}
+                value={nDebateRounds}
+                onChange={(e) => setNDebateRounds(Number(e.target.value))}
+                displayValue={String(nDebateRounds)}
+              />
+            </>
+          )}
+
+          {architecture === "ensemble" && (
+            <>
+              <Slider
+                label="Ensemble Size"
+                min={2}
+                max={5}
+                step={1}
+                value={nModels}
+                onChange={(e) => setNModels(Number(e.target.value))}
+                displayValue={String(nModels)}
+              />
+              <Select
+                label="Voting"
+                value={voting}
+                onChange={(e) => setVoting(e.target.value as "majority" | "weighted")}
+              >
+                <option value="majority">Majority</option>
+                <option value="weighted">Weighted</option>
+              </Select>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="llm-tiebreak"
+                  checked={llmTiebreak}
+                  onChange={(e) => setLlmTiebreak(e.target.checked)}
+                  className="h-4 w-4 rounded border-zinc-300"
+                />
+                <label htmlFor="llm-tiebreak" className="text-sm text-zinc-700">
+                  Use LLM tiebreak when ensemble has no majority
+                </label>
+              </div>
+            </>
+          )}
 
           <div className="flex items-center gap-2">
             <input
@@ -205,7 +286,7 @@ export function ExperimentForm() {
 
           {!canLaunch && (
             <p className="text-sm text-zinc-600">
-              Launch is enabled once a local Ollama SLM is available. Non-dry runs also require the API key for the selected fallback model.
+              Launch is enabled once both selected endpoints are runnable. Dry run skips endpoint checks.
             </p>
           )}
         </form>

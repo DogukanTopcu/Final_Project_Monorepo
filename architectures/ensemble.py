@@ -19,10 +19,10 @@ from __future__ import annotations
 
 from collections import Counter
 
+from architectures.base import BaseArchitecture
 from core.models import ModelProvider
 from core.prompt import mcq_prompt, open_prompt, parse_mcq_answer, parse_open_answer
 from core.types import Query, Response
-from architectures.base import BaseArchitecture
 
 
 class EnsembleArchitecture(BaseArchitecture):
@@ -52,11 +52,24 @@ class EnsembleArchitecture(BaseArchitecture):
         confidences: list[float] = []
         total_in = total_out = 0
         total_cost = total_latency = 0.0
+        inference_steps: list[dict[str, object]] = []
 
-        for _ in range(self.n_models):
+        for idx in range(self.n_models):
             text, conf, in_t, out_t, cost, lat = self._timed_generate(self.slm, prompt)
-            total_in += in_t; total_out += out_t
-            total_cost += cost; total_latency += lat
+            total_in += in_t
+            total_out += out_t
+            total_cost += cost
+            total_latency += lat
+            inference_steps.append(
+                {
+                    "role": f"ensemble_member_{idx + 1}",
+                    "model_id": self.slm.model_id,
+                    "latency_ms": lat,
+                    "input_tokens": in_t,
+                    "output_tokens": out_t,
+                    "api_cost_usd": cost,
+                }
+            )
             parsed = (
                 parse_mcq_answer(text)
                 if self.task_type == "mcq"
@@ -80,9 +93,21 @@ class EnsembleArchitecture(BaseArchitecture):
             llm_text, _, l_in, l_out, l_cost, l_lat = self._timed_generate(
                 self.llm, prompt
             )
-            total_in += l_in; total_out += l_out
-            total_cost += l_cost; total_latency += l_lat
+            total_in += l_in
+            total_out += l_out
+            total_cost += l_cost
+            total_latency += l_lat
             llm_calls = 1
+            inference_steps.append(
+                {
+                    "role": "llm_tiebreak",
+                    "model_id": self.llm.model_id,
+                    "latency_ms": l_lat,
+                    "input_tokens": l_in,
+                    "output_tokens": l_out,
+                    "api_cost_usd": l_cost,
+                }
+            )
             final_answer = (
                 parse_mcq_answer(llm_text)
                 if self.task_type == "mcq"
@@ -106,6 +131,9 @@ class EnsembleArchitecture(BaseArchitecture):
                 "votes": votes,
                 "confidences": confidences,
                 "voting_method": self.voting,
+                "n_models": self.n_models,
+                "llm_tiebreak": self.llm_tiebreak,
+                "inference_steps": inference_steps,
             },
         )
 

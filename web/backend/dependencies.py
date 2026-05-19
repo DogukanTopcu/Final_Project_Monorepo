@@ -1,9 +1,30 @@
 from __future__ import annotations
 
+import os
 from functools import lru_cache
+from pathlib import Path
 
 import boto3
 from pydantic_settings import BaseSettings
+
+
+def _load_repo_env(path: str | Path = ".env") -> None:
+    env_path = Path(path)
+    if not env_path.exists():
+        return
+
+    for raw_line in env_path.read_text().splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+_load_repo_env()
 
 
 class Settings(BaseSettings):
@@ -18,6 +39,8 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     gemini_api_key: str = ""
     together_api_key: str = ""
+    force_vllm: bool = False
+    hf_token: str = ""
     results_dir: str = "results"
     environment: str = "dev"
     cors_origins: list[str] = ["http://localhost:3000"]
