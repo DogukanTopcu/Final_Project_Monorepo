@@ -8,8 +8,11 @@ import boto3
 from pydantic_settings import BaseSettings
 
 
-def _load_repo_env(path: str | Path = ".env") -> None:
-    env_path = Path(path)
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _load_repo_env(path: str | Path | None = None) -> None:
+    env_path = Path(path) if path is not None else REPO_ROOT / ".env"
     if not env_path.exists():
         return
 
@@ -41,7 +44,7 @@ class Settings(BaseSettings):
     together_api_key: str = ""
     force_vllm: bool = False
     hf_token: str = ""
-    results_dir: str = "results"
+    results_dir: str = str(REPO_ROOT / "results")
     environment: str = "dev"
     cors_origins: list[str] = ["http://localhost:3000"]
 
@@ -50,7 +53,11 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    settings = Settings()
+    results_path = Path(settings.results_dir)
+    if not results_path.is_absolute():
+        settings.results_dir = str((REPO_ROOT / results_path).resolve())
+    return settings
 
 
 def get_s3_client():

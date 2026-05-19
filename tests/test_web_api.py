@@ -369,6 +369,31 @@ def test_get_result_gracefully_handles_old_result_shape(client: TestClient, tmp_
     assert "final_model_id" not in sample
 
 
+def test_experiments_endpoint_includes_persisted_local_results(client: TestClient, tmp_path: Path):
+    persisted_payload = {
+        "experiment_id": "exp_persisted_ui",
+        "created_at": "2026-05-19T12:00:00+00:00",
+        "config": {
+            "architecture": "routing",
+            "benchmark": "mmlu",
+            "n_samples": 5,
+            "slm": "qwen3.5-4b",
+            "llm": "gpt-oss-20b",
+        },
+        "metrics": {"accuracy": 0.4, "eats_score": 0.8},
+        "samples": [],
+    }
+    (tmp_path / "exp_persisted_ui.json").write_text(__import__("json").dumps(persisted_payload))
+
+    response = client.get("/api/experiments")
+    assert response.status_code == 200
+    payload = response.json()
+    matching = next(item for item in payload if item["experiment_id"] == "exp_persisted_ui")
+    assert matching["status"] == "completed"
+    assert matching["metrics"]["accuracy"] == 0.4
+    assert matching["slm"] == "qwen3.5-4b"
+
+
 def test_launch_accepts_gemini_configured_fallback(client: TestClient, monkeypatch):
     monkeypatch.setenv("THESIS_GEMINI_API_KEY", "gemini-test-key")
     get_settings.cache_clear()

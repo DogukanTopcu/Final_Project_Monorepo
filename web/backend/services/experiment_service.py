@@ -4,6 +4,8 @@ import os
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
+import json
+from pathlib import Path
 from threading import Event
 from typing import Any
 
@@ -13,8 +15,10 @@ from core.types import ExperimentConfig
 from evaluation.metrics import compute_metrics
 from experiments.runner import ExperimentCancelledError, ExperimentRunner
 from mlops.callbacks import RunnerCallbacks
-from web.backend.dependencies import Settings
+from web.backend.dependencies import Settings, get_settings
 from web.backend.schemas import (
+    Architecture,
+    Benchmark,
     ExperimentCreate,
     ExperimentResponse,
     ExperimentStatus,
@@ -25,6 +29,54 @@ _executor = ThreadPoolExecutor(max_workers=4)
 _experiments: dict[str, ExperimentResponse] = {}
 _cancel_flags: dict[str, Event] = {}
 _sse_queues: dict[str, list[dict[str, Any]]] = {}
+
+
+def _build_persisted_experiment_response(path: Path) -> ExperimentResponse | None:
+    try:
+        data = json.loads(path.read_text())
+    except Exception:
+        return None
+
+    config = data.get("config", {})
+    experiment_id = str(data.get("experiment_id", path.stem))
+    architecture = str(config.get("architecture", "routing"))
+    benchmark = str(config.get("benchmark", "mmlu"))
+
+    try:
+        return ExperimentResponse(
+            experiment_id=experiment_id,
+            status=ExperimentStatus.COMPLETED,
+            architecture=Architecture(architecture),
+            benchmark=Benchmark(benchmark),
+            n_samples=int(config.get("n_samples", 0)),
+            slm=str(config.get("slm", "")),
+            llm=str(config.get("llm", "")),
+            config_overrides=config,
+            created_at=datetime.fromisoformat(
+                data.get("created_at", datetime.now(timezone.utc).isoformat())
+            ),
+            completed_at=datetime.fromisoformat(
+                data.get("created_at", datetime.now(timezone.utc).isoformat())
+            ),
+            metrics=data.get("metrics", {}),
+            progress=int(config.get("n_samples", 0)),
+            total=int(config.get("n_samples", 0)),
+        )
+    except Exception:
+        return None
+
+
+def _load_persisted_experiments(settings: Settings) -> dict[str, ExperimentResponse]:
+    results_dir = Path(settings.results_dir)
+    if not results_dir.exists():
+        return {}
+
+    persisted: dict[str, ExperimentResponse] = {}
+    for path in sorted(results_dir.glob("*.json")):
+        exp = _build_persisted_experiment_response(path)
+        if exp is not None:
+            persisted[exp.experiment_id] = exp
+    return persisted
 
 
 def _push_event(experiment_id: str, event: dict[str, Any]) -> None:
@@ -249,12 +301,23 @@ def launch_experiment(params: ExperimentCreate, settings: Settings) -> Experimen
 
 
 def get_experiment(experiment_id: str) -> ExperimentResponse | None:
-    return _experiments.get(experiment_id)
+    live = _experiments.get(experiment_id)
+    if live is not None:
+        return live
+
+    settings = get_settings()
+    persisted_path = Path(settings.results_dir) / f"{experiment_id}.json"
+    if persisted_path.exists():
+        return _build_persisted_experiment_response(persisted_path)
+    return None
 
 
 def list_experiments() -> list[ExperimentResponse]:
+    settings = get_settings()
+    experiments = _load_persisted_experiments(settings)
+    experiments.update(_experiments)
     return sorted(
-        _experiments.values(),
+        experiments.values(),
         key=lambda e: e.created_at,
         reverse=True,
     )
