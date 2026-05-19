@@ -23,7 +23,7 @@ class MonolithicArchitecture:
         base_url: str | None = None,
         model_name: str = "meta-llama/Llama-3.3-70B-Instruct",
         temperature: float = 0.0,
-        max_tokens: int = 512,
+        max_tokens: int = 8192,
     ) -> None:
         self.base_url = (base_url or os.environ.get("VLLM_LLAMA33_70B_URL", "http://localhost:8000/v1")).rstrip("/")
         self.model_name = model_name

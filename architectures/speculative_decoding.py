@@ -38,7 +38,7 @@ def _vllm_generate(
     base_url: str,
     model_name: str,
     prompt: str,
-    max_tokens: int = 256,
+    max_tokens: int = 8192,
     temperature: float = 0.0,
     logprobs: int = 1,
 ) -> _DraftResult:
@@ -88,7 +88,7 @@ class SpeculativeDecodingArchitecture:
         drafter_model: str = "Qwen/Qwen3.5-4B",
         verifier_model: str = "meta-llama/Llama-3.3-70B-Instruct",
         confidence_threshold: float = 0.75,
-        max_tokens: int = 256,
+        max_tokens: int = 8192,
     ) -> None:
         self.drafter_url = (drafter_url or os.environ.get("VLLM_QWEN35_4B_URL", "http://localhost:8001/v1"))
         self.verifier_url = (verifier_url or os.environ.get("VLLM_LLAMA33_70B_URL", "http://localhost:8000/v1"))
@@ -185,7 +185,7 @@ class SpeculativeDecodingArchitecture:
             self.verifier_url,
             self.verifier_model,
             score_prompt,
-            max_tokens=8,
+            max_tokens=8192,
         )
         try:
             score = float(result.text.strip())

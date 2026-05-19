@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     environment: str = "dev"
     cors_origins: list[str] = ["http://localhost:3000"]
 
-    model_config = {"env_prefix": "THESIS_", "env_file": ".env"}
+    model_config = {"env_prefix": "THESIS_", "env_file": ".env", "extra": "ignore"}
 
 
 @lru_cache

@@ -37,7 +37,7 @@ class VLLMAgent:
         self.base_url = base_url.rstrip("/")
         self.model_name = model_name
 
-    def chat(self, system: str, user: str, max_tokens: int = 512, temperature: float = 0.0) -> tuple[str, float]:
+    def chat(self, system: str, user: str, max_tokens: int = 8192, temperature: float = 0.0) -> tuple[str, float]:
         payload = {
             "model": self.model_name,
             "messages": [

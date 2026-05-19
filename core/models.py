@@ -31,6 +31,8 @@ _GEMINI_COSTS: dict[str, tuple[float, float]] = {
     "gemini-2.5-flash-lite": (0.10 / 1_000_000, 0.40 / 1_000_000),
 }
 
+_DEFAULT_MAX_TOKENS = 8192
+
 
 def _get_env(*names: str, default: str = "") -> str:
     """Return the first non-empty environment variable from the given names."""
@@ -119,7 +121,7 @@ class OllamaModel(ModelProvider):
             "stream": False,
             "options": {
                 "temperature": kwargs.get("temperature", self.temperature),
-                "num_predict": kwargs.get("max_tokens", 512),
+                "num_predict": kwargs.get("max_tokens", _DEFAULT_MAX_TOKENS),
             },
         }
         resp = requests.post(url, json=payload, timeout=120)
@@ -188,7 +190,7 @@ class OpenAIModel(ModelProvider):
             model=self.model_id,
             messages=[{"role": "user", "content": prompt}],
             temperature=kwargs.get("temperature", self.temperature),
-            max_tokens=kwargs.get("max_tokens", 512),
+            max_tokens=kwargs.get("max_tokens", _DEFAULT_MAX_TOKENS),
             logprobs=True,
             top_logprobs=1,
         )
@@ -247,7 +249,7 @@ class TogetherModel(ModelProvider):
             "model": self.model_id,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": kwargs.get("temperature", self.temperature),
-            "max_tokens": kwargs.get("max_tokens", 512),
+            "max_tokens": kwargs.get("max_tokens", _DEFAULT_MAX_TOKENS),
         }
         resp = requests.post(url, json=payload, headers=headers, timeout=120)
         resp.raise_for_status()
@@ -292,7 +294,7 @@ class GeminiModel(ModelProvider):
             model=self.model_id,
             messages=[{"role": "user", "content": prompt}],
             temperature=kwargs.get("temperature", self.temperature),
-            max_tokens=kwargs.get("max_tokens", 512),
+            max_tokens=kwargs.get("max_tokens", _DEFAULT_MAX_TOKENS),
         )
 
         choice = response.choices[0]
@@ -328,7 +330,7 @@ class OpenAICompatibleModel(ModelProvider):
             "model": self.model_id,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": kwargs.get("temperature", self.temperature),
-            "max_tokens": kwargs.get("max_tokens", 512),
+            "max_tokens": kwargs.get("max_tokens", _DEFAULT_MAX_TOKENS),
             "logprobs": True,
             "top_logprobs": 1,
         }
