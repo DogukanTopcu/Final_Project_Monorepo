@@ -1,11 +1,18 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSSE } from "@/hooks/useSSE";
 import { useCancelExperiment } from "@/hooks/useExperiments";
-import type { SSEEvent } from "@/types";
 
 interface LiveProgressProps {
   experimentId: string;
@@ -20,24 +27,32 @@ export function LiveProgress({ experimentId, enabled }: LiveProgressProps) {
   const cancel = useCancelExperiment();
 
   const progressEvents = events.filter((e) => e.type === "progress");
-  const metricEvents = events.filter((e) => e.type === "metric");
   const latest = progressEvents[progressEvents.length - 1];
   const completed = latest?.completed ?? 0;
   const total = latest?.total ?? 1;
   const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
   const isDone = lastEvent?.type === "complete" || lastEvent?.type === "error";
+  let seenProgress = 0;
+  const accuracyBySample = new Map<number, number>();
+  for (const event of events) {
+    if (event.type === "progress") {
+      seenProgress = event.completed ?? seenProgress;
+    }
+    if (event.type === "metric" && event.name === "accuracy" && typeof event.value === "number") {
+      const sample = seenProgress || accuracyBySample.size + 1;
+      accuracyBySample.set(sample, event.value);
+    }
+  }
+  const accuracySeries = Array.from(accuracyBySample.entries()).map(([sample, accuracy]) => ({
+    sample,
+    accuracy,
+  }));
+  const lastAccuracy = accuracySeries[accuracySeries.length - 1]?.accuracy ?? null;
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Live Progress</CardTitle>
-        <div className="flex items-center gap-2">
-          {isReconnecting && (
-            <Badge variant="warning">Reconnecting...</Badge>
-          )}
-          {isConnected && <Badge variant="success">Connected</Badge>}
-          {error && <Badge variant="destructive">Disconnected</Badge>}
-        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
@@ -61,13 +76,50 @@ export function LiveProgress({ experimentId, enabled }: LiveProgressProps) {
           </p>
         )}
 
-        {metricEvents.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {metricEvents.map((e: SSEEvent, i: number) => (
-              <Badge key={i} variant="outline">
-                {e.name}: {e.value?.toFixed(3)}
-              </Badge>
-            ))}
+        {accuracySeries.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-sm font-medium text-zinc-900">Live accuracy</div>
+              <div className="text-sm font-medium text-zinc-700">
+                Last accuracy: {lastAccuracy != null ? `${(lastAccuracy * 100).toFixed(1)}%` : "—"}
+              </div>
+            </div>
+            <div className="h-48 w-full rounded-lg border border-zinc-200 bg-white p-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={accuracySeries} margin={{ top: 8, right: 12, bottom: 8, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
+                  <XAxis
+                    type="number"
+                    dataKey="sample"
+                    domain={[1, Math.max(total, 1)]}
+                    allowDecimals={false}
+                    tickCount={Math.min(Math.max(total, 2), 6)}
+                    tick={{ fontSize: 12, fill: "#71717a" }}
+                    label={{ value: "Sample", position: "insideBottom", offset: -4 }}
+                  />
+                  <YAxis
+                    domain={[0, 1]}
+                    tickFormatter={(value: number) => `${Math.round(value * 100)}%`}
+                    tick={{ fontSize: 12, fill: "#71717a" }}
+                    width={44}
+                  />
+                  <Tooltip
+                    cursor={false}
+                    formatter={(value: number) => [`${(value * 100).toFixed(1)}%`, "Accuracy"]}
+                    labelFormatter={(label: number) => `Sample ${label}`}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="accuracy"
+                    stroke="#18181b"
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 4 }}
+                    isAnimationActive={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         )}
 

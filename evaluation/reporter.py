@@ -186,4 +186,6 @@ class Reporter:
             "slm_text": slm_raw_text,
             "final_text": final_raw_text,
         }
+        for key, value in metadata.items():
+            payload.setdefault(key, value)
         return payload

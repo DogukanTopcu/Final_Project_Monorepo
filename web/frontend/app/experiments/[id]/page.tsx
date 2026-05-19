@@ -18,7 +18,11 @@ import {
   formatNumber,
   formatPercent,
 } from "@/lib/utils";
-import type { ResultSample, ResultSampleInferenceStep } from "@/types";
+import type {
+  EnsembleMemberResponse,
+  ResultSample,
+  ResultSampleInferenceStep,
+} from "@/types";
 
 type Tab = "overview" | "metrics" | "samples" | "inference" | "config";
 
@@ -231,6 +235,12 @@ function getStepEntries(step: ResultSampleInferenceStep): Array<[string, unknown
   return Object.entries(step).sort(([a], [b]) => a.localeCompare(b));
 }
 
+function getEnsembleMemberResponses(sample: ResultSample): EnsembleMemberResponse[] {
+  return Array.isArray(sample.ensemble_member_responses)
+    ? sample.ensemble_member_responses
+    : [];
+}
+
 export default function ExperimentDetailPage({
   params,
 }: {
@@ -238,7 +248,9 @@ export default function ExperimentDetailPage({
 }) {
   const { id } = params;
   const { data: experiment, isLoading: experimentLoading } = useExperiment(id);
-  const { data: resultDetail, isLoading: resultLoading } = useResult(id);
+  const { data: resultDetail, isLoading: resultLoading } = useResult(id, {
+    expectedSamples: experiment?.n_samples ?? null,
+  });
   const [tab, setTab] = useState<Tab>("overview");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
@@ -589,6 +601,7 @@ export default function ExperimentDetailPage({
                 {samples.map((sample) => {
                   const isExpanded = !!expanded[sample.query_id];
                   const detailEntries = getSampleDetailEntries(sample);
+                  const memberResponses = getEnsembleMemberResponses(sample);
                   return (
                     <Fragment key={sample.query_id}>
                       <div className="rounded-lg border border-zinc-200 bg-white">
@@ -604,7 +617,7 @@ export default function ExperimentDetailPage({
                               <div className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
                                 Question
                               </div>
-                              <div className="mt-1 max-h-28 overflow-hidden whitespace-pre-wrap break-words text-sm leading-5 text-zinc-700">
+                              <div className="mt-1 whitespace-pre-wrap break-words text-sm leading-5 text-zinc-700">
                                 {getSampleQuestionPreview(sample)}
                               </div>
                             </div>
@@ -691,6 +704,147 @@ export default function ExperimentDetailPage({
                         {isExpanded && (
                           <div className="border-t border-zinc-200 bg-zinc-50/70 px-4 py-4">
                             <div className="space-y-4">
+                                  {architecture === "ensemble" && (
+                                    <section className="space-y-3">
+                                      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                                        Ensemble decision
+                                      </p>
+                                      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                                        <div className="rounded-md border border-zinc-200 bg-white px-3 py-2">
+                                          <div className="text-xs text-zinc-500">Voting method</div>
+                                          <div className="mt-1 text-sm font-medium text-zinc-900">
+                                            {typeof sample.voting_method === "string"
+                                              ? sample.voting_method
+                                              : "—"}
+                                          </div>
+                                        </div>
+                                        <div className="rounded-md border border-zinc-200 bg-white px-3 py-2">
+                                          <div className="text-xs text-zinc-500">Vote counts</div>
+                                          <div className="mt-1 break-words text-sm font-medium text-zinc-900">
+                                            {sample.vote_counts &&
+                                            typeof sample.vote_counts === "object" &&
+                                            Object.keys(sample.vote_counts).length
+                                              ? Object.entries(sample.vote_counts)
+                                                  .map(([answer, count]) => `${answer}: ${count}`)
+                                                  .join(" · ")
+                                              : "—"}
+                                          </div>
+                                        </div>
+                                        <div className="rounded-md border border-zinc-200 bg-white px-3 py-2">
+                                          <div className="text-xs text-zinc-500">Votes</div>
+                                          <div className="mt-1 break-words text-sm font-medium text-zinc-900">
+                                            {Array.isArray(sample.votes) && sample.votes.length
+                                              ? sample.votes.join(", ")
+                                              : "—"}
+                                          </div>
+                                        </div>
+                                        <div className="rounded-md border border-zinc-200 bg-white px-3 py-2">
+                                          <div className="text-xs text-zinc-500">LLM tiebreak</div>
+                                          <div className="mt-1 text-sm font-medium text-zinc-900">
+                                            {sample.llm_tiebreak ? "enabled" : "disabled"}
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {!memberResponses.length ? (
+                                        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-800">
+                                          Member-level answers are not available for this run.
+                                          This result only contains call traces, not per-model raw
+                                          answers. It was likely produced before the ensemble
+                                          observability update or by an older backend process.
+                                          Restart the backend and rerun the experiment to capture
+                                          per-model answers here.
+                                        </div>
+                                      ) : (
+                                        <div className="space-y-2">
+                                          {memberResponses.map((member) => (
+                                            <div
+                                              key={`${sample.query_id}-${member.member_index ?? member.model_id}`}
+                                              className="rounded-md border border-zinc-200 bg-white px-3 py-3"
+                                            >
+                                              <div className="flex flex-wrap items-center gap-2">
+                                                <Badge variant="secondary">
+                                                  Member {member.member_index ?? "?"}
+                                                </Badge>
+                                                {member.role && (
+                                                  <Badge variant="outline">{String(member.role)}</Badge>
+                                                )}
+                                                <span className="font-mono text-xs text-zinc-500">
+                                                  {member.model_id ?? "—"}
+                                                </span>
+                                              </div>
+                                              <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-4">
+                                                <div className="rounded-md border border-zinc-100 bg-zinc-50 px-3 py-2">
+                                                  <div className="text-xs text-zinc-500">Parsed</div>
+                                                  <div className="mt-1 text-sm font-medium text-zinc-900">
+                                                    {typeof member.parsed_answer === "string"
+                                                      ? member.parsed_answer
+                                                      : "—"}
+                                                  </div>
+                                                </div>
+                                                <div className="rounded-md border border-zinc-100 bg-zinc-50 px-3 py-2">
+                                                  <div className="text-xs text-zinc-500">Confidence</div>
+                                                  <div className="mt-1 text-sm font-medium text-zinc-900">
+                                                    {typeof member.confidence === "number"
+                                                      ? formatPercent(member.confidence)
+                                                      : "—"}
+                                                  </div>
+                                                </div>
+                                                <div className="rounded-md border border-zinc-100 bg-zinc-50 px-3 py-2">
+                                                  <div className="text-xs text-zinc-500">Latency</div>
+                                                  <div className="mt-1 text-sm font-medium text-zinc-900">
+                                                    {typeof member.latency_ms === "number"
+                                                      ? formatDurationMs(member.latency_ms)
+                                                      : "—"}
+                                                  </div>
+                                                </div>
+                                                <div className="rounded-md border border-zinc-100 bg-zinc-50 px-3 py-2">
+                                                  <div className="text-xs text-zinc-500">Tokens</div>
+                                                  <div className="mt-1 text-sm font-medium text-zinc-900">
+                                                    {typeof member.input_tokens === "number" ||
+                                                    typeof member.output_tokens === "number"
+                                                      ? `${formatNumber(Number(member.input_tokens ?? 0))} / ${formatNumber(Number(member.output_tokens ?? 0))}`
+                                                      : "—"}
+                                                  </div>
+                                                </div>
+                                              </div>
+                                              <div className="mt-2">
+                                                <div className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                                                  Member answer
+                                                </div>
+                                                <div className="mt-1 whitespace-pre-wrap break-words text-sm leading-5 text-zinc-700">
+                                                  {typeof member.raw_text === "string" && member.raw_text.trim()
+                                                    ? member.raw_text
+                                                    : "Not available"}
+                                                </div>
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+
+                                      {sample.llm_tiebreak && (
+                                        <div className="rounded-md border border-zinc-200 bg-white px-3 py-3">
+                                          <div className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                                            LLM tiebreak answer
+                                          </div>
+                                          <div className="mt-2 whitespace-pre-wrap break-words text-sm leading-5 text-zinc-700">
+                                            {typeof sample.llm_tiebreak_raw_text === "string" &&
+                                            sample.llm_tiebreak_raw_text.trim()
+                                              ? sample.llm_tiebreak_raw_text
+                                              : "Not available"}
+                                          </div>
+                                          <div className="mt-2 text-xs text-zinc-500">
+                                            Parsed:{" "}
+                                            {typeof sample.llm_tiebreak_parsed_answer === "string"
+                                              ? sample.llm_tiebreak_parsed_answer
+                                              : "—"}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </section>
+                                  )}
+
                                   <section className="space-y-3">
                                     <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
                                       Core texts

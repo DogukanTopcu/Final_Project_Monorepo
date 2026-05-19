@@ -282,6 +282,10 @@ class TestEnsembleArchitecture:
         resp = arch.run(QUERY)
         assert resp.predicted_answer == "B"
         assert resp.llm_calls == 0
+        assert len(resp.metadata["ensemble_member_responses"]) == 3
+        assert resp.metadata["ensemble_member_responses"][0]["raw_text"] == "B"
+        assert resp.metadata["ensemble_member_responses"][0]["parsed_answer"] == "B"
+        assert resp.metadata["final_answer_source"] == "ensemble_vote"
 
     def test_no_majority_with_llm_tiebreak(self):
         # 3 models all return different answers — simulate by patching
@@ -295,6 +299,9 @@ class TestEnsembleArchitecture:
         )
         resp = arch.run(QUERY)
         assert resp.llm_calls == 1
+        assert resp.metadata["llm_tiebreak_raw_text"] == "B"
+        assert resp.metadata["llm_tiebreak_parsed_answer"] == "B"
+        assert resp.metadata["final_answer_source"] == "llm_tiebreak"
 
     def test_ensemble_uses_slm_and_llm_specific_settings(self):
         slm = SequenceRecordingStubModel("slm", answers=["A", "B"], confidence=0.85)

@@ -211,3 +211,56 @@ def test_reporter_includes_model_runtime_settings_in_config_and_markdown(tmp_pat
     assert payload["config"]["routing_policy"]["margin_threshold"] is None
     assert "| SLM Temperature | 0.3 |" in markdown
     assert "| LLM Max Tokens | 600 |" in markdown
+
+
+def test_reporter_preserves_architecture_specific_metadata(tmp_path):
+    result = ExperimentResult(
+        experiment_id="exp_ensemble_observability",
+        config=ExperimentConfig(
+            architecture="ensemble",
+            benchmark="mmlu",
+            ensemble_slms=["gemma4-4b", "qwen3.5-4b", "llama3.2-3b"],
+        ),
+        samples=[
+            SampleResult(
+                query=Query(id="q3", text="Question", choices=["A1", "A2", "A3", "A4"], answer="B"),
+                response=Response(
+                    query_id="q3",
+                    text="B",
+                    predicted_answer="B",
+                    confidence=0.81,
+                    model_id="gemma4-4b",
+                    latency_ms=30.0,
+                    input_tokens=10,
+                    output_tokens=3,
+                    cost_usd=0.0,
+                    llm_calls=0,
+                    metadata={
+                        "prompt_text": "Question\n\nA. A1\nB. A2\nC. A3\nD. A4",
+                        "slm_text": "1. gemma4-4b: B\n2. qwen3.5-4b: B\n3. llama3.2-3b: C",
+                        "final_text": "B",
+                        "final_model_id": "ensemble_vote",
+                        "final_answer_source": "ensemble_vote",
+                        "votes": ["B", "B", "C"],
+                        "vote_counts": {"B": 2, "C": 1},
+                        "voting_method": "majority",
+                        "ensemble_member_responses": [
+                            {"member_index": 1, "model_id": "gemma4-4b", "raw_text": "B", "parsed_answer": "B"},
+                            {"member_index": 2, "model_id": "qwen3.5-4b", "raw_text": "B", "parsed_answer": "B"},
+                            {"member_index": 3, "model_id": "llama3.2-3b", "raw_text": "C", "parsed_answer": "C"},
+                        ],
+                    },
+                ),
+                correct=True,
+            )
+        ],
+    )
+
+    path = Reporter(tmp_path).save(result)
+    payload = json.loads(path.read_text())
+    sample = payload["samples"][0]
+
+    assert sample["query_choices"] == ["A1", "A2", "A3", "A4"]
+    assert sample["votes"] == ["B", "B", "C"]
+    assert sample["vote_counts"] == {"B": 2, "C": 1}
+    assert len(sample["ensemble_member_responses"]) == 3
