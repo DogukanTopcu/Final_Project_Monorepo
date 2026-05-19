@@ -226,10 +226,15 @@ class PlaygroundChatResponse(BaseModel):
     model_id: str
     text: str
     latency_ms: float
+    model_latency_ms: float | None = None
+    completed_at: datetime | None = None
     input_tokens: int = 0
     output_tokens: int = 0
+    effective_max_tokens: int = 0
     cost_usd: float = 0.0
-    energy_kwh: float | None = None
-    co2_g: float | None = None
+    energy_kwh: float = 0.0
+    co2_g: float = 0.0
+    gpu_power_w: float = 0.0
+    infra_cost_usd: float = 0.0
     base_url: str | None = None
-    finish_reason: str | None = None
+    finish_reason: str = "unknown"

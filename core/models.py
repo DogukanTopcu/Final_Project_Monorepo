@@ -8,6 +8,7 @@ All providers implement a common interface:
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from datetime import datetime, timezone
 from ipaddress import ip_address
 import math
 import os
@@ -97,9 +98,15 @@ def _resolve_max_tokens(provider: "ModelProvider", prompt: str, kwargs: dict) ->
     )
 
 
+def _is_qwen35_model(model_id: str) -> bool:
+    normalized = model_id.strip().lower()
+    return normalized.startswith("qwen/qwen3.5-") or normalized.startswith("qwen3.5-")
+
+
 class ModelProvider(ABC):
     def __init__(self, model_id: str) -> None:
         self.model_id = model_id
+        self.last_generation_metadata: dict[str, object] = {}
 
     @abstractmethod
     def generate(self, prompt: str, **kwargs) -> tuple[str, float, int, int, float]:
@@ -281,6 +288,8 @@ class OpenAICompatibleModel(ModelProvider):
             "logprobs": True,
             "top_logprobs": 1,
         }
+        if _is_qwen35_model(self.model_id):
+            payload["chat_template_kwargs"] = {"enable_thinking": False}
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
@@ -304,6 +313,11 @@ class OpenAICompatibleModel(ModelProvider):
             in_cost, out_cost = _APPROX_MODEL_COSTS.get(self.model_id, (0.0, 0.0))
             cost = in_tok * in_cost + out_tok * out_cost
 
+        self.last_generation_metadata = _extract_openai_compatible_metadata(
+            data=data,
+            headers=resp.headers,
+            requested_max_tokens=max_tokens,
+        )
         confidence = self._logprob_confidence(choice)
         return text, confidence, in_tok, out_tok, cost
 
@@ -445,3 +459,67 @@ def _is_local_or_private_endpoint(base_url: str) -> bool:
     except ValueError:
         return hostname.endswith(".internal")
     return parsed_ip.is_private or parsed_ip.is_loopback
+
+
+def _extract_openai_compatible_metadata(
+    *,
+    data: dict,
+    headers,
+    requested_max_tokens: int,
+) -> dict[str, object]:
+    choice = data.get("choices", [{}])
+    first_choice = choice[0] if isinstance(choice, list) and choice else {}
+    finish_reason = None
+    if isinstance(first_choice, dict):
+        finish_reason = first_choice.get("finish_reason")
+
+    created = data.get("created")
+    completed_at = None
+    if isinstance(created, (int, float)):
+        completed_at = datetime.fromtimestamp(created, tz=timezone.utc).isoformat()
+    else:
+        completed_at = datetime.now(timezone.utc).isoformat()
+
+    thesis_meta = data.get("_thesis")
+    if not isinstance(thesis_meta, dict):
+        thesis_meta = {}
+
+    def _header_float(name: str) -> float | None:
+        value = headers.get(name)
+        if value is None:
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    latency_ms_server = thesis_meta.get("latency_ms")
+    if not isinstance(latency_ms_server, (int, float)):
+        latency_ms_server = _header_float("x-thesis-latency-ms")
+
+    energy_kwh = thesis_meta.get("energy_kwh")
+    if not isinstance(energy_kwh, (int, float)):
+        energy_kwh = _header_float("x-thesis-energy-kwh")
+
+    co2_g = thesis_meta.get("co2_g")
+    if not isinstance(co2_g, (int, float)):
+        co2_g = _header_float("x-thesis-co2-g")
+
+    gpu_power_w = thesis_meta.get("gpu_power_w")
+    if not isinstance(gpu_power_w, (int, float)):
+        gpu_power_w = _header_float("x-thesis-gpu-power-w")
+
+    infra_cost_usd = thesis_meta.get("infra_cost_usd")
+    if not isinstance(infra_cost_usd, (int, float)):
+        infra_cost_usd = _header_float("x-thesis-infra-cost-usd")
+
+    return {
+        "finish_reason": str(finish_reason) if finish_reason is not None else "unknown",
+        "completed_at": completed_at,
+        "effective_max_tokens": requested_max_tokens,
+        "latency_ms_server": float(latency_ms_server) if isinstance(latency_ms_server, (int, float)) else None,
+        "energy_kwh": float(energy_kwh) if isinstance(energy_kwh, (int, float)) else 0.0,
+        "co2_g": float(co2_g) if isinstance(co2_g, (int, float)) else 0.0,
+        "gpu_power_w": float(gpu_power_w) if isinstance(gpu_power_w, (int, float)) else 0.0,
+        "infra_cost_usd": float(infra_cost_usd) if isinstance(infra_cost_usd, (int, float)) else 0.0,
+    }

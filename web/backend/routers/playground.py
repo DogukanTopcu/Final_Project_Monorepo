@@ -9,6 +9,7 @@ respond with a vague 404.
 from __future__ import annotations
 
 import time
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -105,14 +106,25 @@ def playground_chat(
             )
         except Exception as exc:  # noqa: BLE001
             raise HTTPException(status_code=502, detail=str(exc)) from exc
-        latency_ms = (time.perf_counter() - t0) * 1000.0
+        total_latency_ms = (time.perf_counter() - t0) * 1000.0
+        metadata = dict(getattr(provider, "last_generation_metadata", {}) or {})
+        model_latency_ms = metadata.get("latency_ms_server")
+        model_latency_ms = float(model_latency_ms) if model_latency_ms is not None else None
 
     return PlaygroundChatResponse(
         model_id=req.model_id,
         text=text,
-        latency_ms=round(latency_ms, 2),
+        latency_ms=round(total_latency_ms, 2),
+        model_latency_ms=round(model_latency_ms, 2) if model_latency_ms is not None else None,
+        completed_at=datetime.fromisoformat(str(metadata.get("completed_at"))) if metadata.get("completed_at") else datetime.now(timezone.utc),
         input_tokens=in_tokens,
         output_tokens=out_tokens,
+        effective_max_tokens=int(metadata.get("effective_max_tokens") or budget),
         cost_usd=cost,
+        energy_kwh=float(metadata.get("energy_kwh") or 0.0),
+        co2_g=float(metadata.get("co2_g") or 0.0),
+        gpu_power_w=float(metadata.get("gpu_power_w") or 0.0),
+        infra_cost_usd=float(metadata.get("infra_cost_usd") or 0.0),
         base_url=resolve_base_url(req.model_id),
+        finish_reason=str(metadata.get("finish_reason") or "unknown"),
     )

@@ -23,8 +23,9 @@ def open_prompt(query: Query) -> str:
     """Open-ended prompt used for GSM8K."""
     return (
         f"{query.text}\n\n"
-        "Think step by step, then give the final numeric answer on the last line as:\n"
-        "Answer: <number>"
+        "Solve carefully and return only the final numeric answer on the last line as:\n"
+        "Answer: <number>\n"
+        "Do not include chain-of-thought or explanation."
     )
 
 

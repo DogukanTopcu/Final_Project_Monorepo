@@ -108,6 +108,7 @@ sudo docker run -d \
   vllm/vllm-openai:v0.19.1 \
   --model Qwen/Qwen3.5-4B \
   --served-model-name Qwen/Qwen3.5-4B \
+  --default-chat-template-kwargs '{"enable_thinking": false}' \
   --port 8000 \
   --max-model-len 8192
 ```
@@ -147,6 +148,11 @@ Verification:
 sudo docker logs -f mid-llm
 curl -fsS http://localhost:8000/v1/models | jq .
 ```
+
+For VM-side latency and energy metrics on the shared RTX6000 host:
+- run vLLM on host port `8001`
+- run `infrastructure/vllm/metrics_proxy.py` on host port `8000`
+- install the persistent service in [RTX6000_METRICS_PROXY.md](./RTX6000_METRICS_PROXY.md)
 
 ## 6. Optional Nebius Heavy Host
 

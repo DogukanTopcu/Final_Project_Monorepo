@@ -213,11 +213,23 @@ export default function PlaygroundPage() {
                 <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
                   <Badge variant="secondary">{entry.modelId}</Badge>
                   <span>{new Date(entry.createdAt).toLocaleTimeString()}</span>
-                  <span>· {entry.response.latency_ms.toFixed(0)} ms</span>
+                  <span>· total {entry.response.latency_ms.toFixed(0)} ms</span>
+                  <span>
+                    · model{" "}
+                    {Number(
+                      entry.response.model_latency_ms ?? entry.response.latency_ms,
+                    ).toFixed(0)}{" "}
+                    ms
+                  </span>
                   <span>
                     · {entry.response.input_tokens} in / {entry.response.output_tokens} out
                   </span>
+                  <span>
+                    · cap {entry.response.effective_max_tokens ?? "—"}
+                  </span>
                   <span>· ${entry.response.cost_usd.toFixed(6)}</span>
+                  <span>· {Number(entry.response.energy_kwh ?? 0).toFixed(6)} kWh</span>
+                  <span>· {Number(entry.response.co2_g ?? 0).toFixed(3)} gCO₂</span>
                 </div>
                 <div className="mb-2 text-xs text-zinc-500">Prompt</div>
                 <pre className="whitespace-pre-wrap rounded-md bg-zinc-50 p-2 text-xs text-zinc-700">

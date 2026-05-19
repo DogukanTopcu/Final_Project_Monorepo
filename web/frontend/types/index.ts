@@ -252,11 +252,16 @@ export interface PlaygroundChatResponse {
   model_id: string;
   text: string;
   latency_ms: number;
+  model_latency_ms?: number | null;
+  completed_at?: string | null;
   input_tokens: number;
   output_tokens: number;
+  effective_max_tokens?: number;
   cost_usd: number;
   energy_kwh?: number | null;
   co2_g?: number | null;
+  gpu_power_w?: number | null;
+  infra_cost_usd?: number | null;
   base_url?: string | null;
   finish_reason?: string | null;
 }

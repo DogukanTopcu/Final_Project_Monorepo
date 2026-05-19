@@ -43,6 +43,7 @@ services:
     command: >
       --model Qwen/Qwen3.5-4B
       --served-model-name Qwen/Qwen3.5-4B
+      --default-chat-template-kwargs '{"enable_thinking": false}'
       --port 8000
       --max-model-len 32768
       --gpu-memory-utilization 0.75
@@ -119,6 +120,7 @@ services:
     command: >
       --model Qwen/Qwen3.5-27B
       --served-model-name Qwen/Qwen3.5-27B
+      --default-chat-template-kwargs '{"enable_thinking": false}'
       --port 8000
       --max-model-len 32768
       --gpu-memory-utilization 0.88
@@ -195,6 +197,7 @@ services:
     command: >
       --model Qwen/Qwen3.5-35B-A3B
       --served-model-name Qwen/Qwen3.5-35B-A3B
+      --default-chat-template-kwargs '{"enable_thinking": false}'
       --port 8000
       --max-model-len 32768
       --gpu-memory-utilization 0.90
