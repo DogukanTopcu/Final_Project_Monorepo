@@ -39,6 +39,7 @@ class ExperimentConfig:
     benchmark: str                 # "mmlu" | "arc" | "hellaswag" | "gsm8k" | "truthfulqa"
     n_samples: int = 100
     slm: str | None = "qwen3.5-4b"  # may be None for monolithic
+    secondary_slm: str | None = None  # required for blackboard variants
     llm: str | None = "llama3.3-70b"  # may be None when not needed
     ensemble_slms: list[str] = field(default_factory=list)  # multi-SLM ensemble selections
     slm_temperature: float = 0.0

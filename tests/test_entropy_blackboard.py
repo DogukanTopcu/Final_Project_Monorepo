@@ -4,6 +4,14 @@ from core.models import OpenAICompatibleModel, ModelProvider
 from core.types import Query
 from architectures.entropy_based_blackboard import DecentralizedBlackboardArchitecture
 
+RUN_LOCAL = os.getenv("RUN_LOCAL_BLACKBOARD_TESTS") == "1"
+
+SLM_PRIMARY_ID = os.getenv("BLACKBOARD_SLM_PRIMARY_ID", "qwen2.5:3b")
+SLM_PRIMARY_URL = os.getenv("BLACKBOARD_SLM_PRIMARY_URL", "http://localhost:11434/v1")
+SLM_SECONDARY_ID = os.getenv("BLACKBOARD_SLM_SECONDARY_ID", "llama3.2")
+SLM_SECONDARY_URL = os.getenv("BLACKBOARD_SLM_SECONDARY_URL", "http://localhost:11434/v1")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
 # 1. Native Gemini API Provider (Bulletproof Token Handling)
 class GeminiCloudProvider(ModelProvider):
     def __init__(self, api_key: str):
@@ -44,23 +52,26 @@ class GeminiCloudProvider(ModelProvider):
             return "API_CRASH_FALLBACK_TEXT", 0.0, 0, 0, 0.0
 
 
-# 2. Initialize endpoints
-API_KEY = "AIzaSyAVDkdk_D1jrRg6tt1u5igGVeIAXo1egNo" # Put your NEW key here!
-
 slm_primary = OpenAICompatibleModel(
-    model_id="qwen2.5:3b", 
-    base_url="http://localhost:11434/v1"
+    model_id=SLM_PRIMARY_ID,
+    base_url=SLM_PRIMARY_URL,
 )
 
 slm_secondary = OpenAICompatibleModel(
-    model_id="llama3.2", 
-    base_url="http://localhost:11434/v1"
+    model_id=SLM_SECONDARY_ID,
+    base_url=SLM_SECONDARY_URL,
 )
 
-llm_sweeper = GeminiCloudProvider(api_key=API_KEY)
+llm_sweeper = GeminiCloudProvider(api_key=GEMINI_API_KEY or "")
 
 
 def run_test():
+    if not RUN_LOCAL:
+        print("[SKIP] Set RUN_LOCAL_BLACKBOARD_TESTS=1 to run this local-only test.")
+        return
+    if not GEMINI_API_KEY:
+        print("[SKIP] Set GEMINI_API_KEY to run this local-only test.")
+        return
     print("\n🚀 Initializing ENTROPY-BASED Blackboard Swarm...")
     arch = DecentralizedBlackboardArchitecture(
         slm=slm_primary,

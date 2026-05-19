@@ -3,24 +3,37 @@ from core.models import OpenAICompatibleModel
 from core.types import Query
 from architectures.blackboard import DecentralizedBlackboardArchitecture
 
-os.environ["OPENAI_API_KEY"] = "AIzaSyAVDkdk_D1jrRg6tt1u5igGVeIAXo1egNo"
+RUN_LOCAL = os.getenv("RUN_LOCAL_BLACKBOARD_TESTS") == "1"
+
+SLM_PRIMARY_ID = os.getenv("BLACKBOARD_SLM_PRIMARY_ID", "qwen2.5:3b")
+SLM_PRIMARY_URL = os.getenv("BLACKBOARD_SLM_PRIMARY_URL", "http://localhost:11434/v1")
+SLM_SECONDARY_ID = os.getenv("BLACKBOARD_SLM_SECONDARY_ID", "llama3.2")
+SLM_SECONDARY_URL = os.getenv("BLACKBOARD_SLM_SECONDARY_URL", "http://localhost:11434/v1")
+LLM_SWEEPER_ID = os.getenv("BLACKBOARD_LLM_ID", "gemini-2.5-flash")
+LLM_SWEEPER_URL = os.getenv(
+    "BLACKBOARD_LLM_URL",
+    "https://generativelanguage.googleapis.com/v1beta/openai/",
+)
 
 slm_primary = OpenAICompatibleModel(
-    model_id="qwen2.5:3b", 
-    base_url="http://localhost:11434/v1"
+    model_id=SLM_PRIMARY_ID,
+    base_url=SLM_PRIMARY_URL,
 )
 
 slm_secondary = OpenAICompatibleModel(
-    model_id="llama3.2", 
-    base_url="http://localhost:11434/v1"
+    model_id=SLM_SECONDARY_ID,
+    base_url=SLM_SECONDARY_URL,
 )
 
 llm_sweeper = OpenAICompatibleModel(
-    model_id="gemini-2.5-flash", # Or "gemini-2.5-pro" for heavier reasoning
-    base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+    model_id=LLM_SWEEPER_ID,
+    base_url=LLM_SWEEPER_URL,
 )
 
 def run_test():
+    if not RUN_LOCAL:
+        print("[SKIP] Set RUN_LOCAL_BLACKBOARD_TESTS=1 to run this local-only test.")
+        return
     print("\n🚀 Initializing Decentralized Blackboard Swarm...")
     arch = DecentralizedBlackboardArchitecture(
         slm=slm_primary,

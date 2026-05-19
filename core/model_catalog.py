@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
+import os
 
 
 @dataclass(frozen=True)
@@ -150,7 +152,27 @@ def get_model_spec(model_id: str) -> ModelSpec | None:
     return MODEL_BY_ID.get(model_id)
 
 
+def _model_id_overrides() -> dict[str, str]:
+    raw = os.getenv("THESIS_MODEL_ID_OVERRIDES", "").strip()
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    overrides: dict[str, str] = {}
+    for key, value in data.items():
+        if isinstance(key, str) and isinstance(value, str) and key.strip() and value.strip():
+            overrides[key.strip()] = value.strip()
+    return overrides
+
+
 def get_served_model_id(model_id: str) -> str | None:
+    overrides = _model_id_overrides()
+    if model_id in overrides:
+        return overrides[model_id]
     spec = get_model_spec(model_id)
     if spec is None:
         return None
@@ -162,6 +184,9 @@ def get_expected_runtime_model_ids(model_id: str) -> set[str]:
     if spec is None:
         return set()
     expected = {spec.provider_model}
+    overrides = _model_id_overrides()
+    if model_id in overrides:
+        expected.add(overrides[model_id])
     if spec.openai_compatible_model:
         expected.add(spec.openai_compatible_model)
     return {item for item in expected if item}

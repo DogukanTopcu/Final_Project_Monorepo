@@ -2,9 +2,9 @@
 CLI entry point for running experiments.
 
 Usage:
-    python -m experiments.run_experiment --architecture routing --benchmark mmlu --n_samples 100
+    python -m experiments.run_experiment --architecture blackboard --benchmark truthfulqa --n_samples 100
     python -m experiments.run_experiment --config experiments/configs/arch_a.yaml
-    python -m experiments.run_experiment --architecture all --benchmark mmlu --n_samples 50
+    python -m experiments.run_experiment --architecture all --benchmark halueval --n_samples 50
 """
 from __future__ import annotations
 
@@ -21,16 +21,20 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--config", help="Path to YAML config file")
     p.add_argument(
         "--architecture",
-        choices=["routing", "multi_agent", "ensemble", "all"],
+        # ADDED: The two new blackboard variants
+        choices=["routing", "multi_agent", "ensemble", "blackboard", "entropy_blackboard", "all"],
         default="routing",
     )
     p.add_argument(
         "--benchmark",
-        choices=["mmlu", "arc", "hellaswag", "gsm8k", "truthfulqa"],
+        # ADDED: halueval for hallucination detection
+        choices=["mmlu", "arc", "hellaswag", "gsm8k", "truthfulqa", "halueval"],
         default="mmlu",
     )
     p.add_argument("--n_samples", type=int, default=100)
     p.add_argument("--slm", default="qwen3.5-4b")
+    # Secondary SLM for swarm architectures
+    p.add_argument("--secondary_slm", default=None)
     p.add_argument("--llm", default="llama3.3-70b")
     p.add_argument("--slm_temperature", type=float, default=0.0)
     p.add_argument("--llm_temperature", type=float, default=0.0)
@@ -65,11 +69,14 @@ def parse_args() -> argparse.Namespace:
 
 
 def build_config(args: argparse.Namespace, architecture: str) -> ExperimentConfig:
+    if architecture in {"blackboard", "entropy_blackboard"} and not args.secondary_slm:
+        raise ValueError("blackboard architectures require --secondary_slm")
     return ExperimentConfig(
         architecture=architecture,
         benchmark=args.benchmark,
         n_samples=args.n_samples,
         slm=args.slm,
+        secondary_slm=args.secondary_slm,
         llm=args.llm,
         slm_temperature=args.slm_temperature,
         llm_temperature=args.llm_temperature,
@@ -98,7 +105,7 @@ def main() -> None:
         return
 
     architectures = (
-        ["routing", "multi_agent", "ensemble"]
+        ["routing", "multi_agent", "ensemble", "blackboard", "entropy_blackboard"]
         if args.architecture == "all"
         else [args.architecture]
     )
