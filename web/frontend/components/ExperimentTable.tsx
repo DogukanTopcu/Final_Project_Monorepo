@@ -72,7 +72,11 @@ export function ExperimentTable() {
                       ? exp.llm ?? "—"
                       : exp.architecture === "ensemble" && exp.ensemble_slms?.length
                         ? `${exp.ensemble_slms.join(", ")}${exp.llm ? ` → tiebreak ${exp.llm}` : ""}`
-                        : `${exp.slm ?? "—"} / ${exp.llm ?? "—"}`}
+                        : exp.architecture === "pure_swarm"
+                          ? `${exp.slm ?? "—"} / ${exp.secondary_slm ?? "—"}`
+                          : exp.architecture === "blackboard" || exp.architecture === "entropy_blackboard"
+                            ? `${exp.slm ?? "—"} / ${exp.secondary_slm ?? "—"} / ${exp.llm ?? "—"}`
+                            : `${exp.slm ?? "—"} / ${exp.llm ?? "—"}`}
                   </td>
                   <td className="py-3 pr-4">
                     <Badge variant={statusVariant[exp.status]}>{exp.status}</Badge>
