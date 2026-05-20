@@ -49,6 +49,20 @@ HOSTS: tuple[HostSpec, ...] = (
         model_ids=("llama3.2-3b",),
     ),
     HostSpec(
+        host_id="l4-ministral-3b",
+        label="GCP L4 — ministral3-3b",
+        shared=False,
+        description="Dedicated L4 host serving ministral3-3b only.",
+        model_ids=("ministral3-3b",),
+    ),
+    HostSpec(
+        host_id="l4-phi4-mini",
+        label="GCP L4 — phi4-mini",
+        shared=False,
+        description="Dedicated L4 host serving phi4-mini only.",
+        model_ids=("phi4-mini",),
+    ),
+    HostSpec(
         host_id="rtx6000",
         label="GCP RTX6000 — shared mid-tier",
         shared=True,

@@ -26,7 +26,7 @@ The working deployment model from the current experiments is:
 | Layer | Runtime | Purpose |
 |---|---|---|
 | Control plane | Local machine | FastAPI backend, Next.js frontend, MLflow, experiment runner |
-| SLM tier | GCP L4 hosts | `gemma4-4b`, `qwen3.5-4b`, `llama3.2-3b` |
+| SLM tier | GCP L4 hosts | `gemma4-4b`, `qwen3.5-4b`, `llama3.2-3b`, `ministral3-3b`, `phi4-mini` |
 | Mid-tier LLM tier | GCP G4 / RTX PRO 6000 shared host | `gpt-oss-20b`, `qwen3.5-27b`, `gemma4-31b`, `qwen3.5-35b-a3b`, `gemma4-26b-a4b` |
 | Heavy tier | Optional Nebius H100/H200 class host | `llama3.3-70b`, `gpt-oss-120b` |
 
@@ -45,7 +45,7 @@ These aliases are the source of truth used by the backend, CLI runner, and front
 
 | Tier | Alias |
 |---|---|
-| SLM | `gemma4-4b`, `qwen3.5-4b`, `llama3.2-3b` |
+| SLM | `gemma4-4b`, `qwen3.5-4b`, `llama3.2-3b`, `ministral3-3b`, `phi4-mini` |
 | Light LLM | `gpt-oss-20b`, `qwen3.5-27b`, `gemma4-31b` |
 | MoE / mid-tier | `qwen3.5-35b-a3b`, `gemma4-26b-a4b` |
 | Heavy LLM | `llama3.3-70b`, `gpt-oss-120b` |

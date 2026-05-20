@@ -87,6 +87,8 @@ Models:
 - `gemma4-4b`
 - `qwen3.5-4b`
 - `llama3.2-3b`
+- `ministral3-3b`
+- `phi4-mini`
 
 Host checklist:
 
@@ -218,6 +220,8 @@ Example:
 VLLM_QWEN35_4B_URL=http://<L4_QWEN_IP>:8000/v1
 VLLM_GEMMA4_E4B_URL=http://<L4_GEMMA_IP>:8000/v1
 VLLM_LLAMA32_3B_URL=http://<L4_LLAMA_IP>:8000/v1
+VLLM_MINISTRAL3_3B_URL=http://<L4_MINISTRAL_IP>:8000/v1
+VLLM_PHI4_MINI_URL=http://<L4_PHI4_IP>:8000/v1
 
 VLLM_GPT_OSS_20B_URL=http://<RTX_IP>:8000/v1
 VLLM_QWEN35_27B_URL=http://<RTX_IP>:8000/v1

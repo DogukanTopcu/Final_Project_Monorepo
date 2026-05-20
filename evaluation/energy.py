@@ -151,6 +151,10 @@ _DEFAULT_RESOURCE_PROFILES: dict[str, ResourceProfile] = {
     "Qwen/Qwen3.5-4B": ResourceProfile("gcp-l4", 0.75, 72.0, "Single L4 host"),
     "llama3.2-3b": ResourceProfile("gcp-l4", 0.75, 72.0, "Single L4 host"),
     "meta-llama/Llama-3.2-3B-Instruct": ResourceProfile("gcp-l4", 0.75, 72.0, "Single L4 host"),
+    "ministral3-3b": ResourceProfile("gcp-l4", 0.75, 72.0, "Single L4 host"),
+    "mistralai/Ministral-3-3B-Instruct-2512": ResourceProfile("gcp-l4", 0.75, 72.0, "Single L4 host"),
+    "phi4-mini": ResourceProfile("gcp-l4", 0.75, 72.0, "Single L4 host"),
+    "microsoft/Phi-4-mini-instruct": ResourceProfile("gcp-l4", 0.75, 72.0, "Single L4 host"),
     "gpt-oss-20b": ResourceProfile("gcp-g4-rtx6000", 2.35, 320.0, "Shared RTX PRO 6000 host"),
     "openai/gpt-oss-20b": ResourceProfile("gcp-g4-rtx6000", 2.35, 320.0, "Shared RTX PRO 6000 host"),
     "qwen3.5-27b": ResourceProfile("gcp-g4-rtx6000", 2.35, 320.0, "Shared RTX PRO 6000 host"),
@@ -178,6 +182,8 @@ _MODEL_PARAMS: dict[str, float] = {
     "google/gemma-4-E4B-it": 4.5e9,
     "Qwen/Qwen3.5-4B": 4e9,
     "meta-llama/Llama-3.2-3B-Instruct": 3e9,
+    "mistralai/Ministral-3-3B-Instruct-2512": 3e9,
+    "microsoft/Phi-4-mini-instruct": 4e9,
 }
 
 

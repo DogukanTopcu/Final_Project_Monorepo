@@ -139,6 +139,30 @@ SELECTED_MODELS: tuple[ModelSpec, ...] = (
         base_url_env="VLLM_LLAMA32_3B_URL",
         base_url_default="http://localhost:8003/v1",
     ),
+    ModelSpec(
+        id="ministral3-3b",
+        name="Ministral 3 (3B)",
+        family="Ministral",
+        tier="slm",
+        kind="slm",
+        provider="openai_compatible",
+        provider_model="mistralai/Ministral-3-3B-Instruct-2512",
+        openai_compatible_model="mistralai/Ministral-3-3B-Instruct-2512",
+        base_url_env="VLLM_MINISTRAL3_3B_URL",
+        base_url_default="http://localhost:8009/v1",
+    ),
+    ModelSpec(
+        id="phi4-mini",
+        name="Phi 4 Mini",
+        family="Phi",
+        tier="slm",
+        kind="slm",
+        provider="openai_compatible",
+        provider_model="microsoft/Phi-4-mini-instruct",
+        openai_compatible_model="microsoft/Phi-4-mini-instruct",
+        base_url_env="VLLM_PHI4_MINI_URL",
+        base_url_default="http://localhost:8010/v1",
+    ),
 )
 
 MODEL_BY_ID: dict[str, ModelSpec] = {model.id: model for model in SELECTED_MODELS}
