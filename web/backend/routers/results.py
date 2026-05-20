@@ -182,13 +182,14 @@ async def get_result(result_id: str, settings: Settings = Depends(get_settings))
             pass
 
     exp = experiment_service.get_experiment(result_id)
-    if exp and exp.metrics:
+    if exp:
         return ResultDetail(
             id=result_id,
             experiment_id=exp.experiment_id,
             architecture=exp.architecture.value,
             benchmark=exp.benchmark.value,
-            metrics=exp.metrics,
+            metrics=exp.metrics or {},
+            samples=[],
             config=exp.config_overrides,
             created_at=exp.created_at,
         )
