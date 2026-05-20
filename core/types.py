@@ -62,6 +62,8 @@ class ExperimentConfig:
     llm_tiebreak: bool = False
     # Speculative params
     speculative_acceptance_threshold: float = 0.7
+    # Blackboard params
+    cost_weight: float = 0.15
     # Runtime
     dry_run: bool = False
     seed: int = 42

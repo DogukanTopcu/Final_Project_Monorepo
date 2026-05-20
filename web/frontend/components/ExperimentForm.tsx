@@ -29,6 +29,7 @@ const MODE_DEFAULT_ARCH: Record<ArchitectureMode, Architecture> = {
   monolithic: "monolithic",
   hybrid: "routing",
   ensemble: "ensemble",
+  swarm: "blackboard",
 };
 
 export function ExperimentForm() {
@@ -44,6 +45,7 @@ export function ExperimentForm() {
   const [benchmark, setBenchmark] = useState<Benchmark>("mmlu");
   const [nSamples, setNSamples] = useState(100);
   const [slm, setSlm] = useState("");
+  const [secondarySlm, setSecondarySlm] = useState("");
   const [llm, setLlm] = useState("");
   const [ensembleSlms, setEnsembleSlms] = useState<string[]>([]);
   const [paramValues, setParamValues] = useState<Record<string, unknown>>({});
@@ -84,6 +86,12 @@ export function ExperimentForm() {
       const preferred = models.slm.find((m) => m.configured) ?? models.slm[0];
       setSlm(preferred.id);
     }
+    if (!secondarySlm && models.slm.length) {
+      // Default secondary SLM to second configured SLM (different from primary)
+      const configured = models.slm.filter((m) => m.configured);
+      const preferred = configured.find((m) => m.id !== slm) ?? configured[1] ?? models.slm[1] ?? models.slm[0];
+      if (preferred) setSecondarySlm(preferred.id);
+    }
     if (!llm && models.llm.length) {
       const preferred =
         models.llm.find((m) => m.configured && m.id === "gpt-oss-20b") ??
@@ -91,7 +99,7 @@ export function ExperimentForm() {
         models.llm[0];
       setLlm(preferred.id);
     }
-  }, [models, slm, llm]);
+  }, [models, slm, secondarySlm, llm]);
 
   // When the user switches into ensemble mode for the first time, seed it
   // with their single SLM pick so the form is never empty.
@@ -120,6 +128,7 @@ export function ExperimentForm() {
       involvedModelIds.push(slm);
     }
     if (architecture === "ensemble") involvedModelIds.push(...ensembleSlms);
+    if (architecture === "blackboard" && secondarySlm) involvedModelIds.push(secondarySlm);
 
     const sharedHostsTouched = new Set<string>();
     const modelsById = new Map<string, string>(); // model_id -> host_id
@@ -149,6 +158,7 @@ export function ExperimentForm() {
         if (ensembleSlms.length === 0) return false;
       } else if (!slm) return false;
     }
+    if (architecture === "blackboard" && !secondarySlm) return false;
     return true;
   })();
 
@@ -169,6 +179,7 @@ export function ExperimentForm() {
       benchmark,
       n_samples: nSamples,
       slm: archSpec.requires_slm && architecture !== "ensemble" ? slm : null,
+      secondary_slm: architecture === "blackboard" ? secondarySlm : null,
       llm: archSpec.requires_llm ? llm : architecture === "ensemble" && paramValues.llm_tiebreak ? llm : null,
       ensemble_slms: architecture === "ensemble" ? ensembleSlms : [],
       config_overrides: configOverrides,
@@ -253,11 +264,25 @@ export function ExperimentForm() {
 
             {archSpec?.requires_slm && architecture !== "ensemble" && (
               <ModelPicker
-                label="SLM"
-                description="The small model that drafts answers."
+                label={architecture === "blackboard" ? "Primary SLM" : "SLM"}
+                description={
+                  architecture === "blackboard"
+                    ? "First autonomous worker (e.g. Qwen 3.5-4B). Bids on tasks from the shared board."
+                    : "The small model that drafts answers."
+                }
                 models={models?.slm ?? []}
                 value={slm}
                 onChange={setSlm}
+              />
+            )}
+
+            {architecture === "blackboard" && (
+              <ModelPicker
+                label="Secondary SLM"
+                description="Second autonomous worker (e.g. Llama 3.2-3B). Competes with the primary SLM."
+                models={models?.slm ?? []}
+                value={secondarySlm}
+                onChange={setSecondarySlm}
               />
             )}
 
@@ -276,11 +301,19 @@ export function ExperimentForm() {
             {(archSpec?.requires_llm ||
               (architecture === "ensemble" && Boolean(paramValues.llm_tiebreak))) && (
               <ModelPicker
-                label={architecture === "ensemble" ? "Tiebreak LLM" : "LLM"}
+                label={
+                  architecture === "ensemble"
+                    ? "Tiebreak LLM"
+                    : architecture === "blackboard"
+                      ? "Heavy Sweeper (LLM)"
+                      : "LLM"
+                }
                 description={
                   architecture === "ensemble"
                     ? "Called only when SLMs don't reach a majority."
-                    : "The large model used as fallback / verifier / arbitrator."
+                    : architecture === "blackboard"
+                      ? "Wakes up only when a task exceeds its TTL. Keep it heavy (70B)."
+                      : "The large model used as fallback / verifier / arbitrator."
                 }
                 models={models?.llm ?? []}
                 value={llm}

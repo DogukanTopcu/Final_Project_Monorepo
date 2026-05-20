@@ -199,6 +199,30 @@ _SPECS: list[ArchitectureSpec] = [
             *_temp_params(),
         ],
     ),
+    ArchitectureSpec(
+        id=Architecture.BLACKBOARD,
+        name="Decentralized Blackboard",
+        mode=ArchitectureMode.SWARM,
+        description=(
+            "Event-driven bossless SLM swarm. Two SLMs bid on tasks autonomously; "
+            "the 70B model wakes only when a task stalls past its TTL."
+        ),
+        requires_slm=True,
+        requires_llm=True,
+        requires_secondary_slm=True,
+        params=[
+            ArchitectureParamSpec(
+                key="cost_weight",
+                label="Cost weight",
+                type="float",
+                default=0.15,
+                min=0.0,
+                max=1.0,
+                description="Higher → swarm avoids the heavy sweeper longer.",
+            ),
+            *_temp_params(),
+        ],
+    ),
 ]
 
 

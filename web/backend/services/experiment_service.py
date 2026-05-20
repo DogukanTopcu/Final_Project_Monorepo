@@ -57,6 +57,7 @@ def _build_persisted_experiment_response(path: Path) -> ExperimentResponse | Non
             benchmark=Benchmark(benchmark),
             n_samples=int(config.get("n_samples", 0)),
             slm=str(config.get("slm") or "") or None,
+            secondary_slm=str(config.get("secondary_slm") or "") or None,
             llm=str(config.get("llm") or "") or None,
             ensemble_slms=ensemble_slms,
             config_overrides=config,
@@ -113,6 +114,7 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         "slm_max_tokens",
         "llm_max_tokens",
         "speculative_acceptance_threshold",
+        "cost_weight",
     }
     unexpected = sorted(set(overrides) - allowed_override_keys)
     if unexpected:
@@ -142,6 +144,7 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         benchmark=params.benchmark.value,
         n_samples=params.n_samples,
         slm=params.slm,
+        secondary_slm=params.secondary_slm,
         llm=params.llm,
         ensemble_slms=ensemble_slms,
         slm_temperature=slm_temperature,
@@ -158,6 +161,7 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         speculative_acceptance_threshold=float(
             overrides.get("speculative_acceptance_threshold", 0.7)
         ),
+        cost_weight=float(overrides.get("cost_weight", 0.15)),
         dry_run=bool(overrides.get("dry_run", False)),
         seed=int(overrides.get("seed", 42)),
         output_dir=settings.results_dir,
@@ -220,6 +224,13 @@ def _run_experiment(
                 candidates.extend(params.ensemble_slms or [])
                 if params.slm and not params.ensemble_slms:
                     candidates.append(params.slm)
+            elif params.architecture.value == "blackboard":
+                if params.llm:
+                    candidates.append(params.llm)
+                if params.slm:
+                    candidates.append(params.slm)
+                if params.secondary_slm:
+                    candidates.append(params.secondary_slm)
             else:
                 if params.llm:
                     candidates.append(params.llm)
@@ -344,6 +355,18 @@ def _validate_architecture_models(params: ExperimentCreate, *, require_runtime: 
             _validate_model_selection(params.llm, "llm", require_runtime=require_runtime)
         return
 
+    if arch == "blackboard":
+        if not params.slm:
+            raise ValueError("Blackboard requires a Primary SLM selection.")
+        if not params.secondary_slm:
+            raise ValueError("Blackboard requires a Secondary SLM selection.")
+        if not params.llm:
+            raise ValueError("Blackboard requires an LLM sweeper selection.")
+        _validate_model_selection(params.slm, "slm", require_runtime=require_runtime)
+        _validate_model_selection(params.secondary_slm, "slm", require_runtime=require_runtime)
+        _validate_model_selection(params.llm, "llm", require_runtime=require_runtime)
+        return
+
     # routing / multi_agent / multi_agent_crew / speculative — need both
     if not params.slm or not params.llm:
         raise ValueError(f"{arch} requires both an SLM and an LLM selection.")
@@ -365,6 +388,7 @@ def launch_experiment(params: ExperimentCreate, settings: Settings) -> Experimen
         benchmark=params.benchmark,
         n_samples=params.n_samples,
         slm=params.slm,
+        secondary_slm=params.secondary_slm,
         llm=params.llm,
         ensemble_slms=list(params.ensemble_slms or []),
         config_overrides=params.config_overrides,

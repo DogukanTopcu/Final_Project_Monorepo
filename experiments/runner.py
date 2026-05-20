@@ -114,6 +114,7 @@ class ExperimentRunner:
             arch_kwargs["slms"] = ensemble_slms
         if cfg.architecture in ["blackboard", "entropy_blackboard"]:
             arch_kwargs["secondary_slm"] = secondary_slm
+            arch_kwargs["cost_weight"] = getattr(cfg, "cost_weight", 0.15)
 
         arch_kwargs["slm_temperature"] = cfg.slm_temperature
         arch_kwargs["llm_temperature"] = cfg.llm_temperature

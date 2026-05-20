@@ -14,12 +14,14 @@ class Architecture(str, Enum):
     ENSEMBLE = "ensemble"
     MULTI_AGENT_CREW = "multi_agent_crew"
     SPECULATIVE = "speculative"
+    BLACKBOARD = "blackboard"
 
 
 class ArchitectureMode(str, Enum):
     MONOLITHIC = "monolithic"
     HYBRID = "hybrid"
     ENSEMBLE = "ensemble"
+    SWARM = "swarm"
 
 
 class Benchmark(str, Enum):
@@ -44,6 +46,7 @@ class ExperimentCreate(BaseModel):
     benchmark: Benchmark
     n_samples: int = Field(default=100, ge=1, le=10000)
     slm: str | None = None
+    secondary_slm: str | None = None
     llm: str | None = None
     ensemble_slms: list[str] = Field(default_factory=list)
     config_overrides: dict[str, Any] = Field(default_factory=dict)
@@ -56,6 +59,7 @@ class ExperimentResponse(BaseModel):
     benchmark: Benchmark
     n_samples: int
     slm: str | None = None
+    secondary_slm: str | None = None
     llm: str | None = None
     ensemble_slms: list[str] = Field(default_factory=list)
     config_overrides: dict[str, Any] = Field(default_factory=dict)
@@ -190,6 +194,7 @@ class ArchitectureSpec(BaseModel):
     requires_slm: bool
     requires_llm: bool
     supports_multi_slm: bool = False
+    requires_secondary_slm: bool = False
     experimental: bool = False
     params: list[ArchitectureParamSpec] = Field(default_factory=list)
 

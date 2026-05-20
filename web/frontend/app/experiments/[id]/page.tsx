@@ -325,6 +325,7 @@ function getCoreTextFields(
       "ground_truth",
     ],
     multi_agent_crew: ["prompt_text", "slm_text", "final_text", "predicted", "ground_truth"],
+    blackboard: ["prompt_text", "final_text", "predicted", "ground_truth"],
     unknown: ["prompt_text", "slm_text", "final_text", "predicted", "ground_truth"],
   };
 
@@ -518,6 +519,21 @@ function getArchitectureDetailEntries(
     return hybridEntries;
   }
 
+  if (architecture === "blackboard") {
+    return collectScalarEntries(sample, [
+      "final_model_id",
+      "confidence",
+      "llm_calls",
+      "latency_ms",
+      "cost_usd",
+      "api_cost_usd",
+      "infra_cost_usd",
+      "energy_kwh",
+      "co2_g",
+      "gpu_power_w",
+    ]);
+  }
+
   if (architecture === "multi_agent_crew") {
     const entries = collectScalarEntries(sample, [
       "final_model_id",
@@ -635,6 +651,19 @@ function getOverviewRows({
     rows.push({
       label: "Crew",
       value: "reasoning / code / factual specialists",
+    });
+  } else if (architecture === "blackboard") {
+    rows.push({
+      label: "Primary SLM",
+      value: slm ?? "—",
+    });
+    rows.push({
+      label: "Secondary SLM",
+      value: (config.secondary_slm as string | undefined) ?? "—",
+    });
+    rows.push({
+      label: "Heavy Sweeper",
+      value: llm ?? "—",
     });
   } else {
     rows.push({
@@ -858,6 +887,16 @@ export default function ExperimentDetailPage({
         <p>
           Domain-routed crew of specialist SLMs (reasoning / code / factual). The crew
           self-classifies each query and routes it to the best-fit agent without an LLM fallback.
+        </p>
+      );
+    }
+    if (architecture === "blackboard") {
+      const secondarySlm = config.secondary_slm as string | undefined;
+      return (
+        <p>
+          Bossless swarm: <strong>{slm}</strong> and <strong>{secondarySlm ?? "secondary SLM"}</strong>{" "}
+          competed autonomously on the shared board. <strong>{llm}</strong> acted as the heavy
+          sweeper — woken only when a task exceeded its TTL.
         </p>
       );
     }

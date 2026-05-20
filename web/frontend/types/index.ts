@@ -4,9 +4,10 @@ export type Architecture =
   | "multi_agent"
   | "ensemble"
   | "multi_agent_crew"
-  | "speculative";
+  | "speculative"
+  | "blackboard";
 
-export type ArchitectureMode = "monolithic" | "hybrid" | "ensemble";
+export type ArchitectureMode = "monolithic" | "hybrid" | "ensemble" | "swarm";
 
 export type Benchmark =
   | "mmlu"
@@ -28,6 +29,7 @@ export interface ExperimentCreate {
   benchmark: Benchmark;
   n_samples: number;
   slm?: string | null;
+  secondary_slm?: string | null;
   llm?: string | null;
   ensemble_slms?: string[];
   config_overrides?: Record<string, unknown>;
@@ -40,6 +42,7 @@ export interface ExperimentResponse {
   benchmark: Benchmark;
   n_samples: number;
   slm: string | null;
+  secondary_slm: string | null;
   llm: string | null;
   ensemble_slms: string[];
   config_overrides: Record<string, unknown>;
@@ -248,6 +251,7 @@ export interface ArchitectureSpec {
   requires_slm: boolean;
   requires_llm: boolean;
   supports_multi_slm: boolean;
+  requires_secondary_slm?: boolean;
   experimental: boolean;
   params: ArchitectureParamSpec[];
 }

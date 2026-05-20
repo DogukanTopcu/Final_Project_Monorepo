@@ -22,6 +22,12 @@ const modes: Array<{ id: ArchitectureMode; title: string; subtitle: string; deta
     subtitle: "Multiple SLMs vote",
     detail: "Several small models vote; an LLM may break ties.",
   },
+  {
+    id: "swarm",
+    title: "Swarm",
+    subtitle: "Bossless SLM swarm",
+    detail: "Two SLMs bid on tasks autonomously; 70B wakes only when a task stalls.",
+  },
 ];
 
 export function ModePicker({
@@ -32,7 +38,7 @@ export function ModePicker({
   onChange: (mode: ArchitectureMode) => void;
 }) {
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
       {modes.map((mode) => {
         const active = value === mode.id;
         return (
