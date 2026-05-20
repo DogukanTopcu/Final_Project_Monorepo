@@ -42,6 +42,10 @@ class DecentralizedBlackboardArchitecture(BaseArchitecture):
         slm: ModelProvider,  # Primary Specialist (e.g., Qwen 4B)
         secondary_slm: ModelProvider,  # Complementary Specialist (e.g., Llama 3.2 3B)
         llm: ModelProvider,  # Heavy Sweeper (e.g., Llama 3.3 70B)
+        slm_temperature: float = 0.0,
+        llm_temperature: float = 0.0,
+        slm_max_tokens: int = 0,
+        llm_max_tokens: int = 0,
         cost_weight: float = 0.15,
         task_type: str = "mcq",
     ) -> None:
@@ -49,6 +53,10 @@ class DecentralizedBlackboardArchitecture(BaseArchitecture):
         self.secondary_slm = secondary_slm
         self.cost_weight = cost_weight
         self.task_type = task_type
+        self.slm_temperature = slm_temperature
+        self.llm_temperature = llm_temperature
+        self.slm_max_tokens = slm_max_tokens
+        self.llm_max_tokens = llm_max_tokens
 
         # Metric aggregation across async workers
         self.total_in = 0
@@ -162,7 +170,7 @@ class DecentralizedBlackboardArchitecture(BaseArchitecture):
             now = time.time()
             for task_id, task in list(blackboard.items()):
                 is_sweeping_needed = (
-                    task.status in [TaskStatus.OPEN, TaskStatus.BLOCKED] 
+                    task.status == TaskStatus.OPEN
                     and now > task.ttl_expiry
                 )
 
@@ -181,7 +189,12 @@ class DecentralizedBlackboardArchitecture(BaseArchitecture):
         loop = asyncio.get_running_loop()
         try:
             _, raw_conf, _, _, _ = await loop.run_in_executor(
-                None, lambda: provider.generate(prompt[:300], max_tokens=1)
+                None,
+                lambda: provider.generate(
+                    prompt[:300],
+                    max_tokens=1,
+                    temperature=self.slm_temperature,
+                ),
             )
             return raw_conf - (self.cost_weight * compute_penalty)
         except Exception:
@@ -200,13 +213,24 @@ class DecentralizedBlackboardArchitecture(BaseArchitecture):
         )
         
         budget = compute_completion_budget(provider, execution_prompt, task_type="open", role="swarm_node")
-        
-        # APPLIED FIX: Sweeper token override
-        if "Sweeper" in worker_name:
-            budget = 2048
-            
+
+        is_sweeper = "Sweeper" in worker_name
+        temperature = self.llm_temperature if is_sweeper else self.slm_temperature
+
+        if is_sweeper:
+            budget = self.llm_max_tokens if self.llm_max_tokens > 0 else 2048
+        else:
+            if self.slm_max_tokens > 0:
+                budget = self.slm_max_tokens
+
         text, conf, in_t, out_t, cost, lat = await loop.run_in_executor(
-            None, lambda: self._timed_generate(provider, execution_prompt, max_tokens=budget)
+            None,
+            lambda: self._timed_generate(
+                provider,
+                execution_prompt,
+                max_tokens=budget,
+                temperature=temperature,
+            ),
         )
 
         self.total_in += in_t
@@ -219,8 +243,13 @@ class DecentralizedBlackboardArchitecture(BaseArchitecture):
             "cost_usd": cost
         })
 
-        if "SUB_TASK:" in text:
-            sub_query = text.split("SUB_TASK:")[1].strip()
+        # THE FIX: Intercept sub-task generation safely
+        if "SUB_TASK:" in text and task.id.count("sub_") < 2:
+            # Extract ONLY the first line following the SUB_TASK declaration
+            raw_sub = text.split("SUB_TASK:")[1].strip()
+            # Stop parsing at the first newline to prevent chained hallucinations
+            sub_query = raw_sub.split("\n")[0].strip() 
+            
             sub_id = f"sub_{task.id}_{int(time.time() * 1000)}"
             
             blackboard[sub_id] = BlackboardTask(

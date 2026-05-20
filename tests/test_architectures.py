@@ -333,3 +333,90 @@ class TestEATSMetric:
         eats_efficient = compute_eats(accuracy=0.75, llm_call_ratio=0.1)
         eats_expensive = compute_eats(accuracy=0.80, llm_call_ratio=1.0)
         assert eats_efficient > eats_expensive
+
+
+class BlackboardStubModel(ModelProvider):
+    """A specialized stub model to simulate Blackboard swarm behaviors."""
+    def __init__(self, model_id: str, behavior: str, confidence: float = 0.9):
+        super().__init__(model_id)
+        self.behavior = behavior
+        self.confidence = confidence
+
+    def generate(self, prompt: str, **kwargs):
+        # 1. Bidding Phase: The architecture checks confidence with max_tokens=1
+        if kwargs.get("max_tokens") == 1:
+            return "bid_token", self.confidence, 1, 1, 0.0
+            
+        # 2. Execution Phase: Simulate different swarm outcomes
+        if self.behavior == "sweeper":
+            return "B", self.confidence, 10, 5, 0.0
+            
+        if self.behavior == "direct":
+            return "B", self.confidence, 10, 5, 0.0
+            
+        if self.behavior == "subtask":
+            # If it's a sub-task prompt, resolve it
+            if "Resolve this localized blocker" in prompt:
+                return "sub-answer-resolved", self.confidence, 10, 5, 0.0
+            # If the dependencies are resolved, output the final answer
+            elif "Resolved parameters" in prompt:
+                return "B", self.confidence, 10, 5, 0.0
+            # Otherwise, get "stuck" and generate a sub-task
+            else:
+                return "I am stuck. SUB_TASK: what is X?", self.confidence, 10, 5, 0.0
+                
+        return "B", self.confidence, 10, 5, 0.0
+
+
+class TestBlackboardArchitecture:
+    
+    def test_slm_claims_and_resolves_fast(self):
+        """Test that high-confidence SLMs resolve tasks without the LLM."""
+        from architectures.blackboard import DecentralizedBlackboardArchitecture
+        
+        slm1 = BlackboardStubModel("slm_primary", behavior="direct", confidence=0.9)
+        slm2 = BlackboardStubModel("slm_secondary", behavior="direct", confidence=0.1)
+        llm = BlackboardStubModel("llm_sweeper", behavior="sweeper", confidence=0.9)
+        
+        arch = DecentralizedBlackboardArchitecture(slm1, slm2, llm)
+        resp = arch.run(QUERY)
+        
+        assert resp.llm_calls == 0
+        assert resp.predicted_answer == "B"
+        assert resp.model_id == "PrimarySLM"
+
+    def test_heavy_sweeper_triggers_on_low_bids(self):
+        """Test that the 70B model intervenes if all SLMs bid too low."""
+        from architectures.blackboard import DecentralizedBlackboardArchitecture
+        
+        # Both SLMs lack confidence and ignore the task
+        slm1 = BlackboardStubModel("slm_primary", behavior="direct", confidence=0.1)
+        slm2 = BlackboardStubModel("slm_secondary", behavior="direct", confidence=0.1)
+        llm = BlackboardStubModel("llm_sweeper", behavior="sweeper", confidence=0.9)
+        
+        arch = DecentralizedBlackboardArchitecture(slm1, slm2, llm)
+        resp = arch.run(QUERY)
+        
+        # The TTL should expire (~0.6s) and the heavy sweeper picks it up
+        assert resp.llm_calls == 1
+        assert resp.predicted_answer == "B"
+        assert resp.model_id == "HeavySweeper70B"
+
+    def test_subtask_dependency_resolution(self):
+        """Test the Active Oracle pattern where SLMs generate and resolve sub-tasks."""
+        from architectures.blackboard import DecentralizedBlackboardArchitecture
+        
+        # Primary SLM is programmed to get stuck and issue a SUB_TASK
+        slm1 = BlackboardStubModel("slm_primary", behavior="subtask", confidence=0.9)
+        slm2 = BlackboardStubModel("slm_secondary", behavior="direct", confidence=0.1)
+        llm = BlackboardStubModel("llm_sweeper", behavior="sweeper", confidence=0.9)
+        
+        arch = DecentralizedBlackboardArchitecture(slm1, slm2, llm)
+        resp = arch.run(QUERY)
+        
+        assert resp.llm_calls == 0
+        assert resp.predicted_answer == "B"
+        
+        # Verify the inference steps reflect the sub-tasking loop
+        steps = resp.metadata["inference_steps"]
+        assert len(steps) >= 3 # 1. Main task blocks, 2. Sub-task resolves, 3. Main task resumes

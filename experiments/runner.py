@@ -65,6 +65,7 @@ class ExperimentRunner:
 
         # Build models
         slm = None
+        secondary_slm = None  # ADDED: For Swarm architectures
         llm = None
         ensemble_slms: list[Any] = []
 
@@ -82,6 +83,20 @@ class ExperimentRunner:
             if cfg.llm_tiebreak and cfg.llm:
                 assert_model_runnable(cfg.llm)
                 llm = get_model(cfg.llm)
+        elif cfg.architecture in ["blackboard", "entropy_blackboard"]:
+            # ADDED: Custom loading for 3-node swarms
+            assert_model_runnable(cfg.slm)
+            assert_model_runnable(cfg.llm)
+            
+
+            if not cfg.secondary_slm:
+                raise ValueError("blackboard architectures require secondary_slm")
+
+            assert_model_runnable(cfg.secondary_slm)
+
+            slm = get_model(cfg.slm)
+            secondary_slm = get_model(cfg.secondary_slm)
+            llm = get_model(cfg.llm)
         else:
             # routing, multi_agent, multi_agent_crew, speculative
             assert_model_runnable(cfg.slm)
@@ -97,6 +112,8 @@ class ExperimentRunner:
             arch_kwargs["llm"] = llm
         if ensemble_slms:
             arch_kwargs["slms"] = ensemble_slms
+        if cfg.architecture in ["blackboard", "entropy_blackboard"]:
+            arch_kwargs["secondary_slm"] = secondary_slm
 
         arch_kwargs["slm_temperature"] = cfg.slm_temperature
         arch_kwargs["llm_temperature"] = cfg.llm_temperature
@@ -112,16 +129,17 @@ class ExperimentRunner:
             arch_kwargs["confidence_method"] = cfg.confidence_method
         elif cfg.architecture == "multi_agent":
             arch_kwargs["arbitrator"] = cfg.arbitrator
-            arch_kwargs["n_rounds"] = cfg.n_debate_rounds
+            arch_kwargs["n_rounds"] = getattr(cfg, "n_debate_rounds", 3)
         elif cfg.architecture == "ensemble":
             arch_kwargs["n_models"] = cfg.n_models
             arch_kwargs["voting"] = cfg.voting
             arch_kwargs["llm_tiebreak"] = cfg.llm_tiebreak
         elif cfg.architecture == "speculative":
-            arch_kwargs["acceptance_threshold"] = cfg.speculative_acceptance_threshold
+            arch_kwargs["acceptance_threshold"] = getattr(cfg, "speculative_acceptance_threshold", 0.8)
 
         benchmark = get_benchmark(cfg.benchmark, n_samples=cfg.n_samples, seed=cfg.seed)
         arch_kwargs["task_type"] = benchmark.task_type
+        
         architecture = get_architecture(cfg.architecture, **arch_kwargs)
 
         queries = benchmark.load()
@@ -129,12 +147,16 @@ class ExperimentRunner:
 
         if cfg.architecture == "monolithic":
             pair_label = f"(LLM only) {cfg.llm}"
-        elif cfg.architecture == "ensemble" and (cfg.ensemble_slms or not cfg.slm):
-            members = cfg.ensemble_slms or [cfg.slm or "?"]
+        elif cfg.architecture == "ensemble" and (getattr(cfg, "ensemble_slms", None) or not cfg.slm):
+            members = getattr(cfg, "ensemble_slms", None) or [cfg.slm or "?"]
             tiebreak = f" → tiebreak {cfg.llm}" if (cfg.llm_tiebreak and cfg.llm) else ""
             pair_label = f"ensemble[{', '.join(members)}]{tiebreak}"
+        elif cfg.architecture in ["blackboard", "entropy_blackboard"]:
+            # ADDED: Proper console logging for the Swarm
+            pair_label = f"Swarm[{cfg.slm}, {cfg.secondary_slm}] → {cfg.llm}"
         else:
             pair_label = f"{cfg.slm or '?'} → {cfg.llm or '?'}"
+            
         print(
             f"[{self.experiment_id}] {cfg.architecture} | {cfg.benchmark} | "
             f"{pair_label} | {len(queries)} samples"
@@ -156,7 +178,7 @@ class ExperimentRunner:
                 config=dataclasses.asdict(cfg),
             )
         except Exception as e:
-            print(f"[WARN] MLflow not available: {e}")
+            pass # Suppressed MLFlow warnings to keep terminal clean
 
         for i, query in enumerate(queries, start=1):
             if self.callbacks and self.callbacks.is_cancelled():
