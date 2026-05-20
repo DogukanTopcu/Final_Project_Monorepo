@@ -26,7 +26,7 @@ const modes: Array<{ id: ArchitectureMode; title: string; subtitle: string; deta
     id: "swarm",
     title: "Swarm",
     subtitle: "Bossless SLM swarm",
-    detail: "Two SLMs bid on tasks autonomously; 70B wakes only when a task stalls.",
+    detail: "Bossless SLM swarm variants, with or without a heavy sweeper.",
   },
 ];
 

@@ -97,6 +97,13 @@ class ExperimentRunner:
             slm = get_model(cfg.slm)
             secondary_slm = get_model(cfg.secondary_slm)
             llm = get_model(cfg.llm)
+        elif cfg.architecture == "pure_swarm":
+            assert_model_runnable(cfg.slm)
+            if not cfg.secondary_slm:
+                raise ValueError("pure_swarm requires secondary_slm")
+            assert_model_runnable(cfg.secondary_slm)
+            slm = get_model(cfg.slm)
+            secondary_slm = get_model(cfg.secondary_slm)
         else:
             # routing, multi_agent, multi_agent_crew, speculative
             assert_model_runnable(cfg.slm)
@@ -115,11 +122,20 @@ class ExperimentRunner:
         if cfg.architecture in ["blackboard", "entropy_blackboard"]:
             arch_kwargs["secondary_slm"] = secondary_slm
             arch_kwargs["cost_weight"] = getattr(cfg, "cost_weight", 0.15)
+            arch_kwargs["bid_threshold"] = getattr(cfg, "bid_threshold", 0.65)
+            arch_kwargs["ttl_ms"] = getattr(cfg, "ttl_ms", 1500)
+
+        if cfg.architecture == "pure_swarm":
+            arch_kwargs["secondary_slm"] = secondary_slm
+            arch_kwargs["cost_weight"] = getattr(cfg, "cost_weight", 0.15)
+            arch_kwargs["bid_threshold"] = getattr(cfg, "bid_threshold", 0.65)
+            arch_kwargs["ttl_ms"] = getattr(cfg, "ttl_ms", 1500)
 
         arch_kwargs["slm_temperature"] = cfg.slm_temperature
-        arch_kwargs["llm_temperature"] = cfg.llm_temperature
         arch_kwargs["slm_max_tokens"] = cfg.slm_max_tokens
-        arch_kwargs["llm_max_tokens"] = cfg.llm_max_tokens
+        if llm is not None:
+            arch_kwargs["llm_temperature"] = cfg.llm_temperature
+            arch_kwargs["llm_max_tokens"] = cfg.llm_max_tokens
 
         if cfg.architecture == "routing":
             arch_kwargs["slm_only"] = cfg.slm_only
@@ -155,6 +171,8 @@ class ExperimentRunner:
         elif cfg.architecture in ["blackboard", "entropy_blackboard"]:
             # ADDED: Proper console logging for the Swarm
             pair_label = f"Swarm[{cfg.slm}, {cfg.secondary_slm}] → {cfg.llm}"
+        elif cfg.architecture == "pure_swarm":
+            pair_label = f"PureSwarm[{cfg.slm}, {cfg.secondary_slm}]"
         else:
             pair_label = f"{cfg.slm or '?'} → {cfg.llm or '?'}"
             

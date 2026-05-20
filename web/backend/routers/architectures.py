@@ -59,6 +59,29 @@ def _temp_params() -> list[ArchitectureParamSpec]:
     ]
 
 
+def _slm_params() -> list[ArchitectureParamSpec]:
+    return [
+        ArchitectureParamSpec(
+            key="slm_temperature",
+            label="SLM temperature",
+            type="float",
+            default=0.0,
+            min=0.0,
+            max=2.0,
+            description="Sampling temperature for SLM calls.",
+        ),
+        ArchitectureParamSpec(
+            key="slm_max_tokens",
+            label="SLM max tokens",
+            type="int",
+            default=0,
+            min=0,
+            max=32768,
+            description="0 = auto budget.",
+        ),
+    ]
+
+
 _SPECS: list[ArchitectureSpec] = [
     ArchitectureSpec(
         id=Architecture.MONOLITHIC,
@@ -220,7 +243,103 @@ _SPECS: list[ArchitectureSpec] = [
                 max=1.0,
                 description="Higher → swarm avoids the heavy sweeper longer.",
             ),
+            ArchitectureParamSpec(
+                key="bid_threshold",
+                label="Bid threshold",
+                type="float",
+                default=0.65,
+                min=0.0,
+                max=1.0,
+                description="Minimum bid needed before a worker claims a task.",
+            ),
+            ArchitectureParamSpec(
+                key="ttl_ms",
+                label="Task TTL (ms)",
+                type="int",
+                default=1500,
+                min=100,
+                max=10000,
+                description="After TTL, the heavy sweeper can claim the task.",
+            ),
             *_temp_params(),
+        ],
+    ),
+    ArchitectureSpec(
+        id=Architecture.ENTROPY_BLACKBOARD,
+        name="Entropy Blackboard",
+        mode=ArchitectureMode.SWARM,
+        description="Bossless swarm with entropy-based bidding and heavy sweeper fallback.",
+        requires_slm=True,
+        requires_llm=True,
+        requires_secondary_slm=True,
+        params=[
+            ArchitectureParamSpec(
+                key="cost_weight",
+                label="Cost weight",
+                type="float",
+                default=0.15,
+                min=0.0,
+                max=1.0,
+                description="Higher → swarm avoids the heavy sweeper longer.",
+            ),
+            ArchitectureParamSpec(
+                key="bid_threshold",
+                label="Bid threshold",
+                type="float",
+                default=0.65,
+                min=0.0,
+                max=1.0,
+                description="Minimum bid needed before a worker claims a task.",
+            ),
+            ArchitectureParamSpec(
+                key="ttl_ms",
+                label="Task TTL (ms)",
+                type="int",
+                default=1500,
+                min=100,
+                max=10000,
+                description="After TTL, the heavy sweeper can claim the task.",
+            ),
+            *_temp_params(),
+        ],
+    ),
+    ArchitectureSpec(
+        id=Architecture.PURE_SWARM,
+        name="Pure Swarm",
+        mode=ArchitectureMode.SWARM,
+        description="Bossless peer-to-peer SLM swarm without an LLM fallback.",
+        requires_slm=True,
+        requires_llm=False,
+        requires_secondary_slm=True,
+        params=[
+            ArchitectureParamSpec(
+                key="cost_weight",
+                label="Cost weight",
+                type="float",
+                default=0.15,
+                min=0.0,
+                max=1.0,
+                description="Higher → penalizes bids from smaller models.",
+            ),
+            ArchitectureParamSpec(
+                key="bid_threshold",
+                label="Bid threshold",
+                type="float",
+                default=0.65,
+                min=0.0,
+                max=1.0,
+                description="Minimum bid needed before a peer claims the task.",
+            ),
+            ArchitectureParamSpec(
+                key="ttl_ms",
+                label="Task TTL (ms)",
+                type="int",
+                default=1500,
+                min=100,
+                max=10000,
+                description="After TTL, the bid threshold drops to 0.",
+            ),
+            *_slm_params(),
         ],
     ),
 ]

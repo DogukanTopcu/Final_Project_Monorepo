@@ -5,7 +5,9 @@ export type Architecture =
   | "ensemble"
   | "multi_agent_crew"
   | "speculative"
-  | "blackboard";
+  | "blackboard"
+  | "entropy_blackboard"
+  | "pure_swarm";
 
 export type ArchitectureMode = "monolithic" | "hybrid" | "ensemble" | "swarm";
 

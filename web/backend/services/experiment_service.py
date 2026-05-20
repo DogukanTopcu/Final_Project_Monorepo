@@ -115,6 +115,8 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         "llm_max_tokens",
         "speculative_acceptance_threshold",
         "cost_weight",
+        "bid_threshold",
+        "ttl_ms",
     }
     unexpected = sorted(set(overrides) - allowed_override_keys)
     if unexpected:
@@ -162,6 +164,8 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
             overrides.get("speculative_acceptance_threshold", 0.7)
         ),
         cost_weight=float(overrides.get("cost_weight", 0.15)),
+        bid_threshold=float(overrides.get("bid_threshold", 0.65)),
+        ttl_ms=int(overrides.get("ttl_ms", 1500)),
         dry_run=bool(overrides.get("dry_run", False)),
         seed=int(overrides.get("seed", 42)),
         output_dir=settings.results_dir,
@@ -224,7 +228,7 @@ def _run_experiment(
                 candidates.extend(params.ensemble_slms or [])
                 if params.slm and not params.ensemble_slms:
                     candidates.append(params.slm)
-            elif params.architecture.value == "blackboard":
+            elif params.architecture.value in {"blackboard", "entropy_blackboard", "pure_swarm"}:
                 if params.llm:
                     candidates.append(params.llm)
                 if params.slm:
@@ -365,6 +369,27 @@ def _validate_architecture_models(params: ExperimentCreate, *, require_runtime: 
         _validate_model_selection(params.slm, "slm", require_runtime=require_runtime)
         _validate_model_selection(params.secondary_slm, "slm", require_runtime=require_runtime)
         _validate_model_selection(params.llm, "llm", require_runtime=require_runtime)
+        return
+
+    if arch == "entropy_blackboard":
+        if not params.slm:
+            raise ValueError("Entropy Blackboard requires a Primary SLM selection.")
+        if not params.secondary_slm:
+            raise ValueError("Entropy Blackboard requires a Secondary SLM selection.")
+        if not params.llm:
+            raise ValueError("Entropy Blackboard requires an LLM sweeper selection.")
+        _validate_model_selection(params.slm, "slm", require_runtime=require_runtime)
+        _validate_model_selection(params.secondary_slm, "slm", require_runtime=require_runtime)
+        _validate_model_selection(params.llm, "llm", require_runtime=require_runtime)
+        return
+
+    if arch == "pure_swarm":
+        if not params.slm:
+            raise ValueError("Pure Swarm requires a Primary SLM selection.")
+        if not params.secondary_slm:
+            raise ValueError("Pure Swarm requires a Secondary SLM selection.")
+        _validate_model_selection(params.slm, "slm", require_runtime=require_runtime)
+        _validate_model_selection(params.secondary_slm, "slm", require_runtime=require_runtime)
         return
 
     # routing / multi_agent / multi_agent_crew / speculative — need both

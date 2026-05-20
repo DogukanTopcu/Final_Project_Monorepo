@@ -128,7 +128,7 @@ export function ExperimentForm() {
       involvedModelIds.push(slm);
     }
     if (architecture === "ensemble") involvedModelIds.push(...ensembleSlms);
-    if (architecture === "blackboard" && secondarySlm) involvedModelIds.push(secondarySlm);
+    if (archSpec?.requires_secondary_slm && secondarySlm) involvedModelIds.push(secondarySlm);
 
     const sharedHostsTouched = new Set<string>();
     const modelsById = new Map<string, string>(); // model_id -> host_id
@@ -158,7 +158,7 @@ export function ExperimentForm() {
         if (ensembleSlms.length === 0) return false;
       } else if (!slm) return false;
     }
-    if (architecture === "blackboard" && !secondarySlm) return false;
+    if (archSpec.requires_secondary_slm && !secondarySlm) return false;
     return true;
   })();
 
@@ -179,7 +179,7 @@ export function ExperimentForm() {
       benchmark,
       n_samples: nSamples,
       slm: archSpec.requires_slm && architecture !== "ensemble" ? slm : null,
-      secondary_slm: architecture === "blackboard" ? secondarySlm : null,
+      secondary_slm: archSpec.requires_secondary_slm ? secondarySlm : null,
       llm: archSpec.requires_llm ? llm : architecture === "ensemble" && paramValues.llm_tiebreak ? llm : null,
       ensemble_slms: architecture === "ensemble" ? ensembleSlms : [],
       config_overrides: configOverrides,
@@ -264,9 +264,9 @@ export function ExperimentForm() {
 
             {archSpec?.requires_slm && architecture !== "ensemble" && (
               <ModelPicker
-                label={architecture === "blackboard" ? "Primary SLM" : "SLM"}
+                label={archSpec.requires_secondary_slm ? "Primary SLM" : "SLM"}
                 description={
-                  architecture === "blackboard"
+                  archSpec.requires_secondary_slm
                     ? "First autonomous worker (e.g. Qwen 3.5-4B). Bids on tasks from the shared board."
                     : "The small model that drafts answers."
                 }
@@ -276,7 +276,7 @@ export function ExperimentForm() {
               />
             )}
 
-            {architecture === "blackboard" && (
+            {archSpec?.requires_secondary_slm && (
               <ModelPicker
                 label="Secondary SLM"
                 description="Second autonomous worker (e.g. Llama 3.2-3B). Competes with the primary SLM."
@@ -304,14 +304,14 @@ export function ExperimentForm() {
                 label={
                   architecture === "ensemble"
                     ? "Tiebreak LLM"
-                    : architecture === "blackboard"
+                    : archSpec?.requires_secondary_slm
                       ? "Heavy Sweeper (LLM)"
                       : "LLM"
                 }
                 description={
                   architecture === "ensemble"
                     ? "Called only when SLMs don't reach a majority."
-                    : architecture === "blackboard"
+                    : archSpec?.requires_secondary_slm
                       ? "Wakes up only when a task exceeds its TTL. Keep it heavy (70B)."
                       : "The large model used as fallback / verifier / arbitrator."
                 }
