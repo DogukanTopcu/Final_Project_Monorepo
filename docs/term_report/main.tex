@@ -1,10 +1,14 @@
-\documentclass[9pt]{report}
+\documentclass[10pt]{report}
 \usepackage[a4paper, margin=1in]{geometry}
 \usepackage{graphicx}
 \usepackage{hyperref}
 \usepackage{amsmath}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{longtable}
 \usepackage{listings}
 \usepackage{caption}
+\usepackage{tabularx}
 \usepackage{titlesec}
 \usepackage{fancyhdr}
 \usepackage{setspace}
@@ -16,17 +20,30 @@
 \pagestyle{fancy}
 \fancyhf{}
 \rhead{\thepage}
+\setlength{\headheight}{14pt}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    columns=fullflexible
+}
 
 \titleformat{\chapter}[block]{\sffamily\bfseries\LARGE}{\thechapter.}{1em}{}
 \titleformat{\section}[block]{\sffamily\bfseries\Large}{\thesection}{1em}{}
 
 \begin{document}
 
+\hypersetup{pageanchor=false}
 \input{chapters/titlepage}
+\pagenumbering{roman}
+\setcounter{page}{1}
 \input{chapters/abstract}
 
 \tableofcontents
-\newpage
+\clearpage
+\hypersetup{pageanchor=true}
+\pagenumbering{arabic}
 
 \input{chapters/01_introduction}
 \input{chapters/02_related_work}

@@ -1,6 +1,98 @@
 \appendix
 \chapter{APPENDIX}
 
-% Provide supplementary material that supports the report but is too detailed for the main sections.
-% Include additional diagrams, tables, code snippets, and configuration files.
-% You can explain reproducibility steps if you provide source code and other configuration options.
+\section{Canonical Model Aliases}
+
+Table \ref{tab:appendix-aliases} lists the canonical aliases used by the control plane. These aliases are important because they decouple experiment configuration from the served model identifiers exposed by remote vLLM endpoints.
+
+\begin{longtable}{@{} l l l @{}}
+    \caption{Canonical model aliases used by the platform.}
+    \label{tab:appendix-aliases} \\
+    \toprule
+    \textbf{Alias} & \textbf{Tier} & \textbf{Typical host class} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Alias} & \textbf{Tier} & \textbf{Typical host class} \\
+    \midrule
+    \endhead
+    \texttt{gemma4-4b} & SLM & Dedicated GCP L4 \\
+    \texttt{qwen3.5-4b} & SLM & Dedicated GCP L4 \\
+    \texttt{llama3.2-3b} & SLM & Dedicated GCP L4 \\
+    \texttt{ministral3-3b} & SLM & Dedicated GCP L4 \\
+    \texttt{phi4-mini} & SLM & Dedicated GCP L4 \\
+    \texttt{gpt-oss-20b} & Mid-tier LLM & Shared RTX PRO6000 \\
+    \texttt{qwen3.5-27b} & Mid-tier LLM & Shared RTX PRO6000 \\
+    \texttt{gemma4-31b} & Mid-tier LLM & Shared RTX PRO6000 \\
+    \texttt{qwen3.5-35b-a3b} & Mid-tier MoE & Shared RTX PRO6000 \\
+    \texttt{gemma4-26b-a4b} & Mid-tier MoE & Shared RTX PRO6000 \\
+    \texttt{llama3.3-70b} & Heavy LLM & Nebius heavy host \\
+    \texttt{gpt-oss-120b} & Heavy LLM & Nebius heavy host \\
+    \bottomrule
+\end{longtable}
+
+\section{Host Topology Summary}
+
+The current host topology used by the platform can be summarized as follows:
+
+\begin{itemize}
+    \item one dedicated Google Cloud L4 host per SLM alias,
+    \item one shared Google Cloud RTX PRO6000 host for the 20B--40B class models,
+    \item one optional shared Nebius heavy host for the 70B and 120B class models, and
+    \item a local control plane that communicates with all remote hosts through OpenAI-compatible HTTP endpoints.
+\end{itemize}
+
+\section{Benchmark Record Sketches}
+
+The intended record shape for the planned coding benchmark is:
+
+\begin{itemize}
+    \item \texttt{id}
+    \item \texttt{difficulty} = \texttt{easy} / \texttt{medium} / \texttt{hard}
+    \item \texttt{prompt}
+    \item \texttt{starter\_code}
+    \item \texttt{public\_tests}
+    \item \texttt{hidden\_tests}
+    \item \texttt{topic}
+    \item \texttt{source}
+    \item \texttt{metadata}
+\end{itemize}
+
+The intended record shape for the human preference benchmark is:
+
+\begin{itemize}
+    \item \texttt{prompt\_id} and \texttt{prompt\_text}
+    \item \texttt{architecture\_a}, \texttt{architecture\_b}
+    \item \texttt{answer\_a}, \texttt{answer\_b}
+    \item randomized display order
+    \item selected winner or tie/skip
+    \item evaluator/session identifier and timestamp
+    \item latency, token, and cost metadata for both compared answers
+\end{itemize}
+
+\section{EATS Definition}
+
+The project-specific EATS metric is defined as:
+
+\[
+\text{EATS} = \frac{\text{accuracy}}{\text{llm\_call\_ratio} \times \text{normalized\_cost} + \varepsilon}
+\]
+
+Its purpose is to reward architectures that preserve useful answer quality while reducing unnecessary large-model usage and normalized cost.
+
+\section{Example Experiment Configuration Placeholder}
+
+Listing \ref{lst:config-placeholder} shows a minimal experiment configuration placeholder illustrating how an automated run can be described.
+
+\begin{lstlisting}[caption={Example experiment configuration placeholder.}, label={lst:config-placeholder}, language={}]
+architecture: routing
+benchmark: custom_stratified
+n_samples: 30
+slm: qwen3.5-4b
+llm: gpt-oss-20b
+confidence_threshold: 0.7
+output_dir: results
+mlflow_tracking_uri: http://localhost:5000
+\end{lstlisting}
+
+The final appendix can later be extended with completed experiment configurations, run identifiers, result tables, and final figure references once the benchmark and experiment pipeline are stable.

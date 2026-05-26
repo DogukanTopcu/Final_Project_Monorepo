@@ -1,8 +1,9 @@
 \chapter*{Abstract}
 
-% Provide a short summary of the entire project to present the key points.
-% Limit to 150–250 words. Avoid citations and technical jargon.
+This report documents the current state of a thesis experiment platform that compares small language model (SLM) and large language model (LLM) orchestration architectures under a shared evaluation contract. The project is not limited to a single model benchmark. Instead, it studies how different architectures that receive the same \texttt{Query} input and return the same \texttt{Response} output behave in terms of answer quality, latency, token usage, monetary cost, energy consumption, carbon impact, and operational complexity. The current implementation combines a local control plane with remote OpenAI-compatible vLLM endpoints hosted on Google Cloud and Nebius, a FastAPI backend, a Next.js frontend, MLflow tracking, JSON/Markdown reporting, and a measurement layer that records latency, cost, \texttt{energy\_kwh}, and \texttt{co2\_g}. The report also introduces the Efficiency-Accuracy Trade-off Score (EATS), which is used to compare solution quality against LLM usage and normalized cost.
+
+The literature basis of the project has already been established through a separate systematic literature review prepared within the same thesis work. Building on that review, this term report focuses on the implemented software and infrastructure, the benchmark plan for coding-oriented evaluation, and the novel swarm-style architecture ideas under development. The report deliberately does not present final experimental results because the benchmark suite and experiment consistency are still incomplete. Instead, it provides a substantive design-oriented draft that distinguishes completed platform components from preliminary and planned evaluation steps.
 
 \vspace{0.5cm}
 
-\noindent \textbf{Keywords:} Keyword 1, Keyword 2, Keyword 3, Keyword 4
+\noindent \textbf{Keywords:} small language models, large language models, orchestration architectures, benchmarking, energy-aware evaluation

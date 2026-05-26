@@ -1,5 +1,98 @@
 \chapter{RESEARCH METHODOLOGY}
 
-% Describe the overall approach and the technical design of your solution.
-% Explain your methodology or design decisions in detail.
-% Include system architecture, data flow diagrams, algorithms, or implementation steps if relevant.
+\section{System Overview}
+
+The project is implemented as an experiment platform rather than as a single benchmark script. The shared pipeline is built around a common input/output contract: a benchmark loader or user-facing interface produces a \texttt{Query}, an architecture consumes that query using one or more models, and the system returns a normalized \texttt{Response}. Because every architecture produces the same response structure, the runner, metric computation, reporting code, and user interface can remain architecture-agnostic.
+
+The current control plane runs locally and includes a FastAPI backend, a Next.js frontend, MLflow tracking, an experiment runner, and JSON/Markdown reporting. The inference plane is remote. Models are served through Dockerized OpenAI-compatible vLLM endpoints, and the control plane communicates with those endpoints through canonical model aliases stored in the repository. This separation allows the platform to compare heterogeneous deployments without changing the benchmark or reporting surface.
+
+\section{Model Pool and Deployment Topology}
+
+The selected model pool spans small, mid-tier, and heavy model classes. SLMs are hosted on dedicated Google Cloud L4 machines, mid-tier models are hosted on a shared Google Cloud RTX PRO6000 machine, and the heaviest models are intended for a separate Nebius H100/H200-class host. Table \ref{tab:model-topology} summarizes the current deployment structure used by the platform.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Current model and host topology used by the experiment platform.}
+    \label{tab:model-topology}
+    \small
+    \begin{tabularx}{\linewidth}{@{} l l X @{}}
+        \toprule
+        \textbf{Tier} & \textbf{Representative aliases} & \textbf{Deployment role} \\
+        \midrule
+        SLM tier & \texttt{gemma4-4b}, \texttt{qwen3.5-4b}, \texttt{llama3.2-3b}, \texttt{ministral3-3b}, \texttt{phi4-mini} & Dedicated Google Cloud L4 hosts for low-cost primary inference. \\
+        Mid-tier LLM / MoE tier & \texttt{gpt-oss-20b}, \texttt{qwen3.5-27b}, \texttt{gemma4-31b}, \texttt{qwen3.5-35b-a3b}, \texttt{gemma4-26b-a4b} & Shared Google Cloud RTX PRO6000 host for escalation, verification, and stronger baselines. \\
+        Heavy LLM tier & \texttt{llama3.3-70b}, \texttt{gpt-oss-120b} & Separate Nebius heavy host for frontier baselines and expensive fallback paths. \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+The shared mid-tier and heavy hosts introduce an operational constraint: only one large model should be active on each shared host at a time. The platform therefore includes host-status tracking and a reservation lock mechanism so that two experiments do not attempt to use incompatible shared-host model aliases simultaneously. This is an important methodological choice because scheduling constraints affect experiment reproducibility in multi-model systems.
+
+\section{Architecture Taxonomy}
+
+The architecture surface is intentionally broader than a single baseline. In the current state of the repository, the implemented and available comparison surface consists of the following core architecture groups:
+
+\begin{table}[htbp]
+    \centering
+    \caption{Architecture groups used in the current thesis platform.}
+    \label{tab:architecture-groups}
+    \small
+    \begin{tabularx}{\linewidth}{@{} l l X @{}}
+        \toprule
+        \textbf{Status} & \textbf{Architectures} & \textbf{Purpose in the thesis} \\
+        \midrule
+        Implemented comparison surface & \texttt{monolithic}, \texttt{routing}, \texttt{multi\_agent}, \texttt{ensemble} & Core thesis comparison set: direct LLM baseline, selective router, debate-style multi-agent flow, and voting ensemble. \\
+        Exposed but experimental & \texttt{speculative}, \texttt{multi\_agent\_crew} & Available in the repository and UI, but not treated as validated result surfaces in this report. \\
+        Project-proposed preliminary swarm family & \texttt{blackboard}, \texttt{entropy\_blackboard}, \texttt{pure\_swarm} & Decentralized architecture proposals under development and awaiting benchmark-backed validation. \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+The first group represents the currently usable evaluation surface. The second group remains experimental. The third group is the most original part of the project and therefore requires careful framing. The decentralized blackboard architecture allows two SLM workers to bid for tasks, while a heavier model acts as a sweeper if a task exceeds its time-to-live. The entropy-based variant penalizes uncertain claims through an entropy-informed bid. The pure swarm variant removes the heavy fallback altogether and asks how far peer-only SLM coordination can go on constrained hardware. These swarm ideas are central to the novelty of the project, but this report does not present them as already validated experimental findings.
+
+\section{Measurement and Logging}
+
+The measurement stack was designed to keep operational costs visible throughout the pipeline. Each normalized \texttt{Response} stores at least the following resource-oriented fields: latency in milliseconds, input and output token counts, total cost in U.S. dollars, separated API and infrastructure cost estimates, energy in \texttt{kWh}, emissions in \texttt{co2\_g}, average GPU power, and an LLM-call count used to estimate escalation behavior.
+
+The thesis introduces the Efficiency-Accuracy Trade-off Score (EATS) to make this comparison explicit:
+
+\begin{equation}
+\text{EATS} = \frac{A}{r_{\text{llm}} \times c_{\text{norm}} + \varepsilon}
+\end{equation}
+
+where $A$ is the experiment accuracy, $r_{\text{llm}}$ is the fraction of samples that required an LLM call, $c_{\text{norm}}$ is the experiment cost normalized against a full-LLM baseline, and $\varepsilon$ is a small constant that prevents division by zero. Higher EATS values indicate a better balance between answer quality and resource efficiency. EATS does not replace raw accuracy. Rather, it complements it by penalizing architectures that obtain modest quality gains only by invoking expensive models too frequently.
+
+The measurement data comes from two complementary mechanisms. First, the proxy layer in front of selected vLLM hosts measures host-side latency and can expose \texttt{energy\_kwh}, \texttt{co2\_g}, and GPU power values directly in the response metadata. Second, the platform supports resource-profile estimation based on model-to-host mappings when direct host measurement is unavailable or when experiment-level aggregation is needed. These measurements are then propagated into MLflow, JSON summaries, Markdown reports, and the frontend result views. This design reflects the concern raised in prior work that energy and resource use should be treated as first-class inference outcomes rather than as afterthoughts \cite{energytoken2025}.
+
+\section{Benchmark Surfaces and Semantics}
+
+The benchmark layer includes both automated and planned human-evaluation surfaces. The automated benchmark surface currently includes \texttt{mmlu}, \texttt{arc}, \texttt{hellaswag}, \texttt{gsm8k}, and \texttt{truthfulqa}. These provide a mixed evaluation space covering multiple-choice reasoning, commonsense completion, mathematical reasoning, and hallucination resistance.
+
+Two names require explicit clarification because the repository semantics differ from common external expectations:
+
+\begin{itemize}
+    \item \texttt{HumanEval} in this project does \emph{not} mean the OpenAI HumanEval coding benchmark. Its intended meaning is a UI-backed human preference evaluation workflow, including an LLM Arena-style prompt comparison surface and a live chat preference surface.
+    \item \texttt{custom\_stratified} is intended to become the thesis coding benchmark with \texttt{easy}, \texttt{medium}, and \texttt{hard} difficulty bands. Its current repository implementation is still a legacy placeholder and must be replaced before it can support thesis-grade claims.
+\end{itemize}
+
+Table \ref{tab:benchmark-status} summarizes the intended status of each benchmark surface.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Benchmark surfaces and their current methodological status.}
+    \label{tab:benchmark-status}
+    \small
+    \begin{tabularx}{\linewidth}{@{} l l X @{}}
+        \toprule
+        \textbf{Benchmark surface} & \textbf{Type} & \textbf{Current status in the thesis} \\
+        \midrule
+        \texttt{mmlu}, \texttt{arc}, \texttt{hellaswag}, \texttt{gsm8k}, \texttt{truthfulqa} & Automated benchmarks & Implemented and usable for pipeline testing and early comparative runs. \\
+        \texttt{custom\_stratified} & Coding benchmark & Planned as the main thesis coding benchmark, but its current loader is still a legacy placeholder and therefore not yet valid for final claims. \\
+        \texttt{HumanEval} & Human preference benchmark & Planned as a UI-backed evaluation workflow; the current repository file is a legacy prototype and does not define the final benchmark semantics. \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\section{Scope Boundary}
+
+This report deliberately excludes training and fine-tuning from its completed-methodology claims. Even though the repository contains training-related code and configuration, the current experiment platform and this term report focus on inference-time architecture comparison, benchmark design, and measurement instrumentation. Any later training-based ablation study should be reported as a separate comparison axis rather than mixed into the core architecture analysis.

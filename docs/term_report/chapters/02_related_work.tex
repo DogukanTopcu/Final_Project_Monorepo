@@ -1,5 +1,19 @@
 \chapter{RELATED WORK}
 
-% Provide the related literature and relevant discussion about the novelty of your project.
-% Summarize key papers, tools, or systems that are relevant to your problem.
-% Identify gaps or limitations in existing solutions that your project addresses.
+\section{Literature Basis}
+
+The literature foundation of this project was prepared in a separate systematic literature review manuscript developed within the same thesis work and submitted to Euromicro \cite{slrmanuscript2026}. That review followed a PRISMA-oriented protocol and synthesized 54 studies on collaborative SLM--LLM systems, with monolithic LLMs treated mainly as baselines rather than as the main object of study \cite{page2021prisma}. Instead of repeating the full review process here, this chapter extracts the most relevant themes that directly shaped the design of the experiment platform.
+
+The most important conclusion from the review is that recent work increasingly treats orchestration as a way to compensate for the capability limits of small models. In other words, the literature suggests that SLMs are rarely competitive as direct one-to-one replacements for larger models across broad tasks, but they can become competitive when the system decides \emph{when} to use them, \emph{how} to combine them, and \emph{when} to escalate to a stronger model \cite{hao2024hybrid, shao2025dot, multiagent2025}.
+
+\section{Representative Architecture Patterns}
+
+Several recurring architecture families appear across the literature reviewed for this thesis. Hybrid edge--cloud systems route or escalate only difficult cases to larger models, which reduces average cost while preserving quality on harder samples \cite{hao2024hybrid, oh2025uncertainty, citer2025}. Planner-based or decomposition-based systems divide a complex task into smaller steps and assign different reasoning responsibilities to different components \cite{shao2025dot, lee2024orchestrallm}. Multi-agent systems use explicit roles such as proposer, critic, verifier, or arbitrator in order to improve reasoning discipline and error checking \cite{multiagent2025}. Ensemble-based systems instead rely on agreement, voting, or reranking across multiple weaker models, sometimes with an optional larger-model tiebreaker \cite{sentensemble2026}.
+
+These patterns matter for the thesis because the project is designed as a common comparison surface across precisely these ideas. Monolithic inference is kept as a baseline, but the core emphasis is on routing, debate, ensemble behavior, and swarm-style coordination. The platform is therefore aligned with the dominant architectural tendencies observed in the literature, while also making room for the project's own architecture proposals.
+
+\section{Gap Addressed by the Thesis Project}
+
+The literature is richer in architecture ideas than in evaluation discipline. Many papers report accuracy improvements or qualitative benefits, but far fewer provide measurements that allow a fair comparison of latency, monetary cost, energy usage, and carbon impact under realistic deployment assumptions \cite{slrmanuscript2026, energytoken2025}. This is particularly important for engineering decisions, because a small gain in task accuracy may not justify a large increase in expensive LLM calls or in infrastructure cost.
+
+The current project addresses that gap in two ways. First, it builds a platform in which multiple architectures can be evaluated through a shared \texttt{Query}--\texttt{Response} contract. Second, it introduces a measurement stack that makes operational metrics visible throughout the experiment lifecycle, from the proxy layer to experiment reports and the web interface. The EATS metric is part of that response: it does not replace raw task accuracy, but it creates an explicit comparison surface between quality and resource usage. In that sense, the contribution of this thesis is both experimental and infrastructural.

@@ -1,7 +1,116 @@
 \chapter{EXPERIMENTAL STUDY}
 
-% Present experiments, evaluation setup, and performance analysis.
-% Describe the test environment (hardware, software, datasets).
-% Define metrics used for evaluation (accuracy, latency, etc.).
-% Present results clearly using tables, charts, or graphs.
-% Discuss what the results show and the underlying reasons.
+This chapter defines the experimental study as an execution design and reporting plan. It does not present final comparative results, because the current experiments are not yet valid for thesis-grade claims. The main purpose of this chapter is to describe what can already be run, what remains preliminary, and how the next phase of valid experimentation will be conducted.
+
+\section{Evaluation Environment}
+
+The platform uses a split deployment model in which the control plane runs locally while model inference runs on remote GPU hosts. Table \ref{tab:environment-matrix} summarizes the current environment used by the project.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Current experimental environment and its role in the platform.}
+    \label{tab:environment-matrix}
+    \small
+    \begin{tabularx}{\linewidth}{@{} l l X @{}}
+        \toprule
+        \textbf{Layer} & \textbf{Technology} & \textbf{Role in the experiment stack} \\
+        \midrule
+        Local control plane & FastAPI, Next.js, MLflow, Python runner & Experiment launch, tracking, result storage, and UI management. \\
+        Dedicated SLM serving & Dockerized vLLM on Google Cloud L4 machines & Low-cost SLM inference for baseline, hybrid, and swarm components. \\
+        Shared mid-tier serving & Dockerized vLLM on a Google Cloud RTX PRO6000 host & Shared 20B--40B serving for escalation and stronger baselines. \\
+        Heavy serving & Dockerized vLLM on Nebius H100/H200-class machines & Frontier-scale serving for the largest baselines and fallback paths. \\
+        Measurement layer & Metrics proxy, resource profiles, MLflow, JSON/Markdown reporter & Latency, token, cost, energy, carbon, and experiment summary collection. \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+All selected models are exposed through OpenAI-compatible HTTP endpoints so that the experiment runner can stay provider-neutral. The repository also contains host-lock logic to coordinate experiments that depend on shared hosts where only one large model may be active at a time.
+
+\section{Implemented and Usable Today}
+
+The following pieces are already implemented and useful for development, smoke testing, and early-stage experimentation:
+
+\begin{itemize}
+    \item the local control plane consisting of backend, frontend, MLflow integration, experiment runner, and result reporting;
+    \item the canonical model alias system that maps architecture configurations to remote vLLM endpoints;
+    \item baseline and hybrid architecture surfaces such as monolithic inference, routing, multi-agent debate, and SLM voting ensembles;
+    \item proxy-based and response-level metric propagation for latency, token counts, cost, energy, and emissions; and
+    \item web surfaces for dashboarding, experiment launch, host visibility, result comparison, and playground-style prompt testing.
+\end{itemize}
+
+These capabilities are sufficient to support platform demonstrations, architecture debugging, early pilot runs, and documentation of the end-to-end workflow. They are not yet sufficient to support the final experimental claims of the thesis.
+
+\section{Preliminary Components Not Yet Valid for Thesis Claims}
+
+Several core ideas of the thesis are still under construction or still require methodological cleanup:
+
+\begin{itemize}
+    \item The coding benchmark is not yet finalized. The intended \texttt{custom\_stratified} benchmark should contain easy, medium, and hard coding tasks, but the current repository loader is still a legacy mixture and therefore cannot be treated as a valid coding benchmark.
+    \item The project-specific \texttt{HumanEval} surface is conceptually defined as a human preference workflow, but the current repository file still contains a legacy prototype and is not the final benchmark implementation.
+    \item The local end-to-end runner path still exhibits environment and benchmark-loader friction. In practice, this means that a repository-level ``run everything'' path is not yet stable enough to be cited as a finished validation pipeline.
+    \item The project-proposed swarm family --- decentralized blackboard, entropy blackboard, and pure swarm --- is implemented as a promising architecture direction, but not yet supported by a finalized benchmark and valid comparative evidence.
+\end{itemize}
+
+For these reasons, the current experimental outputs are treated as exploratory rather than conclusive. No quantitative values are reported in this term report as final findings. This is intentional: fabricated or unstable numbers would weaken the thesis rather than strengthen it.
+
+\section{Planned Coding Benchmark Protocol}
+
+The main benchmark contribution planned for the thesis is a coding-focused dataset organized by difficulty. The benchmark will be centered on the \texttt{custom\_stratified} track and will compare architectures on practical coding tasks rather than on a single public multiple-choice benchmark. The target structure is shown in Table \ref{tab:coding-benchmark-plan}.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Planned size targets for the coding benchmark.}
+    \label{tab:coding-benchmark-plan}
+    \small
+    \begin{tabularx}{\linewidth}{@{} l c c c X @{}}
+        \toprule
+        \textbf{Phase} & \textbf{Easy} & \textbf{Medium} & \textbf{Hard} & \textbf{Purpose} \\
+        \midrule
+        Pilot set & 10 & 10 & 10 & Quick validation of scoring, prompts, and end-to-end runner behavior. \\
+        Main comparison set & 50 & 50 & 50 & Minimum thesis-grade automated comparison target across architectures and model tiers. \\
+        Stronger final set & 100 & 100 & 100 & Ideal stretch target if authoring, checking, and hidden-test preparation are completed in time. \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+Each task record should contain at least an identifier, a difficulty label, a prompt, optional starter code, public and hidden tests, a topic label, and source metadata. The benchmark should support evaluation by exact output or unit tests depending on the task. The main comparison axes will be: architecture, SLM choice, LLM choice, escalation behavior, total cost, energy consumption, carbon emissions, and EATS. This structure makes the benchmark suitable for the thesis focus on coding skill rather than on general-purpose language understanding alone.
+
+\section{Evaluation Protocol}
+
+Once the benchmark is finalized, the comparative protocol will proceed in three layers:
+
+\begin{itemize}
+    \item \textbf{Monolithic baseline:} a single stronger model answers every query and provides the upper baseline for quality and the likely upper bound for cost.
+    \item \textbf{Hybrid and ensemble comparison:} routing, multi-agent, and ensemble systems are compared against the monolithic baseline under the same coding tasks and the same reporting stack.
+    \item \textbf{Project-proposed architecture study:} the swarm family is evaluated after the benchmark and runner paths are stable enough to support valid comparison.
+\end{itemize}
+
+All comparisons will record accuracy or task success, latency, input/output tokens, total cost, API/infrastructure cost split, LLM-call ratio, energy, emissions, and EATS. Human preference evaluation will be added in a later phase through the UI-backed benchmark surface and should be treated as a complementary study rather than as a replacement for the coding benchmark.
+
+\section{Pending Result Artifacts}
+
+The following quantitative artifacts are intentionally left as placeholders until stable runs are completed:
+
+\begin{table}[htbp]
+    \centering
+    \caption{Pending result artifacts for later insertion.}
+    \label{tab:pending-results}
+    \small
+    \begin{tabularx}{\linewidth}{@{} l X @{}}
+        \toprule
+        \textbf{Artifact} & \textbf{Current status} \\
+        \midrule
+        Accuracy / latency / cost summary table & Pending insertion after valid automated benchmark runs. \\
+        Energy / CO$_2$ / EATS comparison table & Pending insertion after stable proxy-backed measurements are collected. \\
+        Architecture comparison figure & Pending insertion after enough runs exist for a meaningful multi-architecture plot. \\
+        Human preference result table & Pending insertion after the UI-backed preference workflow is finalized and used. \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\begin{figure}[htbp]
+    \centering
+    \fbox{\parbox{0.85\linewidth}{\centering Pending figure placeholder: insert a final architecture comparison plot after the coding benchmark, measurement stack, and experiment pipeline are all stable enough for valid thesis claims.}}
+    \caption{Reserved placeholder for the final comparative experiment figure.}
+    \label{fig:pending-comparison}
+\end{figure}

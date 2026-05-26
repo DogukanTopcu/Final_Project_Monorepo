@@ -1,25 +1,21 @@
 \chapter*{ALIGNMENT WITH UN SUSTAINABLE DEVELOPMENT GOALS}
 \addcontentsline{toc}{chapter}{ALIGNMENT WITH UN SUSTAINABLE DEVELOPMENT GOALS}
 
-\begin{table}[h]
-\begin{tabular}{|l|l|l|}
-\hline
-\textbf{Impact Area} & \textbf{\begin{tabular}[c]{@{}l@{}}Does project impact?\\ Direct or indirect?\end{tabular}} & \textbf{Impact Definition} \\ \hline
+This project does not target a single social sector such as healthcare or education. Its contribution is infrastructural: it improves how language-model systems are evaluated, compared, and governed. That still creates meaningful alignment with sustainable development goals because the platform makes hidden resource trade-offs visible and helps avoid wasteful deployment choices.
 
-\begin{tabular}[c]{@{}l@{}}\textbf{Social}\\ (How does the project affect people and society?\\ Who benefits from the project?\\ Does it improve accessibility, inclusion, or equality?\\ Does it reduce manual effort or improve quality of life?)\\ \\ SDG 10 - Reduced Inequalities\end{tabular}
-& Social impact & Social definition \\ \hline
-
-\begin{tabular}[c]{@{}l@{}}\textbf{Health}\\ (How does the project affect health directly or indirectly?\\ Does it reduce stress, workload, or human error?\\ Does it support health monitoring, safety, or well-being?\\ Does it prevent unsafe working conditions?)\\ \\ SDG 3 - Good Health and Well-being\end{tabular}
-& Health impact & Health definition \\ \hline
-
-\begin{tabular}[c]{@{}l@{}}\textbf{Security}\\ (How is security achieved in the project,\\ or how does the project increase the security?\\ How is user data protected?\\ What security risks exist?)\\ \\ SDG 16 - Peace, Justice, and Strong Institutions\end{tabular}
-& Security impact & Security definition \\ \hline
-
-\begin{tabular}[c]{@{}l@{}}\textbf{Economic}\\ (How does the project contribute to the economy?\\ Does it reduce costs?\\ Does it improve productivity?)\\ \\ SDG 8 - Decent Work and Economic Growth\end{tabular}
-& Economic impact & Economic definition \\ \hline
-
-\begin{tabular}[c]{@{}l@{}}\textbf{Sustainability and Environment}\\ (How does the project contribute to the sustainability,\\ and affect the environment?\\ Does it reduce paper usage?\\ Does it optimize energy or resource consumption?\\ Is computer system usage efficient?)\\ \\ SDG 11 - Sustainable cities and communities\\ SDG 13 - Climate Action\\ SDG 12 - Responsible Consumption and Production\end{tabular}
-& Environment impact & Environment definition \\ \hline
-
-\end{tabular}
+\begin{table}[htbp]
+    \centering
+    \caption{Alignment of the thesis project with selected UN SDGs.}
+    \small
+    \begin{tabularx}{\linewidth}{@{} l l X @{}}
+        \toprule
+        \textbf{Impact area} & \textbf{Direct / indirect impact} & \textbf{Project relevance} \\
+        \midrule
+        Social (SDG 10: Reduced Inequalities) & Indirect & By comparing smaller and larger model architectures under a common framework, the project supports more accessible AI deployment paths for teams that cannot afford frontier-scale hardware or API usage. \\
+        Health (SDG 3: Good Health and Well-being) & Indirect & The project reduces engineering uncertainty and manual experimentation overhead by providing a structured platform for comparison, reporting, and reproducibility. \\
+        Security (SDG 16: Peace, Justice and Strong Institutions) & Indirect & The platform encourages transparent reporting of model behavior, host usage, and benchmark assumptions, which supports more accountable evaluation practices. \\
+        Economic (SDG 8: Decent Work and Economic Growth) & Direct & Cost-aware orchestration and shared-host visibility help teams reason about whether a workload really requires an expensive LLM, which can improve engineering productivity and reduce unnecessary spending. \\
+        Sustainability and environment (SDGs 12 and 13) & Direct & Energy, carbon, and EATS reporting are central to the platform. The project explicitly tracks \texttt{energy\_kwh} and \texttt{co2\_g} so that model quality can be discussed alongside environmental cost. \\
+        \bottomrule
+    \end{tabularx}
 \end{table}
