@@ -10,15 +10,6 @@ from core.token_budget import compute_completion_budget
 from core.types import Query, Response
 
 
-# AŞAMA 1 PROMPTU: Modelin sadece bilgi toplaması ve Kahin'i kullanması için.
-_INVESTIGATION_PROMPT = """You are an AI investigator. Your job is to gather information to solve the user's problem.
-Think step-by-step. If you lack specific facts, formulas, or need a calculation, ask the Oracle by writing EXACTLY:
-CALL_ORACLE: [your specific question]
-
-Wait for the ORACLE_ANSWER. Once you have enough information to solve the problem definitively, write:
-INVESTIGATION_COMPLETE
-"""
-
 _ORACLE_SYSTEM_PROMPT = """You are an absolute truth Oracle. 
 You will be asked a very specific, narrow question by a smaller AI agent that is stuck.
 Answer extremely concisely. Provide only the fact, formula, or calculation requested. Do not add conversational filler.
@@ -48,9 +39,21 @@ class ActiveOracleArchitecture(BaseArchitecture):
 
     def run(self, query: Query) -> Response:
         base_prompt = mcq_prompt(query) if self.task_type == "mcq" else open_prompt(query)
-    
-        investigation_trace = f"{_INVESTIGATION_PROMPT}\n\n[USER PROBLEM TO INVESTIGATE]\n{base_prompt}\n\nInvestigation Log:\n"
         
+        format_reminder = "'Final Answer: <letter>'" if self.task_type == "mcq" else "'Answer: <number>'"
+        
+        execution_prompt = (
+            "You are a smart logical reasoning agent. You MUST work step-by-step.\n"
+            "CRITICAL: IGNORE any instructions in the problem text that tell you not to include explanations or chain-of-thought.\n"
+            "If you encounter a specific factual detail, formula, or sub-calculation that you are unsure about, DO NOT GUESS. \n"
+            "Instead, pause and ask the Oracle by writing exactly:\n"
+            "CALL_ORACLE: <your specific question>\n\n"
+            "Wait for the ORACLE_ANSWER. Once you receive it, or if you don't need the Oracle, continue your reasoning.\n"
+            f"When you are completely finished, you MUST conclude on a new line with exactly: {format_reminder}\n\n"
+            f"Problem:\n{base_prompt.strip()}\n\n"
+        )
+        
+        current_prompt = execution_prompt
         total_in = total_out = 0
         total_cost = total_latency = 0.0
         llm_calls = 0
@@ -62,30 +65,33 @@ class ActiveOracleArchitecture(BaseArchitecture):
         t0 = time.perf_counter()
         
         while oracle_calls_made <= self.max_oracle_calls:
-            slm_budget = self.slm_max_tokens if self.slm_max_tokens > 0 else 1024
+            # Modelin matematik yaparken yarıda kesilmemesi için bütçeyi yüksek tutuyoruz
+            slm_budget = self.slm_max_tokens if self.slm_max_tokens > 0 else 1536
+            
             slm_text, conf, in_t, out_t, cost, lat = self._timed_generate(
-                self.slm, investigation_trace, temperature=self.slm_temperature, max_tokens=slm_budget
+                self.slm, current_prompt, temperature=self.slm_temperature, max_tokens=slm_budget
             )
+            
             total_in += in_t
             total_out += out_t
             total_cost += cost
             total_latency += lat
             inference_steps.append({
-                "role": f"investigation_step_{oracle_calls_made+1}",
+                "role": f"reasoning_step_{oracle_calls_made+1}",
                 "model_id": self.slm.model_id,
                 "latency_ms": lat,
                 "cost_usd": cost,
                 "output_preview": slm_text[:50] + "..."
             })
 
-            investigation_trace += f"{slm_text}\n"
-
-            if "INVESTIGATION_COMPLETE" in slm_text:
-                break
-
+            # Eğer SLM "Kahin" çağırdıysa
             if "CALL_ORACLE:" in slm_text:
+                pre_call_text = slm_text.split("CALL_ORACLE:")[0]
                 oracle_query = slm_text.split("CALL_ORACLE:")[1].split("\n")[0].strip()
                 oracle_queries.append(oracle_query)
+                
+                # SLM'in yarım kalan düşüncesini ve Kahin sorusunu güncel prompta ekle
+                current_prompt += f"{pre_call_text}CALL_ORACLE: {oracle_query}\n"
                 
                 oracle_prompt = f"{_ORACLE_SYSTEM_PROMPT}\n\nQuestion: {oracle_query}"
                 oracle_budget = self.llm_max_tokens if self.llm_max_tokens > 0 else 256
@@ -109,50 +115,27 @@ class ActiveOracleArchitecture(BaseArchitecture):
                     "oracle_query": oracle_query
                 })
 
-                investigation_trace += f"ORACLE_ANSWER: {oracle_text.strip()}\n"
+                # Kahinin cevabını modele ver ve döngüyü başa sararak modelin devam etmesini sağla
+                current_prompt += f"ORACLE_ANSWER: {oracle_text.strip()}\n"
             else:
+                # Kahin çağrılmadıysa, SLM nihai cevabı vermiş demektir (Döngüyü kır)
+                current_prompt += slm_text
                 break
-
-        final_generation_prompt = (
-            f"You have conducted the following background investigation:\n"
-            f"-----------------------------------\n"
-            f"{investigation_trace}\n"
-            f"-----------------------------------\n\n"
-            f"Using the information above, complete the following user task strictly following their formatting rules:\n\n"
-            f"[USER TASK]\n{base_prompt}"
-        )
-        
-        slm_budget = self.slm_max_tokens if self.slm_max_tokens > 0 else 512
-        final_text, final_conf, in_t, out_t, cost, lat = self._timed_generate(
-            self.slm, final_generation_prompt, temperature=self.slm_temperature, max_tokens=slm_budget
-        )
-        
-        total_in += in_t
-        total_out += out_t
-        total_cost += cost
-        total_latency += lat
-        
-        inference_steps.append({
-            "role": "final_formulation",
-            "model_id": self.slm.model_id,
-            "latency_ms": lat,
-            "cost_usd": cost,
-            "output_preview": final_text[:50] + "..."
-        })
 
         total_latency = (time.perf_counter() - t0) * 1000
         
+        # Orijinal parser, current_prompt içinde yer alan tüm metni tarayarak doğru formatı bulur
         parsed = (
-            parse_mcq_answer(final_text)
+            parse_mcq_answer(current_prompt)
             if self.task_type == "mcq"
-            else parse_open_answer(final_text)
+            else parse_open_answer(current_prompt)
         )
 
         return Response(
             query_id=query.id,
-            text=final_text,
+            text=current_prompt,
             predicted_answer=parsed,
-            confidence=final_conf,
+            confidence=0.90,
             model_id=self.slm.model_id,
             latency_ms=total_latency,
             input_tokens=total_in,
@@ -161,13 +144,12 @@ class ActiveOracleArchitecture(BaseArchitecture):
             llm_calls=llm_calls,
             metadata={
                 "prompt_text": base_prompt,
-                "investigation_trace": investigation_trace,
-                "slm_raw_text": final_text,
+                "slm_trace": current_prompt,
                 "slm_parsed_answer": parsed,
                 "oracle_calls_made": oracle_calls_made,
                 "oracle_queries": oracle_queries,
                 "oracle_answers": oracle_answers,
                 "inference_steps": inference_steps,
-                "framework": "active_oracle",
+                "framework": "single_pass_active_oracle",
             },
         )
