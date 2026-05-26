@@ -1140,7 +1140,7 @@ export default function ExperimentDetailPage({
                 <>
                   {!hasFallbackCalls ? (
                     <p className="rounded-md bg-green-50 px-3 py-2 text-green-700">
-                      No escalation: every sample was answered locally by the SLM.
+                      No escalation: every sample was answered by the SLM without LLM fallback.
                     </p>
                   ) : (
                     <p className="rounded-md bg-amber-50 px-3 py-2 text-amber-800">
@@ -1154,7 +1154,11 @@ export default function ExperimentDetailPage({
           </Card>
 
           {isActive && experiment && (
-            <LiveProgress experimentId={experiment.experiment_id} enabled={isActive} />
+            <LiveProgress
+              experimentId={experiment.experiment_id}
+              enabled={isActive}
+              showRoutingLlmRatio={architecture === "routing"}
+            />
           )}
 
           {experiment?.error && (
@@ -1373,10 +1377,27 @@ export default function ExperimentDetailPage({
                                             {(typeof member.input_tokens === "number" ||
                                               typeof member.output_tokens === "number") && (
                                               <div className="rounded-md border border-zinc-100 bg-zinc-50 px-3 py-2">
-                                                <div className="text-xs text-zinc-500">Tokens</div>
+                                                <div className="text-xs text-zinc-500">Tokens (in / out)</div>
                                                 <div className="mt-1 text-sm font-medium text-zinc-900">
                                                   {`${formatNumber(Number(member.input_tokens ?? 0))} / ${formatNumber(Number(member.output_tokens ?? 0))}`}
                                                 </div>
+                                                {(typeof member.effective_max_tokens === "number" ||
+                                                  hasTextValue(member.finish_reason)) && (
+                                                  <div className="mt-1 text-xs text-zinc-500">
+                                                    {typeof member.effective_max_tokens === "number"
+                                                      ? `max ${formatNumber(Number(member.effective_max_tokens))}`
+                                                      : ""}
+                                                    {typeof member.effective_max_tokens === "number" &&
+                                                    hasTextValue(member.finish_reason)
+                                                      ? " · "
+                                                      : ""}
+                                                    {hasTextValue(member.finish_reason)
+                                                      ? member.finish_reason === "length"
+                                                        ? "finish: length (truncated)"
+                                                        : `finish: ${String(member.finish_reason)}`
+                                                      : ""}
+                                                  </div>
+                                                )}
                                               </div>
                                             )}
                                           </div>

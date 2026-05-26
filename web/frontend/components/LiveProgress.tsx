@@ -17,9 +17,14 @@ import { useCancelExperiment } from "@/hooks/useExperiments";
 interface LiveProgressProps {
   experimentId: string;
   enabled: boolean;
+  showRoutingLlmRatio?: boolean;
 }
 
-export function LiveProgress({ experimentId, enabled }: LiveProgressProps) {
+export function LiveProgress({
+  experimentId,
+  enabled,
+  showRoutingLlmRatio = false,
+}: LiveProgressProps) {
   const { events, lastEvent, isConnected, isReconnecting, error } = useSSE({
     experimentId,
     enabled,
@@ -34,6 +39,7 @@ export function LiveProgress({ experimentId, enabled }: LiveProgressProps) {
   const isDone = lastEvent?.type === "complete" || lastEvent?.type === "error";
   let seenProgress = 0;
   const accuracyBySample = new Map<number, number>();
+  const llmRatioBySample = new Map<number, number>();
   for (const event of events) {
     if (event.type === "progress") {
       seenProgress = event.completed ?? seenProgress;
@@ -42,12 +48,21 @@ export function LiveProgress({ experimentId, enabled }: LiveProgressProps) {
       const sample = seenProgress || accuracyBySample.size + 1;
       accuracyBySample.set(sample, event.value);
     }
+    if (event.type === "metric" && event.name === "llm_call_ratio" && typeof event.value === "number") {
+      const sample = seenProgress || llmRatioBySample.size + 1;
+      llmRatioBySample.set(sample, event.value);
+    }
   }
   const accuracySeries = Array.from(accuracyBySample.entries()).map(([sample, accuracy]) => ({
     sample,
     accuracy,
   }));
+  const llmRatioSeries = Array.from(llmRatioBySample.entries()).map(([sample, llmCallRatio]) => ({
+    sample,
+    llmCallRatio,
+  }));
   const lastAccuracy = accuracySeries[accuracySeries.length - 1]?.accuracy ?? null;
+  const lastLlmCallRatio = llmRatioSeries[llmRatioSeries.length - 1]?.llmCallRatio ?? null;
 
   return (
     <Card>
@@ -112,6 +127,53 @@ export function LiveProgress({ experimentId, enabled }: LiveProgressProps) {
                     type="monotone"
                     dataKey="accuracy"
                     stroke="#18181b"
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 4 }}
+                    isAnimationActive={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+
+        {showRoutingLlmRatio && llmRatioSeries.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-sm font-medium text-zinc-900">Live LLM call ratio</div>
+              <div className="text-sm font-medium text-zinc-700">
+                Current ratio: {lastLlmCallRatio != null ? `${(lastLlmCallRatio * 100).toFixed(1)}%` : "—"}
+              </div>
+            </div>
+            <div className="h-40 w-full rounded-lg border border-amber-200 bg-amber-50/40 p-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={llmRatioSeries} margin={{ top: 8, right: 12, bottom: 8, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#fde68a" />
+                  <XAxis
+                    type="number"
+                    dataKey="sample"
+                    domain={[1, Math.max(total, 1)]}
+                    allowDecimals={false}
+                    tickCount={Math.min(Math.max(total, 2), 6)}
+                    tick={{ fontSize: 12, fill: "#a16207" }}
+                    label={{ value: "Sample", position: "insideBottom", offset: -4 }}
+                  />
+                  <YAxis
+                    domain={[0, 1]}
+                    tickFormatter={(value: number) => `${Math.round(value * 100)}%`}
+                    tick={{ fontSize: 12, fill: "#a16207" }}
+                    width={44}
+                  />
+                  <Tooltip
+                    cursor={false}
+                    formatter={(value: number) => [`${(value * 100).toFixed(1)}%`, "LLM call ratio"]}
+                    labelFormatter={(label: number) => `Sample ${label}`}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="llmCallRatio"
+                    stroke="#d97706"
                     strokeWidth={2}
                     dot={false}
                     activeDot={{ r: 4 }}

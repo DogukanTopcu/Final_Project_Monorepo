@@ -50,6 +50,29 @@ class SequenceRecordingStubModel(RecordingStubModel):
         return next(self._answers), self._confidence, 10, 5, 0.0
 
 
+class MetadataStubModel(RecordingStubModel):
+    def __init__(
+        self,
+        model_id: str,
+        answer: str = "A",
+        confidence: float = 0.9,
+        *,
+        finish_reason: str = "stop",
+        effective_max_tokens: int = 0,
+    ) -> None:
+        super().__init__(model_id, answer=answer, confidence=confidence)
+        self._finish_reason = finish_reason
+        self._effective_max_tokens = effective_max_tokens
+
+    def generate(self, prompt: str, **kwargs):
+        self.calls.append(kwargs)
+        self.last_generation_metadata = {
+            "finish_reason": self._finish_reason,
+            "effective_max_tokens": self._effective_max_tokens,
+        }
+        return super().generate(prompt, **kwargs)
+
+
 QUERY = Query(
     id="q1",
     text="What is 2+2?",
@@ -326,6 +349,22 @@ class TestEnsembleArchitecture:
             {"temperature": 0.25, "max_tokens": 144},
         ]
         assert llm.calls == [{"temperature": 0.55, "max_tokens": 377}]
+
+    def test_ensemble_exposes_member_generation_metadata(self):
+        slm = MetadataStubModel(
+            "slm",
+            answer="Answer: B",
+            confidence=0.85,
+            finish_reason="length",
+            effective_max_tokens=660,
+        )
+        arch = EnsembleArchitecture(slm=slm, n_models=1, voting="majority")
+
+        resp = arch.run(QUERY)
+
+        member = resp.metadata["ensemble_member_responses"][0]
+        assert member["finish_reason"] == "length"
+        assert member["effective_max_tokens"] == 660
 
 
 class TestActiveOracleArchitecture:

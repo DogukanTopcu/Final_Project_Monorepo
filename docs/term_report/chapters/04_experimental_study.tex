@@ -1,6 +1,20 @@
+\definecolor{routingcolor}{RGB}{42,157,143}
+\definecolor{monolithiccolor}{RGB}{231,111,81}
+\newcommand{\metricbar}[2]{%
+  \makebox[4.0cm][l]{\textcolor{black!12}{\rule{4.0cm}{9pt}}}%
+  \hspace{-4.0cm}%
+  \textcolor{#1}{\rule{#2}{9pt}}%
+}
+
 \chapter{EXPERIMENTAL STUDY}
 
-This chapter defines the experimental study as an execution design and reporting plan. It does not present final comparative results, because the current experiments are not yet valid for thesis-grade claims. The main purpose of this chapter is to describe what can already be run, what remains preliminary, and how the next phase of valid experimentation will be conducted.
+This chapter documents the current state of the experimental study in two
+complementary ways. First, it reports two completed MMLU experiments that
+already provide a concrete architecture comparison under a shared setup.
+Second, it clarifies which parts of the broader thesis evaluation pipeline are
+already usable and which still remain preliminary. This separation is important
+because the repository can already produce meaningful pilot evidence, but not
+every benchmark surface is yet mature enough for thesis-grade claims.
 
 \section{Evaluation Environment}
 
@@ -26,9 +40,191 @@ The platform uses a split deployment model in which the control plane runs local
 
 All selected models are exposed through OpenAI-compatible HTTP endpoints so that the experiment runner can stay provider-neutral. The repository also contains host-lock logic to coordinate experiments that depend on shared hosts where only one large model may be active at a time.
 
+\section{Current MMLU Comparison Setup}
+
+This report includes two new MMLU experiments and uses them to compare two
+response-generation strategies under the same benchmark. The routing run,
+\texttt{exp\_ecdd81b2}, first answers with the lightweight
+\texttt{gemma4-4b} model and escalates uncertain cases to
+\texttt{gemma4-31b}. The monolithic run, \texttt{exp\_018ab0cf}, answers every
+question directly with \texttt{gemma4-31b}. Since both runs evaluate the same
+\texttt{mmlu} benchmark with 100 samples and zero temperature, the comparison
+isolates the effect of architecture choice rather than dataset variation.
+
+The comparison focuses on five outcome families: accuracy, EATS, latency,
+cost, and resource usage. In this repository, EATS is the
+``Efficiency-Accuracy Trade-off Score'' and rewards architectures that preserve
+accuracy while reducing heavy LLM usage and normalized cost. Therefore, a
+higher EATS indicates a better efficiency-quality balance.
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\caption{Configuration of the two MMLU comparison runs}
+\label{tab:mmlu-config}
+\begin{tabular}{|p{3.3cm}|p{5.1cm}|p{5.1cm}|}
+\hline
+\textbf{Setting} & \textbf{Routing: \texttt{exp\_ecdd81b2}} & \textbf{Monolithic: \texttt{exp\_018ab0cf}} \\
+\hline
+Architecture & Routing with SLM draft and LLM fallback & Single-pass monolithic inference \\
+\hline
+Benchmark & \multicolumn{2}{c|}{MMLU} \\
+\hline
+Samples & \multicolumn{2}{c|}{100} \\
+\hline
+Final LLM & \texttt{gemma4-31b} fallback only & \texttt{gemma4-31b} for every sample \\
+\hline
+Draft SLM & \texttt{gemma4-4b} & None \\
+\hline
+Temperature & \multicolumn{2}{c|}{0.0} \\
+\hline
+Confidence threshold & 0.8, active for escalation & 0.7 recorded in config, not used for routing \\
+\hline
+LLM call ratio & 34\% & 100\% \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Score Comparison}
+
+Figure~\ref{fig:mmlu-scores} compares the two architectures on raw task
+quality. The monolithic design achieved the higher MMLU accuracy with 85
+correct answers out of 100, while the routing design reached 76 correct
+answers. This 9 percentage point gap is expected because the monolithic
+baseline always uses the stronger \texttt{gemma4-31b} model.
+
+The more interesting result is the EATS comparison. Routing reached an EATS of
+2.171, while the monolithic baseline remained at 0.842. This means the routing
+architecture delivered a 2.58 times better efficiency-accuracy trade-off even
+though its raw accuracy was lower. The main driver is selective escalation:
+66 samples were accepted at the SLM stage and only 34 required the heavy LLM.
+
+\begin{figure}[htbp]
+\centering
+\begin{minipage}[t]{0.46\textwidth}
+\centering
+\textbf{Accuracy (\%, higher is better)}\\[0.6em]
+\begin{tabular}{@{}l l r@{}}
+Routing & \metricbar{routingcolor}{3.58cm} & 76.0 \\
+Monolithic & \metricbar{monolithiccolor}{4.00cm} & 85.0 \\
+\end{tabular}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.46\textwidth}
+\centering
+\textbf{EATS (higher is better)}\\[0.6em]
+\begin{tabular}{@{}l l r@{}}
+Routing & \metricbar{routingcolor}{4.00cm} & 2.171 \\
+Monolithic & \metricbar{monolithiccolor}{1.55cm} & 0.842 \\
+\end{tabular}
+\end{minipage}
+\caption{Score comparison between routing and monolithic architectures on MMLU}
+\label{fig:mmlu-scores}
+\end{figure}
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\caption{Raw outcome summary for the two MMLU runs}
+\label{tab:mmlu-summary}
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Metric} & \textbf{Routing} & \textbf{Monolithic} \\
+\hline
+Accuracy & 76.0\% & 85.0\% \\
+\hline
+EATS & 2.171 & 0.842 \\
+\hline
+Correct answers & 76 / 100 & 85 / 100 \\
+\hline
+LLM call ratio & 34\% & 100\% \\
+\hline
+Average latency & 20.45 s & 9.29 s \\
+\hline
+Latency p95 & 42.18 s & 17.66 s \\
+\hline
+Total cost & \$0.5913 & \$0.6066 \\
+\hline
+Total energy & 0.0665 kWh & 0.0826 kWh \\
+\hline
+Total CO$_2$ & 25.28 g & 31.39 g \\
+\hline
+Total tokens & 69,512 & 42,889 \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Efficiency and Resource Comparison}
+
+Figure~\ref{fig:mmlu-efficiency} shows the operating-cost side of the same
+comparison. Routing reduced heavy-model usage from 100\% to 34\%, lowered total
+energy from 0.0826 to 0.0665 kWh, and reduced estimated CO$_2$ emissions from
+31.39 g to 25.28 g. The cost difference was smaller but still favorable to
+routing: \$0.5913 versus \$0.6066, or roughly a 2.5\% reduction.
+
+The latency trade-off is much sharper. Average latency increased from 9.29
+seconds in the monolithic run to 20.45 seconds in routing, and tail latency
+(p95) increased from 17.66 seconds to 42.18 seconds. This overhead comes from
+the two-stage control flow. Every routing request pays for an initial SLM pass,
+and 34 requests also pay for a second LLM pass. Within the routing run, the
+66 SLM-only samples averaged 16.26 seconds, while escalated samples averaged
+28.57 seconds.
+
+The escalation breakdown also helps explain the result. Out of the 34 escalated
+samples, 23 were escalated because confidence fell below the 0.8 threshold and
+11 were escalated because the draft answer could not be parsed reliably. In
+other words, part of the latency penalty comes from router conservatism and
+output-format failures, not only from difficult questions.
+
+\begin{figure}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{@{}p{3.3cm}l l r@{}}
+\textbf{Metric} & \textbf{System} & \textbf{Relative bar} & \textbf{Value} \\
+\hline
+Average latency & Routing & \metricbar{routingcolor}{4.00cm} & 20.45 s \\
+ & Monolithic & \metricbar{monolithiccolor}{1.82cm} & 9.29 s \\
+\\[-0.1em]
+Latency p95 & Routing & \metricbar{routingcolor}{4.00cm} & 42.18 s \\
+ & Monolithic & \metricbar{monolithiccolor}{1.67cm} & 17.66 s \\
+\\[-0.1em]
+Total cost & Routing & \metricbar{routingcolor}{3.90cm} & \$0.5913 \\
+ & Monolithic & \metricbar{monolithiccolor}{4.00cm} & \$0.6066 \\
+\\[-0.1em]
+Total energy & Routing & \metricbar{routingcolor}{3.22cm} & 0.0665 kWh \\
+ & Monolithic & \metricbar{monolithiccolor}{4.00cm} & 0.0826 kWh \\
+\\[-0.1em]
+Total CO$_2$ & Routing & \metricbar{routingcolor}{3.22cm} & 25.28 g \\
+ & Monolithic & \metricbar{monolithiccolor}{4.00cm} & 31.39 g \\
+\\[-0.1em]
+LLM call ratio & Routing & \metricbar{routingcolor}{1.36cm} & 34\% \\
+ & Monolithic & \metricbar{monolithiccolor}{4.00cm} & 100\% \\
+\end{tabular}
+\caption{Efficiency and resource comparison on MMLU. Lower is better in all panels.}
+\label{fig:mmlu-efficiency}
+\end{figure}
+
+\section{Discussion of the Current Result}
+
+These two experiments show that architecture choice changes the operating point
+of the system rather than producing a universal winner. If the main objective is
+maximum MMLU accuracy, the monolithic \texttt{gemma4-31b} baseline is stronger.
+If the objective is to reduce heavy-model usage, energy, and carbon while
+keeping accuracy within a usable range, the routing strategy is more attractive.
+
+At the same time, these runs should still be interpreted as a focused pilot
+comparison rather than as the final thesis result set. They demonstrate that the
+reporting stack, experiment runner, and cost-energy instrumentation can support
+meaningful architecture analysis, but they do not yet replace the broader coding
+benchmark that the thesis is designed around.
+
 \section{Implemented and Usable Today}
 
-The following pieces are already implemented and useful for development, smoke testing, and early-stage experimentation:
+The following pieces are already implemented and useful for development, smoke
+testing, and early-stage experimentation:
 
 \begin{itemize}
     \item the local control plane consisting of backend, frontend, MLflow integration, experiment runner, and result reporting;
@@ -38,11 +234,15 @@ The following pieces are already implemented and useful for development, smoke t
     \item web surfaces for dashboarding, experiment launch, host visibility, result comparison, and playground-style prompt testing.
 \end{itemize}
 
-These capabilities are sufficient to support platform demonstrations, architecture debugging, early pilot runs, and documentation of the end-to-end workflow. They are not yet sufficient to support the final experimental claims of the thesis.
+These capabilities are sufficient to support platform demonstrations,
+architecture debugging, early pilot runs, and documentation of the end-to-end
+workflow. They are not yet sufficient to support the final experimental claims
+of the thesis.
 
 \section{Preliminary Components Not Yet Valid for Thesis Claims}
 
-Several core ideas of the thesis are still under construction or still require methodological cleanup:
+Several core ideas of the thesis are still under construction or still require
+methodological cleanup:
 
 \begin{itemize}
     \item The coding benchmark is not yet finalized. The intended \texttt{custom\_stratified} benchmark should contain easy, medium, and hard coding tasks, but the current repository loader is still a legacy mixture and therefore cannot be treated as a valid coding benchmark.
@@ -51,11 +251,19 @@ Several core ideas of the thesis are still under construction or still require m
     \item The project-proposed swarm family --- decentralized blackboard, entropy blackboard, and pure swarm --- is implemented as a promising architecture direction, but not yet supported by a finalized benchmark and valid comparative evidence.
 \end{itemize}
 
-For these reasons, the current experimental outputs are treated as exploratory rather than conclusive. No quantitative values are reported in this term report as final findings. This is intentional: fabricated or unstable numbers would weaken the thesis rather than strengthen it.
+For these reasons, the current experimental outputs are treated as exploratory
+outside the specific MMLU comparison reported above. No broader quantitative
+claim is made in this term report for the unfinished benchmark surfaces. This is
+intentional: fabricated or unstable numbers would weaken the thesis rather than
+strengthen it.
 
 \section{Planned Coding Benchmark Protocol}
 
-The main benchmark contribution planned for the thesis is a coding-focused dataset organized by difficulty. The benchmark will be centered on the \texttt{custom\_stratified} track and will compare architectures on practical coding tasks rather than on a single public multiple-choice benchmark. The target structure is shown in Table \ref{tab:coding-benchmark-plan}.
+The main benchmark contribution planned for the thesis is a coding-focused
+dataset organized by difficulty. The benchmark will be centered on the
+\texttt{custom\_stratified} track and will compare architectures on practical
+coding tasks rather than on a single public multiple-choice benchmark. The
+target structure is shown in Table \ref{tab:coding-benchmark-plan}.
 
 \begin{table}[htbp]
     \centering
@@ -73,9 +281,16 @@ The main benchmark contribution planned for the thesis is a coding-focused datas
     \end{tabularx}
 \end{table}
 
-Each task record should contain at least an identifier, a difficulty label, a prompt, optional starter code, public and hidden tests, a topic label, and source metadata. The benchmark should support evaluation by exact output or unit tests depending on the task. The main comparison axes will be: architecture, SLM choice, LLM choice, escalation behavior, total cost, energy consumption, carbon emissions, and EATS. This structure makes the benchmark suitable for the thesis focus on coding skill rather than on general-purpose language understanding alone.
+Each task record should contain at least an identifier, a difficulty label, a
+prompt, optional starter code, public and hidden tests, a topic label, and
+source metadata. The benchmark should support evaluation by exact output or
+unit tests depending on the task. The main comparison axes will be:
+architecture, SLM choice, LLM choice, escalation behavior, total cost, energy
+consumption, carbon emissions, and EATS. This structure makes the benchmark
+suitable for the thesis focus on coding skill rather than on general-purpose
+language understanding alone.
 
-\section{Evaluation Protocol}
+\section{Thesis-Grade Evaluation Protocol}
 
 Once the benchmark is finalized, the comparative protocol will proceed in three layers:
 

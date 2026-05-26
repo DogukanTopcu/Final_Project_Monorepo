@@ -47,7 +47,7 @@ Opponent's critique:
 {opponent_output}
 
 You are the Arbitrator. Based on both perspectives, give the final definitive answer.
-Answer with the letter only (A, B, C or D) for multiple-choice, or a number for math.
+Answer with the option letter only for multiple-choice, or a number for math.
 Final Answer:"""
 
 

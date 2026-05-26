@@ -142,6 +142,8 @@ export interface EnsembleMemberResponse {
   confidence?: number | null;
   input_tokens?: number | null;
   output_tokens?: number | null;
+  effective_max_tokens?: number | null;
+  finish_reason?: string | null;
   latency_ms?: number | null;
   cost_usd?: number | null;
   [key: string]: unknown;

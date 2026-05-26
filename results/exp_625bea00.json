@@ -1,0 +1,1307 @@
+{
+  "experiment_id": "exp_625bea00",
+  "created_at": "2026-05-26T14:40:44.794654+00:00",
+  "config": {
+    "architecture": "ensemble",
+    "benchmark": "mmlu",
+    "n_samples": 10,
+    "slm": null,
+    "secondary_slm": null,
+    "llm": null,
+    "ensemble_slms": [
+      "gemma4-4b"
+    ],
+    "slm_temperature": 0.0,
+    "llm_temperature": 0.0,
+    "slm_max_tokens": 660,
+    "llm_max_tokens": 0,
+    "slm_only": false,
+    "confidence_threshold": 0.7,
+    "margin_threshold": null,
+    "long_input_token_threshold": null,
+    "force_escalate": false,
+    "confidence_method": "existing_model_confidence",
+    "n_debate_rounds": 1,
+    "arbitrator": "llm",
+    "n_models": 1,
+    "voting": "majority",
+    "llm_tiebreak": false,
+    "speculative_acceptance_threshold": 0.7,
+    "cost_weight": 0.15,
+    "bid_threshold": 0.65,
+    "ttl_ms": 1500,
+    "dry_run": false,
+    "seed": 42,
+    "output_dir": "/Users/bakiceltik/Documents/GitHub/Final_Project_Monorepo/results",
+    "mlflow_tracking_uri": "http://localhost:5000",
+    "extra": {}
+  },
+  "metrics": {
+    "accuracy": 0.9,
+    "llm_call_ratio": 0.0,
+    "avg_latency_ms": 18400.303770805476,
+    "total_cost_usd": 0.03833396618917807,
+    "total_api_cost_usd": 0.0,
+    "total_infra_cost_usd": 0.03833396618917807,
+    "total_energy_kwh": 0.003680060754161095,
+    "total_co2_g": 1.3984230865812162,
+    "n_total": 10.0,
+    "n_correct": 9.0,
+    "eats_score": 90.0,
+    "normalized_cost": 1.0,
+    "latency_p50_ms": 17919.671874988126,
+    "latency_p95_ms": 28462.687917024596,
+    "total_tokens": 5500,
+    "n_escalated": 0.0,
+    "escalation_rate": 0.0,
+    "n_slm_only": 10.0,
+    "n_llm_final": 0.0,
+    "avg_slm_confidence": 0.8275665253537129,
+    "avg_confidence_escalated": 0.0,
+    "avg_confidence_non_escalated": 0.8275665253537129,
+    "avg_energy_per_sample_kwh": 0.0003680060754161095,
+    "avg_co2_per_sample_g": 0.1398423086581216
+  },
+  "samples": [
+    {
+      "query_id": "mmlu_10476",
+      "query_text": "Mast Co. converted from the FIFO method for inventory valuation to the LIFO method for financial statement and tax purposes. During a period of inflation would Mast's ending inventory and income tax payable using LIFO be higher or lower than FIFO? Ending inventory Income tax payable",
+      "query_choices": [
+        "Lower Lower",
+        "Higher Higher",
+        "Lower Higher",
+        "Higher Lower"
+      ],
+      "correct": true,
+      "predicted": "A",
+      "ground_truth": "A",
+      "llm_calls": 0,
+      "confidence": 0.8771753093713675,
+      "latency_ms": 19543.16229201504,
+      "cost_usd": 0.004071492144169801,
+      "api_cost_usd": 0.0,
+      "infra_cost_usd": 0.004071492144169801,
+      "energy_kwh": 0.0003908632458403008,
+      "co2_g": 0.1485280334193143,
+      "gpu_power_w": 72.0,
+      "final_model_id": "google/gemma-4-E4B-it",
+      "used_llm": false,
+      "escalated": false,
+      "slm_confidence": 0.8771753093713675,
+      "confidence_threshold": null,
+      "margin_threshold": null,
+      "long_input_token_threshold": null,
+      "confidence_method": null,
+      "slm_raw_text": "1. google/gemma-4-E4B-it: Here's a step-by-step analysis to determine the correct answer:\n\n**Understanding the Methods in Inflation**\n\n* **Inflation:** Prices are rising over time. This means newer inventory costs more than older inventory.\n* **FIFO (First-In, First-Out):** Assumes the oldest inventory (cheapest, from earlier periods) is sold first.\n    * **Cost of Goods Sold (COGS):** Uses older, lower costs $\\rightarrow$ Lower COGS.\n    * **Ending Inventory:** Consists of the newest inventory (most recent, highest costs) $\\rightarrow$ Higher Ending Inventory value.\n    * **Net Income:** Higher (because COGS is lower).\n    * **Income Tax Payable:** Higher (because taxable income is higher).\n* **LIFO (Last-In, First-Out):** Assumes the newest inventory (most expensive, from recent purchases) is sold first.\n    * **Cost of Goods Sold (COGS):** Uses newer, higher costs $\\rightarrow$ Higher COGS.\n    * **Ending Inventory:** Consists of the oldest inventory (earlier, lower costs) $\\rightarrow$ Lower Ending Inventory value.\n    * **Net Income:** Lower (because COGS is higher).\n    * **Income Tax Payable:** Lower (because taxable income is lower).\n\n**Comparing LIFO to FIFO During Inflation**\n\nWe need to compare the results using LIFO versus FIFO:\n\n1. **Ending Inventory:**\n   * FIFO Ending Inventory (Newest/Highest Costs) $>$ LIFO Ending Inventory (Oldest/Lowest Costs)\n   * $\\rightarrow$ LIFO Ending Inventory is **Lower** than FIFO.\n\n2. **Income Tax Payable:**\n   * FIFO Income Tax Payable (Higher Income) $>$ LIFO Income Tax Payable (Lower Income)\n   * $\\rightarrow$ LIFO Income Tax Payable is **Lower** than FIFO.\n\n**Conclusion**\n\nUsing LIFO during inflation results in:\n* Ending Inventory: **Lower** than FIFO\n* Income Tax Payable: **Lower** than FIFO\n\nThis corresponds to option A.\n\nAnswer: A",
+      "slm_parsed_answer": null,
+      "slm_parse_status": "unparseable",
+      "llm_raw_text": null,
+      "llm_parsed_answer": null,
+      "llm_parse_status": null,
+      "final_raw_text": "A",
+      "final_parsed_answer": "A",
+      "final_answer_source": "ensemble_vote",
+      "escalation_reason": null,
+      "routing_decision": {
+        "accepted_by": "slm",
+        "threshold": null,
+        "confidence_method": null,
+        "signals": {
+          "parse_success": false,
+          "confidence": 0.8771753093713675,
+          "top2_margin": null,
+          "input_tokens": 114,
+          "input_too_long": false,
+          "low_confidence": false,
+          "low_margin": false,
+          "forced_escalation": false
+        }
+      },
+      "slm_latency_ms": null,
+      "llm_latency_ms": null,
+      "slm_input_tokens": null,
+      "slm_output_tokens": null,
+      "llm_input_tokens": null,
+      "llm_output_tokens": null,
+      "slm_cost_usd": null,
+      "llm_cost_usd": null,
+      "resource_estimate": {
+        "api_cost_usd": 0.0,
+        "infra_cost_usd": 0.004071492144169801,
+        "total_cost_usd": 0.004071492144169801,
+        "energy_kwh": 0.0003908632458403008,
+        "co2_g": 0.1485280334193143,
+        "gpu_power_w": 72.0,
+        "method": "host_profile_estimate"
+      },
+      "inference_steps": [
+        {
+          "role": "ensemble_member_1",
+          "model_id": "google/gemma-4-E4B-it",
+          "latency_ms": 19543.16229201504,
+          "input_tokens": 114,
+          "output_tokens": 441,
+          "api_cost_usd": 0.0,
+          "host_label": "gcp-l4",
+          "duration_s": 19.54316229201504,
+          "energy_kwh": 0.0003908632458403008,
+          "co2_g": 0.1485280334193143,
+          "infra_cost_usd": 0.004071492144169801,
+          "gpu_power_w": 72.0
+        }
+      ],
+      "prompt_text": "Mast Co. converted from the FIFO method for inventory valuation to the LIFO method for financial statement and tax purposes. During a period of inflation would Mast's ending inventory and income tax payable using LIFO be higher or lower than FIFO? Ending inventory Income tax payable\n\nA. Lower Lower\nB. Higher Higher\nC. Lower Higher\nD. Higher Lower\n\nChoose the single best answer: A, B, C, D.\nEnd your response with a final line in the format: Answer: <LETTER>",
+      "slm_text": "1. google/gemma-4-E4B-it: Here's a step-by-step analysis to determine the correct answer:\n\n**Understanding the Methods in Inflation**\n\n* **Inflation:** Prices are rising over time. This means newer inventory costs more than older inventory.\n* **FIFO (First-In, First-Out):** Assumes the oldest inventory (cheapest, from earlier periods) is sold first.\n    * **Cost of Goods Sold (COGS):** Uses older, lower costs $\\rightarrow$ Lower COGS.\n    * **Ending Inventory:** Consists of the newest inventory (most recent, highest costs) $\\rightarrow$ Higher Ending Inventory value.\n    * **Net Income:** Higher (because COGS is lower).\n    * **Income Tax Payable:** Higher (because taxable income is higher).\n* **LIFO (Last-In, First-Out):** Assumes the newest inventory (most expensive, from recent purchases) is sold first.\n    * **Cost of Goods Sold (COGS):** Uses newer, higher costs $\\rightarrow$ Higher COGS.\n    * **Ending Inventory:** Consists of the oldest inventory (earlier, lower costs) $\\rightarrow$ Lower Ending Inventory value.\n    * **Net Income:** Lower (because COGS is higher).\n    * **Income Tax Payable:** Lower (because taxable income is lower).\n\n**Comparing LIFO to FIFO During Inflation**\n\nWe need to compare the results using LIFO versus FIFO:\n\n1. **Ending Inventory:**\n   * FIFO Ending Inventory (Newest/Highest Costs) $>$ LIFO Ending Inventory (Oldest/Lowest Costs)\n   * $\\rightarrow$ LIFO Ending Inventory is **Lower** than FIFO.\n\n2. **Income Tax Payable:**\n   * FIFO Income Tax Payable (Higher Income) $>$ LIFO Income Tax Payable (Lower Income)\n   * $\\rightarrow$ LIFO Income Tax Payable is **Lower** than FIFO.\n\n**Conclusion**\n\nUsing LIFO during inflation results in:\n* Ending Inventory: **Lower** than FIFO\n* Income Tax Payable: **Lower** than FIFO\n\nThis corresponds to option A.\n\nAnswer: A",
+      "final_text": "A",
+      "votes": [
+        "A"
+      ],
+      "vote_counts": {
+        "A": 1
+      },
+      "confidences": [
+        0.8771753093713675
+      ],
+      "voting_method": "majority",
+      "n_models": 1,
+      "members": [
+        "google/gemma-4-E4B-it"
+      ],
+      "ensemble_member_responses": [
+        {
+          "member_index": 1,
+          "role": "ensemble_member_1",
+          "model_id": "google/gemma-4-E4B-it",
+          "raw_text": "Here's a step-by-step analysis to determine the correct answer:\n\n**Understanding the Methods in Inflation**\n\n* **Inflation:** Prices are rising over time. This means newer inventory costs more than older inventory.\n* **FIFO (First-In, First-Out):** Assumes the oldest inventory (cheapest, from earlier periods) is sold first.\n    * **Cost of Goods Sold (COGS):** Uses older, lower costs $\\rightarrow$ Lower COGS.\n    * **Ending Inventory:** Consists of the newest inventory (most recent, highest costs) $\\rightarrow$ Higher Ending Inventory value.\n    * **Net Income:** Higher (because COGS is lower).\n    * **Income Tax Payable:** Higher (because taxable income is higher).\n* **LIFO (Last-In, First-Out):** Assumes the newest inventory (most expensive, from recent purchases) is sold first.\n    * **Cost of Goods Sold (COGS):** Uses newer, higher costs $\\rightarrow$ Higher COGS.\n    * **Ending Inventory:** Consists of the oldest inventory (earlier, lower costs) $\\rightarrow$ Lower Ending Inventory value.\n    * **Net Income:** Lower (because COGS is higher).\n    * **Income Tax Payable:** Lower (because taxable income is lower).\n\n**Comparing LIFO to FIFO During Inflation**\n\nWe need to compare the results using LIFO versus FIFO:\n\n1. **Ending Inventory:**\n   * FIFO Ending Inventory (Newest/Highest Costs) $>$ LIFO Ending Inventory (Oldest/Lowest Costs)\n   * $\\rightarrow$ LIFO Ending Inventory is **Lower** than FIFO.\n\n2. **Income Tax Payable:**\n   * FIFO Income Tax Payable (Higher Income) $>$ LIFO Income Tax Payable (Lower Income)\n   * $\\rightarrow$ LIFO Income Tax Payable is **Lower** than FIFO.\n\n**Conclusion**\n\nUsing LIFO during inflation results in:\n* Ending Inventory: **Lower** than FIFO\n* Income Tax Payable: **Lower** than FIFO\n\nThis corresponds to option A.\n\nAnswer: A",
+          "parsed_answer": "A",
+          "parse_status": "parsed",
+          "confidence": 0.8771753093713675,
+          "input_tokens": 114,
+          "output_tokens": 441,
+          "latency_ms": 19543.16229201504,
+          "cost_usd": 0.0
+        }
+      ],
+      "llm_tiebreak": false,
+      "llm_tiebreak_raw_text": null,
+      "llm_tiebreak_parsed_answer": null,
+      "llm_tiebreak_parse_status": null
+    },
+    {
+      "query_id": "mmlu_1824",
+      "query_text": "What are the dimensions of $\\hat{u}^t \\hat{u}?",
+      "query_choices": [
+        "T x k",
+        "T x 1",
+        "k x 1",
+        "1 x 1"
+      ],
+      "correct": true,
+      "predicted": "D",
+      "ground_truth": "D",
+      "llm_calls": 0,
+      "confidence": 0.7987258694804191,
+      "latency_ms": 17919.671874988126,
+      "cost_usd": 0.0037332649739558596,
+      "api_cost_usd": 0.0,
+      "infra_cost_usd": 0.0037332649739558596,
+      "energy_kwh": 0.00035839343749976253,
+      "co2_g": 0.13618950624990975,
+      "gpu_power_w": 72.0,
+      "final_model_id": "google/gemma-4-E4B-it",
+      "used_llm": false,
+      "escalated": false,
+      "slm_confidence": 0.7987258694804191,
+      "confidence_threshold": null,
+      "margin_threshold": null,
+      "long_input_token_threshold": null,
+      "confidence_method": null,
+      "slm_raw_text": "1. google/gemma-4-E4B-it: Let's analyze the dimensions of the vectors $\\hat{u}$ and $\\hat{u}^t$.\n\n1.  **Determine the dimension of $\\hat{u}$:**\n    The notation $\\hat{u}$ typically represents a vector. In many contexts (like signal processing or linear algebra where this notation is common), if the context doesn't specify the dimension, we assume it is a column vector of some dimension, say $k$.\n    Therefore, the dimension of $\\hat{u}$ is $k \\times 1$.\n\n2.  **Determine the dimension of $\\hat{u}^t$:**\n    $\\hat{u}^t$ denotes the transpose of the vector $\\hat{u}$. If $\\hat{u}$ is $k \\times 1$, its transpose $\\hat{u}^t$ will be $1 \\times k$.\n\n3.  **Determine the dimension of the product $\\hat{u}^t \\hat{u}$:**\n    We are multiplying a matrix of dimension $1 \\times k$ ($\\hat{u}^t$) by a matrix of dimension $k \\times 1$ ($\\hat{u}$).\n    The resulting matrix dimension is (rows of the first matrix) $\\times$ (columns of the second matrix), which is $1 \\times 1$.\n\nThe product $\\hat{u}^t \\hat{u}$ results in a scalar value (a $1 \\times 1$ matrix), which is the squared L2-norm of the vector $\\hat{u}$ (i.e., $\\|\\hat{u}\\|^2$).\n\nComparing this result with the options:\nA. $T \\times k$\nB. $T \\times 1$\nC. $k \\times 1$\nD. $1 \\times 1$\n\nThe correct dimension is $1 \\times 1$.\n\nAnswer: D",
+      "slm_parsed_answer": null,
+      "slm_parse_status": "unparseable",
+      "llm_raw_text": null,
+      "llm_parsed_answer": null,
+      "llm_parse_status": null,
+      "final_raw_text": "D",
+      "final_parsed_answer": "D",
+      "final_answer_source": "ensemble_vote",
+      "escalation_reason": null,
+      "routing_decision": {
+        "accepted_by": "slm",
+        "threshold": null,
+        "confidence_method": null,
+        "signals": {
+          "parse_success": false,
+          "confidence": 0.7987258694804191,
+          "top2_margin": null,
+          "input_tokens": 85,
+          "input_too_long": false,
+          "low_confidence": false,
+          "low_margin": false,
+          "forced_escalation": false
+        }
+      },
+      "slm_latency_ms": null,
+      "llm_latency_ms": null,
+      "slm_input_tokens": null,
+      "slm_output_tokens": null,
+      "llm_input_tokens": null,
+      "llm_output_tokens": null,
+      "slm_cost_usd": null,
+      "llm_cost_usd": null,
+      "resource_estimate": {
+        "api_cost_usd": 0.0,
+        "infra_cost_usd": 0.0037332649739558596,
+        "total_cost_usd": 0.0037332649739558596,
+        "energy_kwh": 0.00035839343749976253,
+        "co2_g": 0.13618950624990975,
+        "gpu_power_w": 72.0,
+        "method": "host_profile_estimate"
+      },
+      "inference_steps": [
+        {
+          "role": "ensemble_member_1",
+          "model_id": "google/gemma-4-E4B-it",
+          "latency_ms": 17919.671874988126,
+          "input_tokens": 85,
+          "output_tokens": 397,
+          "api_cost_usd": 0.0,
+          "host_label": "gcp-l4",
+          "duration_s": 17.919671874988126,
+          "energy_kwh": 0.00035839343749976253,
+          "co2_g": 0.13618950624990975,
+          "infra_cost_usd": 0.0037332649739558596,
+          "gpu_power_w": 72.0
+        }
+      ],
+      "prompt_text": "What are the dimensions of $\\hat{u}^t \\hat{u}?\n\nA. T x k\nB. T x 1\nC. k x 1\nD. 1 x 1\n\nChoose the single best answer: A, B, C, D.\nEnd your response with a final line in the format: Answer: <LETTER>",
+      "slm_text": "1. google/gemma-4-E4B-it: Let's analyze the dimensions of the vectors $\\hat{u}$ and $\\hat{u}^t$.\n\n1.  **Determine the dimension of $\\hat{u}$:**\n    The notation $\\hat{u}$ typically represents a vector. In many contexts (like signal processing or linear algebra where this notation is common), if the context doesn't specify the dimension, we assume it is a column vector of some dimension, say $k$.\n    Therefore, the dimension of $\\hat{u}$ is $k \\times 1$.\n\n2.  **Determine the dimension of $\\hat{u}^t$:**\n    $\\hat{u}^t$ denotes the transpose of the vector $\\hat{u}$. If $\\hat{u}$ is $k \\times 1$, its transpose $\\hat{u}^t$ will be $1 \\times k$.\n\n3.  **Determine the dimension of the product $\\hat{u}^t \\hat{u}$:**\n    We are multiplying a matrix of dimension $1 \\times k$ ($\\hat{u}^t$) by a matrix of dimension $k \\times 1$ ($\\hat{u}$).\n    The resulting matrix dimension is (rows of the first matrix) $\\times$ (columns of the second matrix), which is $1 \\times 1$.\n\nThe product $\\hat{u}^t \\hat{u}$ results in a scalar value (a $1 \\times 1$ matrix), which is the squared L2-norm of the vector $\\hat{u}$ (i.e., $\\|\\hat{u}\\|^2$).\n\nComparing this result with the options:\nA. $T \\times k$\nB. $T \\times 1$\nC. $k \\times 1$\nD. $1 \\times 1$\n\nThe correct dimension is $1 \\times 1$.\n\nAnswer: D",
+      "final_text": "D",
+      "votes": [
+        "D"
+      ],
+      "vote_counts": {
+        "D": 1
+      },
+      "confidences": [
+        0.7987258694804191
+      ],
+      "voting_method": "majority",
+      "n_models": 1,
+      "members": [
+        "google/gemma-4-E4B-it"
+      ],
+      "ensemble_member_responses": [
+        {
+          "member_index": 1,
+          "role": "ensemble_member_1",
+          "model_id": "google/gemma-4-E4B-it",
+          "raw_text": "Let's analyze the dimensions of the vectors $\\hat{u}$ and $\\hat{u}^t$.\n\n1.  **Determine the dimension of $\\hat{u}$:**\n    The notation $\\hat{u}$ typically represents a vector. In many contexts (like signal processing or linear algebra where this notation is common), if the context doesn't specify the dimension, we assume it is a column vector of some dimension, say $k$.\n    Therefore, the dimension of $\\hat{u}$ is $k \\times 1$.\n\n2.  **Determine the dimension of $\\hat{u}^t$:**\n    $\\hat{u}^t$ denotes the transpose of the vector $\\hat{u}$. If $\\hat{u}$ is $k \\times 1$, its transpose $\\hat{u}^t$ will be $1 \\times k$.\n\n3.  **Determine the dimension of the product $\\hat{u}^t \\hat{u}$:**\n    We are multiplying a matrix of dimension $1 \\times k$ ($\\hat{u}^t$) by a matrix of dimension $k \\times 1$ ($\\hat{u}$).\n    The resulting matrix dimension is (rows of the first matrix) $\\times$ (columns of the second matrix), which is $1 \\times 1$.\n\nThe product $\\hat{u}^t \\hat{u}$ results in a scalar value (a $1 \\times 1$ matrix), which is the squared L2-norm of the vector $\\hat{u}$ (i.e., $\\|\\hat{u}\\|^2$).\n\nComparing this result with the options:\nA. $T \\times k$\nB. $T \\times 1$\nC. $k \\times 1$\nD. $1 \\times 1$\n\nThe correct dimension is $1 \\times 1$.\n\nAnswer: D",
+          "parsed_answer": "D",
+          "parse_status": "parsed",
+          "confidence": 0.7987258694804191,
+          "input_tokens": 85,
+          "output_tokens": 397,
+          "latency_ms": 17919.671874988126,
+          "cost_usd": 0.0
+        }
+      ],
+      "llm_tiebreak": false,
+      "llm_tiebreak_raw_text": null,
+      "llm_tiebreak_parsed_answer": null,
+      "llm_tiebreak_parse_status": null
+    },
+    {
+      "query_id": "mmlu_409",
+      "query_text": "_______ theory can be described as a code of conduct to which all rational beings should adhere. This contrasts with ________ morality which is the code of conduct adopted by a particular group or society.",
+      "query_choices": [
+        "Descriptive, Normative",
+        "Normative, Instrumental",
+        "Normative, Descriptive",
+        "Ethical, Descriptive"
+      ],
+      "correct": true,
+      "predicted": "C",
+      "ground_truth": "C",
+      "llm_calls": 0,
+      "confidence": 0.7209098303943564,
+      "latency_ms": 13699.359250022098,
+      "cost_usd": 0.0028540331770879374,
+      "api_cost_usd": 0.0,
+      "infra_cost_usd": 0.0028540331770879374,
+      "energy_kwh": 0.00027398718500044194,
+      "co2_g": 0.10411513030016793,
+      "gpu_power_w": 72.0,
+      "final_model_id": "google/gemma-4-E4B-it",
+      "used_llm": false,
+      "escalated": false,
+      "slm_confidence": 0.7209098303943564,
+      "confidence_threshold": null,
+      "margin_threshold": null,
+      "long_input_token_threshold": null,
+      "confidence_method": null,
+      "slm_raw_text": "1. google/gemma-4-E4B-it: The question describes two types of moral frameworks:\n\n1. **A code of conduct to which all rational beings should adhere:** This describes a set of principles or rules that *ought* to be followed. This is the definition of **Normative** ethics (or moral philosophy), which prescribes how people *should* act.\n2. **The code of conduct adopted by a particular group or society:** This describes how people *actually* behave or what a specific group believes is right or wrong. This is the definition of **Descriptive** ethics, which observes and describes moral beliefs and practices.\n\nLet's evaluate the options:\n\n* **A. Descriptive, Normative:** This reverses the definitions.\n* **B. Normative, Instrumental:** \"Instrumental morality\" is not the standard term for group-specific codes of conduct in this context.\n* **C. Normative, Descriptive:** This matches the definitions: **Normative** theory is the code all rational beings *should* adhere to, contrasting with **Descriptive** morality, which is the code adopted by a particular group.\n* **D. Ethical, Descriptive:** While \"Ethical\" is related to normative claims, \"Normative\" is the precise philosophical term used to contrast with \"Descriptive\" in this context.\n\nTherefore, the correct pairing is Normative theory contrasting with Descriptive morality.\n\nAnswer: C",
+      "slm_parsed_answer": null,
+      "slm_parse_status": "unparseable",
+      "llm_raw_text": null,
+      "llm_parsed_answer": null,
+      "llm_parse_status": null,
+      "final_raw_text": "C",
+      "final_parsed_answer": "C",
+      "final_answer_source": "ensemble_vote",
+      "escalation_reason": null,
+      "routing_decision": {
+        "accepted_by": "slm",
+        "threshold": null,
+        "confidence_method": null,
+        "signals": {
+          "parse_success": false,
+          "confidence": 0.7209098303943564,
+          "top2_margin": null,
+          "input_tokens": 105,
+          "input_too_long": false,
+          "low_confidence": false,
+          "low_margin": false,
+          "forced_escalation": false
+        }
+      },
+      "slm_latency_ms": null,
+      "llm_latency_ms": null,
+      "slm_input_tokens": null,
+      "slm_output_tokens": null,
+      "llm_input_tokens": null,
+      "llm_output_tokens": null,
+      "slm_cost_usd": null,
+      "llm_cost_usd": null,
+      "resource_estimate": {
+        "api_cost_usd": 0.0,
+        "infra_cost_usd": 0.0028540331770879374,
+        "total_cost_usd": 0.0028540331770879374,
+        "energy_kwh": 0.00027398718500044194,
+        "co2_g": 0.10411513030016793,
+        "gpu_power_w": 72.0,
+        "method": "host_profile_estimate"
+      },
+      "inference_steps": [
+        {
+          "role": "ensemble_member_1",
+          "model_id": "google/gemma-4-E4B-it",
+          "latency_ms": 13699.359250022098,
+          "input_tokens": 105,
+          "output_tokens": 285,
+          "api_cost_usd": 0.0,
+          "host_label": "gcp-l4",
+          "duration_s": 13.699359250022098,
+          "energy_kwh": 0.00027398718500044194,
+          "co2_g": 0.10411513030016793,
+          "infra_cost_usd": 0.0028540331770879374,
+          "gpu_power_w": 72.0
+        }
+      ],
+      "prompt_text": "_______ theory can be described as a code of conduct to which all rational beings should adhere. This contrasts with ________ morality which is the code of conduct adopted by a particular group or society.\n\nA. Descriptive, Normative\nB. Normative, Instrumental\nC. Normative, Descriptive\nD. Ethical, Descriptive\n\nChoose the single best answer: A, B, C, D.\nEnd your response with a final line in the format: Answer: <LETTER>",
+      "slm_text": "1. google/gemma-4-E4B-it: The question describes two types of moral frameworks:\n\n1. **A code of conduct to which all rational beings should adhere:** This describes a set of principles or rules that *ought* to be followed. This is the definition of **Normative** ethics (or moral philosophy), which prescribes how people *should* act.\n2. **The code of conduct adopted by a particular group or society:** This describes how people *actually* behave or what a specific group believes is right or wrong. This is the definition of **Descriptive** ethics, which observes and describes moral beliefs and practices.\n\nLet's evaluate the options:\n\n* **A. Descriptive, Normative:** This reverses the definitions.\n* **B. Normative, Instrumental:** \"Instrumental morality\" is not the standard term for group-specific codes of conduct in this context.\n* **C. Normative, Descriptive:** This matches the definitions: **Normative** theory is the code all rational beings *should* adhere to, contrasting with **Descriptive** morality, which is the code adopted by a particular group.\n* **D. Ethical, Descriptive:** While \"Ethical\" is related to normative claims, \"Normative\" is the precise philosophical term used to contrast with \"Descriptive\" in this context.\n\nTherefore, the correct pairing is Normative theory contrasting with Descriptive morality.\n\nAnswer: C",
+      "final_text": "C",
+      "votes": [
+        "C"
+      ],
+      "vote_counts": {
+        "C": 1
+      },
+      "confidences": [
+        0.7209098303943564
+      ],
+      "voting_method": "majority",
+      "n_models": 1,
+      "members": [
+        "google/gemma-4-E4B-it"
+      ],
+      "ensemble_member_responses": [
+        {
+          "member_index": 1,
+          "role": "ensemble_member_1",
+          "model_id": "google/gemma-4-E4B-it",
+          "raw_text": "The question describes two types of moral frameworks:\n\n1. **A code of conduct to which all rational beings should adhere:** This describes a set of principles or rules that *ought* to be followed. This is the definition of **Normative** ethics (or moral philosophy), which prescribes how people *should* act.\n2. **The code of conduct adopted by a particular group or society:** This describes how people *actually* behave or what a specific group believes is right or wrong. This is the definition of **Descriptive** ethics, which observes and describes moral beliefs and practices.\n\nLet's evaluate the options:\n\n* **A. Descriptive, Normative:** This reverses the definitions.\n* **B. Normative, Instrumental:** \"Instrumental morality\" is not the standard term for group-specific codes of conduct in this context.\n* **C. Normative, Descriptive:** This matches the definitions: **Normative** theory is the code all rational beings *should* adhere to, contrasting with **Descriptive** morality, which is the code adopted by a particular group.\n* **D. Ethical, Descriptive:** While \"Ethical\" is related to normative claims, \"Normative\" is the precise philosophical term used to contrast with \"Descriptive\" in this context.\n\nTherefore, the correct pairing is Normative theory contrasting with Descriptive morality.\n\nAnswer: C",
+          "parsed_answer": "C",
+          "parse_status": "parsed",
+          "confidence": 0.7209098303943564,
+          "input_tokens": 105,
+          "output_tokens": 285,
+          "latency_ms": 13699.359250022098,
+          "cost_usd": 0.0
+        }
+      ],
+      "llm_tiebreak": false,
+      "llm_tiebreak_raw_text": null,
+      "llm_tiebreak_parsed_answer": null,
+      "llm_tiebreak_parse_status": null
+    },
+    {
+      "query_id": "mmlu_12149",
+      "query_text": "A city imposes a municipal excise tax of $200 per year on commercial artists' studios in that city. It also imposes an excise tax of $100 per year on every itinerant commercial figure drawer for the privilege of using the streets and sidewalks. A credit is allowed against this latter tax for any excise tax paid to the city by the drawer or his employer in respect to the maintenance of an artist's studio in the city. A gallery, located in a neighboring state, has been sending two itinerant artists into the city. Their practice is to draw a picture of a pedestrian, ask him to order a finished painting, and collect a payment of $2. 00. The drawing is sent to a studio, which frames it and mails the framed painting to the customer. The neighboring state does not impose a tax on artists' studios. The gallery challenges the constitutionality of the $100 per year excise tax that is imposed upon its itinerant artists in the city. The court will most likely declare this tax",
+      "query_choices": [
+        "constitutional, as a valid ad valorem tax on interstate commerce.",
+        "constitutional, since the tax was levied not on the commercial art business as a whole but on the local activity of drawing pictures.",
+        "unconstitutional, since a state or municipality may not impose a license tax on orders for goods or services to be perfonned in another state.",
+        "unconstitutional, as a discriminatory privilege tax."
+      ],
+      "correct": false,
+      "predicted": "S",
+      "ground_truth": "B",
+      "llm_calls": 0,
+      "confidence": 0.7391434715855821,
+      "latency_ms": 28462.687917024596,
+      "cost_usd": 0.005929726649380124,
+      "api_cost_usd": 0.0,
+      "infra_cost_usd": 0.005929726649380124,
+      "energy_kwh": 0.0005692537583404919,
+      "co2_g": 0.21631642816938693,
+      "gpu_power_w": 72.0,
+      "final_model_id": "google/gemma-4-E4B-it",
+      "used_llm": false,
+      "escalated": false,
+      "slm_confidence": 0.7391434715855821,
+      "confidence_threshold": null,
+      "margin_threshold": null,
+      "long_input_token_threshold": null,
+      "confidence_method": null,
+      "slm_raw_text": "1. google/gemma-4-E4B-it: Here is a breakdown of the legal analysis:\n\n1.  **The Tax in Question:** The city imposes a $\\$100$ per year excise tax on *itinerant commercial figure drawers* for the privilege of using the streets and sidewalks.\n2.  **The Nature of the Activity:** The artists are performing a service (drawing a pedestrian) in the city, which is a local activity.\n3.  **The Credit:** A credit is allowed for studio taxes paid, suggesting the tax is intended to regulate the *activity* of drawing in the city, not just the final sale of the painting.\n4.  **The Challenge:** The gallery challenges the tax based on its constitutionality.\n\n**Analyzing the Options:**\n\n*   **A. constitutional, as a valid ad valorem tax on interstate commerce.** This is incorrect. The tax is a fixed fee ($\\$100$ per year), not an *ad valorem* tax (a tax based on value). Furthermore, the tax targets the *local activity* (using the streets), not interstate commerce itself.\n*   **B. constitutional, since the tax was levied not on the commercial art business as a whole but on the local activity of drawing pictures.** This is a strong argument for constitutionality. If the tax is narrowly tailored to the privilege of using public streets for a specific local activity (drawing), it is less likely to be struck down as an undue burden on interstate commerce, especially since the city has a legitimate interest in regulating street use.\n*   **C. unconstitutional, since a state or municipality may not impose a license tax on orders for goods or services to be performed in another state.** This is too broad and likely incorrect. The tax is imposed on the *act of drawing* in the city, not on the final sale or order placed in the neighboring state. The city is taxing the *activity* within its borders.\n*   **D. unconstitutional, as a discriminatory privilege tax.** This is the most likely successful argument in this scenario, drawing from established principles of the Commerce Clause and the Dormant Commerce Clause. The tax specifically targets *itinerant* drawers who are operating in the city, while the studio tax applies to *established* studios. More critically, the tax structure appears to discriminate against out-of-state operators (the gallery's artists) compared to local operators, or it burdens the interstate flow of services disproportionately.\n\n**Revisiting the Core Conflict (Dormant Commerce Clause):**\n\nThe key issue here is whether the tax unduly burdens or discriminates against interstate commerce.\n\n1.  **Discrimination:** The tax targets the *itinerant* drawer using the streets. If the city were to exempt local artists or treat them differently, it would be discriminatory. Even if it doesn't explicitly exempt locals, taxing the *mode of operation* (itinerancy) in a way that disproportionately affects out-of-state entities engaging in temporary local activity is often viewed as discriminatory under the Dormant Commerce Clause.\n2.  **Local vs. Interstate:** While the *activity* is local (drawing on the street), the *source* of the artists and the *",
+      "slm_parsed_answer": null,
+      "slm_parse_status": "unparseable",
+      "llm_raw_text": null,
+      "llm_parsed_answer": null,
+      "llm_parse_status": null,
+      "final_raw_text": "S",
+      "final_parsed_answer": "S",
+      "final_answer_source": "ensemble_vote",
+      "escalation_reason": null,
+      "routing_decision": {
+        "accepted_by": "slm",
+        "threshold": null,
+        "confidence_method": null,
+        "signals": {
+          "parse_success": false,
+          "confidence": 0.7391434715855821,
+          "top2_margin": null,
+          "input_tokens": 335,
+          "input_too_long": false,
+          "low_confidence": false,
+          "low_margin": false,
+          "forced_escalation": false
+        }
+      },
+      "slm_latency_ms": null,
+      "llm_latency_ms": null,
+      "slm_input_tokens": null,
+      "slm_output_tokens": null,
+      "llm_input_tokens": null,
+      "llm_output_tokens": null,
+      "slm_cost_usd": null,
+      "llm_cost_usd": null,
+      "resource_estimate": {
+        "api_cost_usd": 0.0,
+        "infra_cost_usd": 0.005929726649380124,
+        "total_cost_usd": 0.005929726649380124,
+        "energy_kwh": 0.0005692537583404919,
+        "co2_g": 0.21631642816938693,
+        "gpu_power_w": 72.0,
+        "method": "host_profile_estimate"
+      },
+      "inference_steps": [
+        {
+          "role": "ensemble_member_1",
+          "model_id": "google/gemma-4-E4B-it",
+          "latency_ms": 28462.687917024596,
+          "input_tokens": 335,
+          "output_tokens": 660,
+          "api_cost_usd": 0.0,
+          "host_label": "gcp-l4",
+          "duration_s": 28.462687917024596,
+          "energy_kwh": 0.0005692537583404919,
+          "co2_g": 0.21631642816938693,
+          "infra_cost_usd": 0.005929726649380124,
+          "gpu_power_w": 72.0
+        }
+      ],
+      "prompt_text": "A city imposes a municipal excise tax of $200 per year on commercial artists' studios in that city. It also imposes an excise tax of $100 per year on every itinerant commercial figure drawer for the privilege of using the streets and sidewalks. A credit is allowed against this latter tax for any excise tax paid to the city by the drawer or his employer in respect to the maintenance of an artist's studio in the city. A gallery, located in a neighboring state, has been sending two itinerant artists into the city. Their practice is to draw a picture of a pedestrian, ask him to order a finished painting, and collect a payment of $2. 00. The drawing is sent to a studio, which frames it and mails the framed painting to the customer. The neighboring state does not impose a tax on artists' studios. The gallery challenges the constitutionality of the $100 per year excise tax that is imposed upon its itinerant artists in the city. The court will most likely declare this tax\n\nA. constitutional, as a valid ad valorem tax on interstate commerce.\nB. constitutional, since the tax was levied not on the commercial art business as a whole but on the local activity of drawing pictures.\nC. unconstitutional, since a state or municipality may not impose a license tax on orders for goods or services to be perfonned in another state.\nD. unconstitutional, as a discriminatory privilege tax.\n\nChoose the single best answer: A, B, C, D.\nEnd your response with a final line in the format: Answer: <LETTER>",
+      "slm_text": "1. google/gemma-4-E4B-it: Here is a breakdown of the legal analysis:\n\n1.  **The Tax in Question:** The city imposes a $\\$100$ per year excise tax on *itinerant commercial figure drawers* for the privilege of using the streets and sidewalks.\n2.  **The Nature of the Activity:** The artists are performing a service (drawing a pedestrian) in the city, which is a local activity.\n3.  **The Credit:** A credit is allowed for studio taxes paid, suggesting the tax is intended to regulate the *activity* of drawing in the city, not just the final sale of the painting.\n4.  **The Challenge:** The gallery challenges the tax based on its constitutionality.\n\n**Analyzing the Options:**\n\n*   **A. constitutional, as a valid ad valorem tax on interstate commerce.** This is incorrect. The tax is a fixed fee ($\\$100$ per year), not an *ad valorem* tax (a tax based on value). Furthermore, the tax targets the *local activity* (using the streets), not interstate commerce itself.\n*   **B. constitutional, since the tax was levied not on the commercial art business as a whole but on the local activity of drawing pictures.** This is a strong argument for constitutionality. If the tax is narrowly tailored to the privilege of using public streets for a specific local activity (drawing), it is less likely to be struck down as an undue burden on interstate commerce, especially since the city has a legitimate interest in regulating street use.\n*   **C. unconstitutional, since a state or municipality may not impose a license tax on orders for goods or services to be performed in another state.** This is too broad and likely incorrect. The tax is imposed on the *act of drawing* in the city, not on the final sale or order placed in the neighboring state. The city is taxing the *activity* within its borders.\n*   **D. unconstitutional, as a discriminatory privilege tax.** This is the most likely successful argument in this scenario, drawing from established principles of the Commerce Clause and the Dormant Commerce Clause. The tax specifically targets *itinerant* drawers who are operating in the city, while the studio tax applies to *established* studios. More critically, the tax structure appears to discriminate against out-of-state operators (the gallery's artists) compared to local operators, or it burdens the interstate flow of services disproportionately.\n\n**Revisiting the Core Conflict (Dormant Commerce Clause):**\n\nThe key issue here is whether the tax unduly burdens or discriminates against interstate commerce.\n\n1.  **Discrimination:** The tax targets the *itinerant* drawer using the streets. If the city were to exempt local artists or treat them differently, it would be discriminatory. Even if it doesn't explicitly exempt locals, taxing the *mode of operation* (itinerancy) in a way that disproportionately affects out-of-state entities engaging in temporary local activity is often viewed as discriminatory under the Dormant Commerce Clause.\n2.  **Local vs. Interstate:** While the *activity* is local (drawing on the street), the *source* of the artists and the *",
+      "final_text": "S",
+      "votes": [
+        "S"
+      ],
+      "vote_counts": {
+        "S": 1
+      },
+      "confidences": [
+        0.7391434715855821
+      ],
+      "voting_method": "majority",
+      "n_models": 1,
+      "members": [
+        "google/gemma-4-E4B-it"
+      ],
+      "ensemble_member_responses": [
+        {
+          "member_index": 1,
+          "role": "ensemble_member_1",
+          "model_id": "google/gemma-4-E4B-it",
+          "raw_text": "Here is a breakdown of the legal analysis:\n\n1.  **The Tax in Question:** The city imposes a $\\$100$ per year excise tax on *itinerant commercial figure drawers* for the privilege of using the streets and sidewalks.\n2.  **The Nature of the Activity:** The artists are performing a service (drawing a pedestrian) in the city, which is a local activity.\n3.  **The Credit:** A credit is allowed for studio taxes paid, suggesting the tax is intended to regulate the *activity* of drawing in the city, not just the final sale of the painting.\n4.  **The Challenge:** The gallery challenges the tax based on its constitutionality.\n\n**Analyzing the Options:**\n\n*   **A. constitutional, as a valid ad valorem tax on interstate commerce.** This is incorrect. The tax is a fixed fee ($\\$100$ per year), not an *ad valorem* tax (a tax based on value). Furthermore, the tax targets the *local activity* (using the streets), not interstate commerce itself.\n*   **B. constitutional, since the tax was levied not on the commercial art business as a whole but on the local activity of drawing pictures.** This is a strong argument for constitutionality. If the tax is narrowly tailored to the privilege of using public streets for a specific local activity (drawing), it is less likely to be struck down as an undue burden on interstate commerce, especially since the city has a legitimate interest in regulating street use.\n*   **C. unconstitutional, since a state or municipality may not impose a license tax on orders for goods or services to be performed in another state.** This is too broad and likely incorrect. The tax is imposed on the *act of drawing* in the city, not on the final sale or order placed in the neighboring state. The city is taxing the *activity* within its borders.\n*   **D. unconstitutional, as a discriminatory privilege tax.** This is the most likely successful argument in this scenario, drawing from established principles of the Commerce Clause and the Dormant Commerce Clause. The tax specifically targets *itinerant* drawers who are operating in the city, while the studio tax applies to *established* studios. More critically, the tax structure appears to discriminate against out-of-state operators (the gallery's artists) compared to local operators, or it burdens the interstate flow of services disproportionately.\n\n**Revisiting the Core Conflict (Dormant Commerce Clause):**\n\nThe key issue here is whether the tax unduly burdens or discriminates against interstate commerce.\n\n1.  **Discrimination:** The tax targets the *itinerant* drawer using the streets. If the city were to exempt local artists or treat them differently, it would be discriminatory. Even if it doesn't explicitly exempt locals, taxing the *mode of operation* (itinerancy) in a way that disproportionately affects out-of-state entities engaging in temporary local activity is often viewed as discriminatory under the Dormant Commerce Clause.\n2.  **Local vs. Interstate:** While the *activity* is local (drawing on the street), the *source* of the artists and the *",
+          "parsed_answer": "S",
+          "parse_status": "parsed",
+          "confidence": 0.7391434715855821,
+          "input_tokens": 335,
+          "output_tokens": 660,
+          "latency_ms": 28462.687917024596,
+          "cost_usd": 0.0
+        }
+      ],
+      "llm_tiebreak": false,
+      "llm_tiebreak_raw_text": null,
+      "llm_tiebreak_parsed_answer": null,
+      "llm_tiebreak_parse_status": null
+    },
+    {
+      "query_id": "mmlu_4506",
+      "query_text": "Patents, control of resources, economies of scale, and exclusive licenses are",
+      "query_choices": [
+        "all requirements for price discrimination",
+        "required in order for a firm to earn short-run profits",
+        "all sources of elastic demand",
+        "all barriers to entry"
+      ],
+      "correct": true,
+      "predicted": "D",
+      "ground_truth": "D",
+      "llm_calls": 0,
+      "confidence": 0.8000533338785738,
+      "latency_ms": 24806.956166983582,
+      "cost_usd": 0.00516811586812158,
+      "api_cost_usd": 0.0,
+      "infra_cost_usd": 0.00516811586812158,
+      "energy_kwh": 0.0004961391233396716,
+      "co2_g": 0.18853286686907522,
+      "gpu_power_w": 72.0,
+      "final_model_id": "google/gemma-4-E4B-it",
+      "used_llm": false,
+      "escalated": false,
+      "slm_confidence": 0.8000533338785738,
+      "confidence_threshold": null,
+      "margin_threshold": null,
+      "long_input_token_threshold": null,
+      "confidence_method": null,
+      "slm_raw_text": "1. google/gemma-4-E4B-it: Let's analyze each option in the context of the listed concepts: Patents, control of resources, economies of scale, and exclusive licenses.\n\n**Patents, control of resources, economies of scale, and exclusive licenses** are all mechanisms that allow a firm to maintain a degree of market power, which is the ability to influence the price of its product above the marginal cost.\n\n*   **Patents:** Grant the inventor a temporary monopoly, preventing competitors from producing the same invention.\n*   **Control of Resources (Natural Monopoly/Resource Control):** If a firm controls a unique or essential resource (like a utility company controlling water access), it can restrict supply or set prices.\n*   **Economies of Scale:** If a firm achieves significant cost advantages by producing a very large output (natural monopoly), it can often charge a higher price while still covering costs, especially if the market structure prevents smaller competitors from achieving the same scale.\n*   **Exclusive Licenses:** Grant a specific firm the sole right to use a technology or brand within a certain market, creating a temporary or permanent monopoly.\n\nNow let's evaluate the choices:\n\n**A. all requirements for price discrimination:** Price discrimination requires market power (the ability to set different prices for different consumers). While the listed items *can* grant market power, they are not *all* requirements for price discrimination. A firm with market power (e.g., a monopoly) can engage in price discrimination without necessarily having a patent or controlling a unique resource.\n\n**B. required in order for a firm to earn short-run profits:** Firms can earn short-run profits even without these barriers if the market demand curve is steep enough relative to the marginal cost curve (i.e., if the market is temporarily monopolistic or if demand is highly inelastic). These factors are *sources* of sustained profit potential, not *requirements* for short-run profits.\n\n**C. all sources of elastic demand:** Elastic demand means consumers are highly responsive to price changes. The listed items (patents, monopolies, etc.) are mechanisms that *reduce* demand elasticity (making demand more inelastic) by limiting substitutes or restricting supply. Therefore, they are not sources of elastic demand.\n\n**D. all barriers to entry:** A barrier to entry is anything that prevents new firms from entering a market and competing.\n*   Patents are a legal barrier.\n*   Control of unique resources is a resource barrier.\n*   Economies of scale (leading to natural monopolies) are a cost/structural barrier.\n*   Exclusive licenses are contractual/legal barriers.\n\nThese four concepts are classic examples of **barriers to entry** that allow incumbent firms to maintain market power.\n\nTherefore, the single best answer is D.\n\nAnswer: D",
+      "slm_parsed_answer": null,
+      "slm_parse_status": "unparseable",
+      "llm_raw_text": null,
+      "llm_parsed_answer": null,
+      "llm_parse_status": null,
+      "final_raw_text": "D",
+      "final_parsed_answer": "D",
+      "final_answer_source": "ensemble_vote",
+      "escalation_reason": null,
+      "routing_decision": {
+        "accepted_by": "slm",
+        "threshold": null,
+        "confidence_method": null,
+        "signals": {
+          "parse_success": false,
+          "confidence": 0.8000533338785738,
+          "top2_margin": null,
+          "input_tokens": 94,
+          "input_too_long": false,
+          "low_confidence": false,
+          "low_margin": false,
+          "forced_escalation": false
+        }
+      },
+      "slm_latency_ms": null,
+      "llm_latency_ms": null,
+      "slm_input_tokens": null,
+      "slm_output_tokens": null,
+      "llm_input_tokens": null,
+      "llm_output_tokens": null,
+      "slm_cost_usd": null,
+      "llm_cost_usd": null,
+      "resource_estimate": {
+        "api_cost_usd": 0.0,
+        "infra_cost_usd": 0.00516811586812158,
+        "total_cost_usd": 0.00516811586812158,
+        "energy_kwh": 0.0004961391233396716,
+        "co2_g": 0.18853286686907522,
+        "gpu_power_w": 72.0,
+        "method": "host_profile_estimate"
+      },
+      "inference_steps": [
+        {
+          "role": "ensemble_member_1",
+          "model_id": "google/gemma-4-E4B-it",
+          "latency_ms": 24806.956166983582,
+          "input_tokens": 94,
+          "output_tokens": 571,
+          "api_cost_usd": 0.0,
+          "host_label": "gcp-l4",
+          "duration_s": 24.806956166983582,
+          "energy_kwh": 0.0004961391233396716,
+          "co2_g": 0.18853286686907522,
+          "infra_cost_usd": 0.00516811586812158,
+          "gpu_power_w": 72.0
+        }
+      ],
+      "prompt_text": "Patents, control of resources, economies of scale, and exclusive licenses are\n\nA. all requirements for price discrimination\nB. required in order for a firm to earn short-run profits\nC. all sources of elastic demand\nD. all barriers to entry\n\nChoose the single best answer: A, B, C, D.\nEnd your response with a final line in the format: Answer: <LETTER>",
+      "slm_text": "1. google/gemma-4-E4B-it: Let's analyze each option in the context of the listed concepts: Patents, control of resources, economies of scale, and exclusive licenses.\n\n**Patents, control of resources, economies of scale, and exclusive licenses** are all mechanisms that allow a firm to maintain a degree of market power, which is the ability to influence the price of its product above the marginal cost.\n\n*   **Patents:** Grant the inventor a temporary monopoly, preventing competitors from producing the same invention.\n*   **Control of Resources (Natural Monopoly/Resource Control):** If a firm controls a unique or essential resource (like a utility company controlling water access), it can restrict supply or set prices.\n*   **Economies of Scale:** If a firm achieves significant cost advantages by producing a very large output (natural monopoly), it can often charge a higher price while still covering costs, especially if the market structure prevents smaller competitors from achieving the same scale.\n*   **Exclusive Licenses:** Grant a specific firm the sole right to use a technology or brand within a certain market, creating a temporary or permanent monopoly.\n\nNow let's evaluate the choices:\n\n**A. all requirements for price discrimination:** Price discrimination requires market power (the ability to set different prices for different consumers). While the listed items *can* grant market power, they are not *all* requirements for price discrimination. A firm with market power (e.g., a monopoly) can engage in price discrimination without necessarily having a patent or controlling a unique resource.\n\n**B. required in order for a firm to earn short-run profits:** Firms can earn short-run profits even without these barriers if the market demand curve is steep enough relative to the marginal cost curve (i.e., if the market is temporarily monopolistic or if demand is highly inelastic). These factors are *sources* of sustained profit potential, not *requirements* for short-run profits.\n\n**C. all sources of elastic demand:** Elastic demand means consumers are highly responsive to price changes. The listed items (patents, monopolies, etc.) are mechanisms that *reduce* demand elasticity (making demand more inelastic) by limiting substitutes or restricting supply. Therefore, they are not sources of elastic demand.\n\n**D. all barriers to entry:** A barrier to entry is anything that prevents new firms from entering a market and competing.\n*   Patents are a legal barrier.\n*   Control of unique resources is a resource barrier.\n*   Economies of scale (leading to natural monopolies) are a cost/structural barrier.\n*   Exclusive licenses are contractual/legal barriers.\n\nThese four concepts are classic examples of **barriers to entry** that allow incumbent firms to maintain market power.\n\nTherefore, the single best answer is D.\n\nAnswer: D",
+      "final_text": "D",
+      "votes": [
+        "D"
+      ],
+      "vote_counts": {
+        "D": 1
+      },
+      "confidences": [
+        0.8000533338785738
+      ],
+      "voting_method": "majority",
+      "n_models": 1,
+      "members": [
+        "google/gemma-4-E4B-it"
+      ],
+      "ensemble_member_responses": [
+        {
+          "member_index": 1,
+          "role": "ensemble_member_1",
+          "model_id": "google/gemma-4-E4B-it",
+          "raw_text": "Let's analyze each option in the context of the listed concepts: Patents, control of resources, economies of scale, and exclusive licenses.\n\n**Patents, control of resources, economies of scale, and exclusive licenses** are all mechanisms that allow a firm to maintain a degree of market power, which is the ability to influence the price of its product above the marginal cost.\n\n*   **Patents:** Grant the inventor a temporary monopoly, preventing competitors from producing the same invention.\n*   **Control of Resources (Natural Monopoly/Resource Control):** If a firm controls a unique or essential resource (like a utility company controlling water access), it can restrict supply or set prices.\n*   **Economies of Scale:** If a firm achieves significant cost advantages by producing a very large output (natural monopoly), it can often charge a higher price while still covering costs, especially if the market structure prevents smaller competitors from achieving the same scale.\n*   **Exclusive Licenses:** Grant a specific firm the sole right to use a technology or brand within a certain market, creating a temporary or permanent monopoly.\n\nNow let's evaluate the choices:\n\n**A. all requirements for price discrimination:** Price discrimination requires market power (the ability to set different prices for different consumers). While the listed items *can* grant market power, they are not *all* requirements for price discrimination. A firm with market power (e.g., a monopoly) can engage in price discrimination without necessarily having a patent or controlling a unique resource.\n\n**B. required in order for a firm to earn short-run profits:** Firms can earn short-run profits even without these barriers if the market demand curve is steep enough relative to the marginal cost curve (i.e., if the market is temporarily monopolistic or if demand is highly inelastic). These factors are *sources* of sustained profit potential, not *requirements* for short-run profits.\n\n**C. all sources of elastic demand:** Elastic demand means consumers are highly responsive to price changes. The listed items (patents, monopolies, etc.) are mechanisms that *reduce* demand elasticity (making demand more inelastic) by limiting substitutes or restricting supply. Therefore, they are not sources of elastic demand.\n\n**D. all barriers to entry:** A barrier to entry is anything that prevents new firms from entering a market and competing.\n*   Patents are a legal barrier.\n*   Control of unique resources is a resource barrier.\n*   Economies of scale (leading to natural monopolies) are a cost/structural barrier.\n*   Exclusive licenses are contractual/legal barriers.\n\nThese four concepts are classic examples of **barriers to entry** that allow incumbent firms to maintain market power.\n\nTherefore, the single best answer is D.\n\nAnswer: D",
+          "parsed_answer": "D",
+          "parse_status": "parsed",
+          "confidence": 0.8000533338785738,
+          "input_tokens": 94,
+          "output_tokens": 571,
+          "latency_ms": 24806.956166983582,
+          "cost_usd": 0.0
+        }
+      ],
+      "llm_tiebreak": false,
+      "llm_tiebreak_raw_text": null,
+      "llm_tiebreak_parsed_answer": null,
+      "llm_tiebreak_parse_status": null
+    },
+    {
+      "query_id": "mmlu_4012",
+      "query_text": "Which component of a nation's balance of payments recognizes the purchase and sale of real and financial assets between nations?",
+      "query_choices": [
+        "The capital account",
+        "The official reserves account",
+        "The current account",
+        "The trade deficit account"
+      ],
+      "correct": true,
+      "predicted": "A",
+      "ground_truth": "A",
+      "llm_calls": 0,
+      "confidence": 0.9338003071858221,
+      "latency_ms": 11532.588750007562,
+      "cost_usd": 0.0024026226562515757,
+      "api_cost_usd": 0.0,
+      "infra_cost_usd": 0.0024026226562515757,
+      "energy_kwh": 0.00023065177500015125,
+      "co2_g": 0.08764767450005748,
+      "gpu_power_w": 72.0,
+      "final_model_id": "google/gemma-4-E4B-it",
+      "used_llm": false,
+      "escalated": false,
+      "slm_confidence": 0.9338003071858221,
+      "confidence_threshold": null,
+      "margin_threshold": null,
+      "long_input_token_threshold": null,
+      "confidence_method": null,
+      "slm_raw_text": "1. google/gemma-4-E4B-it: The component of a nation's balance of payments that recognizes the purchase and sale of real and financial assets between nations is the **capital account**.\n\nHere's a brief explanation of why:\n\n* **Current Account (C):** Records the flow of goods, services, income (like wages and interest), and unilateral transfers (like foreign aid). It deals with the flow of *current* consumption and production.\n* **Capital Account (A):** Records international transactions related to the transfer of ownership of real assets (like property, patents, and natural resources) and financial assets (like stocks, bonds, and loans). This is where the purchase and sale of these assets are recorded.\n* **Official Reserves Account (B):** This is a specific part of the overall balance of payments that tracks changes in a country's holdings of foreign currencies and gold held by its central bank.\n* **Trade Deficit Account (D):** This is a specific component *within* the Current Account, referring only to the imbalance in the trade of goods and services.\n\nTherefore, the most accurate answer is the capital account.\n\nAnswer: A",
+      "slm_parsed_answer": null,
+      "slm_parse_status": "unparseable",
+      "llm_raw_text": null,
+      "llm_parsed_answer": null,
+      "llm_parse_status": null,
+      "final_raw_text": "A",
+      "final_parsed_answer": "A",
+      "final_answer_source": "ensemble_vote",
+      "escalation_reason": null,
+      "routing_decision": {
+        "accepted_by": "slm",
+        "threshold": null,
+        "confidence_method": null,
+        "signals": {
+          "parse_success": false,
+          "confidence": 0.9338003071858221,
+          "top2_margin": null,
+          "input_tokens": 90,
+          "input_too_long": false,
+          "low_confidence": false,
+          "low_margin": false,
+          "forced_escalation": false
+        }
+      },
+      "slm_latency_ms": null,
+      "llm_latency_ms": null,
+      "slm_input_tokens": null,
+      "slm_output_tokens": null,
+      "llm_input_tokens": null,
+      "llm_output_tokens": null,
+      "slm_cost_usd": null,
+      "llm_cost_usd": null,
+      "resource_estimate": {
+        "api_cost_usd": 0.0,
+        "infra_cost_usd": 0.0024026226562515757,
+        "total_cost_usd": 0.0024026226562515757,
+        "energy_kwh": 0.00023065177500015125,
+        "co2_g": 0.08764767450005748,
+        "gpu_power_w": 72.0,
+        "method": "host_profile_estimate"
+      },
+      "inference_steps": [
+        {
+          "role": "ensemble_member_1",
+          "model_id": "google/gemma-4-E4B-it",
+          "latency_ms": 11532.588750007562,
+          "input_tokens": 90,
+          "output_tokens": 234,
+          "api_cost_usd": 0.0,
+          "host_label": "gcp-l4",
+          "duration_s": 11.532588750007562,
+          "energy_kwh": 0.00023065177500015125,
+          "co2_g": 0.08764767450005748,
+          "infra_cost_usd": 0.0024026226562515757,
+          "gpu_power_w": 72.0
+        }
+      ],
+      "prompt_text": "Which component of a nation's balance of payments recognizes the purchase and sale of real and financial assets between nations?\n\nA. The capital account\nB. The official reserves account\nC. The current account\nD. The trade deficit account\n\nChoose the single best answer: A, B, C, D.\nEnd your response with a final line in the format: Answer: <LETTER>",
+      "slm_text": "1. google/gemma-4-E4B-it: The component of a nation's balance of payments that recognizes the purchase and sale of real and financial assets between nations is the **capital account**.\n\nHere's a brief explanation of why:\n\n* **Current Account (C):** Records the flow of goods, services, income (like wages and interest), and unilateral transfers (like foreign aid). It deals with the flow of *current* consumption and production.\n* **Capital Account (A):** Records international transactions related to the transfer of ownership of real assets (like property, patents, and natural resources) and financial assets (like stocks, bonds, and loans). This is where the purchase and sale of these assets are recorded.\n* **Official Reserves Account (B):** This is a specific part of the overall balance of payments that tracks changes in a country's holdings of foreign currencies and gold held by its central bank.\n* **Trade Deficit Account (D):** This is a specific component *within* the Current Account, referring only to the imbalance in the trade of goods and services.\n\nTherefore, the most accurate answer is the capital account.\n\nAnswer: A",
+      "final_text": "A",
+      "votes": [
+        "A"
+      ],
+      "vote_counts": {
+        "A": 1
+      },
+      "confidences": [
+        0.9338003071858221
+      ],
+      "voting_method": "majority",
+      "n_models": 1,
+      "members": [
+        "google/gemma-4-E4B-it"
+      ],
+      "ensemble_member_responses": [
+        {
+          "member_index": 1,
+          "role": "ensemble_member_1",
+          "model_id": "google/gemma-4-E4B-it",
+          "raw_text": "The component of a nation's balance of payments that recognizes the purchase and sale of real and financial assets between nations is the **capital account**.\n\nHere's a brief explanation of why:\n\n* **Current Account (C):** Records the flow of goods, services, income (like wages and interest), and unilateral transfers (like foreign aid). It deals with the flow of *current* consumption and production.\n* **Capital Account (A):** Records international transactions related to the transfer of ownership of real assets (like property, patents, and natural resources) and financial assets (like stocks, bonds, and loans). This is where the purchase and sale of these assets are recorded.\n* **Official Reserves Account (B):** This is a specific part of the overall balance of payments that tracks changes in a country's holdings of foreign currencies and gold held by its central bank.\n* **Trade Deficit Account (D):** This is a specific component *within* the Current Account, referring only to the imbalance in the trade of goods and services.\n\nTherefore, the most accurate answer is the capital account.\n\nAnswer: A",
+          "parsed_answer": "A",
+          "parse_status": "parsed",
+          "confidence": 0.9338003071858221,
+          "input_tokens": 90,
+          "output_tokens": 234,
+          "latency_ms": 11532.588750007562,
+          "cost_usd": 0.0
+        }
+      ],
+      "llm_tiebreak": false,
+      "llm_tiebreak_raw_text": null,
+      "llm_tiebreak_parsed_answer": null,
+      "llm_tiebreak_parse_status": null
+    },
+    {
+      "query_id": "mmlu_3657",
+      "query_text": "According to The Federalist Papers, federalism has which of the following effects on political factions?",
+      "query_choices": [
+        "It provides a structured environment in which factions may flourish.",
+        "It limits the dangers of factionalism by diluting political power.",
+        "It allows factions to dominate on the national level while limiting their influence on state governments.",
+        "It eliminates any opportunity for factions to form."
+      ],
+      "correct": true,
+      "predicted": "B",
+      "ground_truth": "B",
+      "llm_calls": 0,
+      "confidence": 0.8114882049578603,
+      "latency_ms": 16905.50608301419,
+      "cost_usd": 0.0035219804339612893,
+      "api_cost_usd": 0.0,
+      "infra_cost_usd": 0.0035219804339612893,
+      "energy_kwh": 0.00033811012166028376,
+      "co2_g": 0.12848184623090783,
+      "gpu_power_w": 72.0,
+      "final_model_id": "google/gemma-4-E4B-it",
+      "used_llm": false,
+      "escalated": false,
+      "slm_confidence": 0.8114882049578603,
+      "confidence_threshold": null,
+      "margin_threshold": null,
+      "long_input_token_threshold": null,
+      "confidence_method": null,
+      "slm_raw_text": "1. google/gemma-4-E4B-it: The Federalist Papers, particularly in essays like No. 10 (written by James Madison), extensively discuss the problem of factions. Madison argues that factions are a natural consequence of liberty and are inherently dangerous because they can lead to the tyranny of the majority or instability.\n\nHis proposed solution, which involves the structure of the American government, is not to eliminate factions (which he deems impossible), but to control their effects. The mechanism he champions is a large republic, which is a form of federalism (or at least a large, extended republic).\n\nThe core idea is that in a large republic, there are so many different factions, interests, and parties that no single faction can easily gain a majority across the entire nation. The diversity of interests acts as a check on any one group becoming too powerful.\n\nLet's evaluate the options based on this understanding:\n\n*   **A. It provides a structured environment in which factions may flourish.** This is too passive. While factions exist, the structure is designed to *control* their flourishing into dangerous dominance.\n*   **B. It limits the dangers of factionalism by diluting political power.** This aligns perfectly with Madison's argument in Federalist No. 10. The large scale and division of power dilute the power of any single, dangerous faction.\n*   **C. It allows factions to dominate on the national level while limiting their influence on state governments.** This is the opposite of what the system is designed to achieve.\n*   **D. It eliminates any opportunity for factions to form.** Madison explicitly states that factions cannot be eliminated without destroying liberty, so this is incorrect.\n\nTherefore, the best answer is that federalism (specifically, the structure of a large republic) limits the dangers of factionalism by diluting political power.\n\nAnswer: B",
+      "slm_parsed_answer": null,
+      "slm_parse_status": "unparseable",
+      "llm_raw_text": null,
+      "llm_parsed_answer": null,
+      "llm_parse_status": null,
+      "final_raw_text": "B",
+      "final_parsed_answer": "B",
+      "final_answer_source": "ensemble_vote",
+      "escalation_reason": null,
+      "routing_decision": {
+        "accepted_by": "slm",
+        "threshold": null,
+        "confidence_method": null,
+        "signals": {
+          "parse_success": false,
+          "confidence": 0.8114882049578603,
+          "top2_margin": null,
+          "input_tokens": 122,
+          "input_too_long": false,
+          "low_confidence": false,
+          "low_margin": false,
+          "forced_escalation": false
+        }
+      },
+      "slm_latency_ms": null,
+      "llm_latency_ms": null,
+      "slm_input_tokens": null,
+      "slm_output_tokens": null,
+      "llm_input_tokens": null,
+      "llm_output_tokens": null,
+      "slm_cost_usd": null,
+      "llm_cost_usd": null,
+      "resource_estimate": {
+        "api_cost_usd": 0.0,
+        "infra_cost_usd": 0.0035219804339612893,
+        "total_cost_usd": 0.0035219804339612893,
+        "energy_kwh": 0.00033811012166028376,
+        "co2_g": 0.12848184623090783,
+        "gpu_power_w": 72.0,
+        "method": "host_profile_estimate"
+      },
+      "inference_steps": [
+        {
+          "role": "ensemble_member_1",
+          "model_id": "google/gemma-4-E4B-it",
+          "latency_ms": 16905.50608301419,
+          "input_tokens": 122,
+          "output_tokens": 373,
+          "api_cost_usd": 0.0,
+          "host_label": "gcp-l4",
+          "duration_s": 16.90550608301419,
+          "energy_kwh": 0.00033811012166028376,
+          "co2_g": 0.12848184623090783,
+          "infra_cost_usd": 0.0035219804339612893,
+          "gpu_power_w": 72.0
+        }
+      ],
+      "prompt_text": "According to The Federalist Papers, federalism has which of the following effects on political factions?\n\nA. It provides a structured environment in which factions may flourish.\nB. It limits the dangers of factionalism by diluting political power.\nC. It allows factions to dominate on the national level while limiting their influence on state governments.\nD. It eliminates any opportunity for factions to form.\n\nChoose the single best answer: A, B, C, D.\nEnd your response with a final line in the format: Answer: <LETTER>",
+      "slm_text": "1. google/gemma-4-E4B-it: The Federalist Papers, particularly in essays like No. 10 (written by James Madison), extensively discuss the problem of factions. Madison argues that factions are a natural consequence of liberty and are inherently dangerous because they can lead to the tyranny of the majority or instability.\n\nHis proposed solution, which involves the structure of the American government, is not to eliminate factions (which he deems impossible), but to control their effects. The mechanism he champions is a large republic, which is a form of federalism (or at least a large, extended republic).\n\nThe core idea is that in a large republic, there are so many different factions, interests, and parties that no single faction can easily gain a majority across the entire nation. The diversity of interests acts as a check on any one group becoming too powerful.\n\nLet's evaluate the options based on this understanding:\n\n*   **A. It provides a structured environment in which factions may flourish.** This is too passive. While factions exist, the structure is designed to *control* their flourishing into dangerous dominance.\n*   **B. It limits the dangers of factionalism by diluting political power.** This aligns perfectly with Madison's argument in Federalist No. 10. The large scale and division of power dilute the power of any single, dangerous faction.\n*   **C. It allows factions to dominate on the national level while limiting their influence on state governments.** This is the opposite of what the system is designed to achieve.\n*   **D. It eliminates any opportunity for factions to form.** Madison explicitly states that factions cannot be eliminated without destroying liberty, so this is incorrect.\n\nTherefore, the best answer is that federalism (specifically, the structure of a large republic) limits the dangers of factionalism by diluting political power.\n\nAnswer: B",
+      "final_text": "B",
+      "votes": [
+        "B"
+      ],
+      "vote_counts": {
+        "B": 1
+      },
+      "confidences": [
+        0.8114882049578603
+      ],
+      "voting_method": "majority",
+      "n_models": 1,
+      "members": [
+        "google/gemma-4-E4B-it"
+      ],
+      "ensemble_member_responses": [
+        {
+          "member_index": 1,
+          "role": "ensemble_member_1",
+          "model_id": "google/gemma-4-E4B-it",
+          "raw_text": "The Federalist Papers, particularly in essays like No. 10 (written by James Madison), extensively discuss the problem of factions. Madison argues that factions are a natural consequence of liberty and are inherently dangerous because they can lead to the tyranny of the majority or instability.\n\nHis proposed solution, which involves the structure of the American government, is not to eliminate factions (which he deems impossible), but to control their effects. The mechanism he champions is a large republic, which is a form of federalism (or at least a large, extended republic).\n\nThe core idea is that in a large republic, there are so many different factions, interests, and parties that no single faction can easily gain a majority across the entire nation. The diversity of interests acts as a check on any one group becoming too powerful.\n\nLet's evaluate the options based on this understanding:\n\n*   **A. It provides a structured environment in which factions may flourish.** This is too passive. While factions exist, the structure is designed to *control* their flourishing into dangerous dominance.\n*   **B. It limits the dangers of factionalism by diluting political power.** This aligns perfectly with Madison's argument in Federalist No. 10. The large scale and division of power dilute the power of any single, dangerous faction.\n*   **C. It allows factions to dominate on the national level while limiting their influence on state governments.** This is the opposite of what the system is designed to achieve.\n*   **D. It eliminates any opportunity for factions to form.** Madison explicitly states that factions cannot be eliminated without destroying liberty, so this is incorrect.\n\nTherefore, the best answer is that federalism (specifically, the structure of a large republic) limits the dangers of factionalism by diluting political power.\n\nAnswer: B",
+          "parsed_answer": "B",
+          "parse_status": "parsed",
+          "confidence": 0.8114882049578603,
+          "input_tokens": 122,
+          "output_tokens": 373,
+          "latency_ms": 16905.50608301419,
+          "cost_usd": 0.0
+        }
+      ],
+      "llm_tiebreak": false,
+      "llm_tiebreak_raw_text": null,
+      "llm_tiebreak_parsed_answer": null,
+      "llm_tiebreak_parse_status": null
+    },
+    {
+      "query_id": "mmlu_2286",
+      "query_text": "Keri spent 3 hours on her homework. She spent equal amounts of time on all subjects. If Keri spent 1 over 2 hour on science, how many subjects did she study?",
+      "query_choices": [
+        "4 subjects",
+        "2 subjects",
+        "6 subjects",
+        "5 subjects"
+      ],
+      "correct": true,
+      "predicted": "C",
+      "ground_truth": "C",
+      "llm_calls": 0,
+      "confidence": 0.9082950556371939,
+      "latency_ms": 13902.99283299828,
+      "cost_usd": 0.0028964568402079748,
+      "api_cost_usd": 0.0,
+      "infra_cost_usd": 0.0028964568402079748,
+      "energy_kwh": 0.00027805985665996556,
+      "co2_g": 0.10566274553078692,
+      "gpu_power_w": 72.0,
+      "final_model_id": "google/gemma-4-E4B-it",
+      "used_llm": false,
+      "escalated": false,
+      "slm_confidence": 0.9082950556371939,
+      "confidence_threshold": null,
+      "margin_threshold": null,
+      "long_input_token_threshold": null,
+      "confidence_method": null,
+      "slm_raw_text": "1. google/gemma-4-E4B-it: Here's the step-by-step solution:\n\n1.  **Identify the total time spent:** Keri spent 3 hours on her homework.\n2.  **Identify the time spent on one subject (Science):** Keri spent $\\frac{1}{2}$ hour on science.\n3.  **Determine the time spent on each subject:** The problem states she spent *equal amounts of time on all subjects*. Therefore, the time spent on every subject is $\\frac{1}{2}$ hour.\n4.  **Calculate the number of subjects:** To find the total number of subjects, divide the total time spent by the time spent on each subject.\n\n$$\\text{Number of subjects} = \\frac{\\text{Total time spent}}{\\text{Time spent per subject}}$$\n\n$$\\text{Number of subjects} = \\frac{3 \\text{ hours}}{\\frac{1}{2} \\text{ hour/subject}}$$\n\n$$\\text{Number of subjects} = 3 \\div \\frac{1}{2}$$\n\n$$\\text{Number of subjects} = 3 \\times 2$$\n\n$$\\text{Number of subjects} = 6$$\n\nKeri studied 6 subjects.\n\nComparing this result to the options:\nA. 4 subjects\nB. 2 subjects\nC. 6 subjects\nD. 5 subjects\n\nThe correct option is C.\n\nAnswer: C",
+      "slm_parsed_answer": null,
+      "slm_parse_status": "unparseable",
+      "llm_raw_text": null,
+      "llm_parsed_answer": null,
+      "llm_parse_status": null,
+      "final_raw_text": "C",
+      "final_parsed_answer": "C",
+      "final_answer_source": "ensemble_vote",
+      "escalation_reason": null,
+      "routing_decision": {
+        "accepted_by": "slm",
+        "threshold": null,
+        "confidence_method": null,
+        "signals": {
+          "parse_success": false,
+          "confidence": 0.9082950556371939,
+          "top2_margin": null,
+          "input_tokens": 105,
+          "input_too_long": false,
+          "low_confidence": false,
+          "low_margin": false,
+          "forced_escalation": false
+        }
+      },
+      "slm_latency_ms": null,
+      "llm_latency_ms": null,
+      "slm_input_tokens": null,
+      "slm_output_tokens": null,
+      "llm_input_tokens": null,
+      "llm_output_tokens": null,
+      "slm_cost_usd": null,
+      "llm_cost_usd": null,
+      "resource_estimate": {
+        "api_cost_usd": 0.0,
+        "infra_cost_usd": 0.0028964568402079748,
+        "total_cost_usd": 0.0028964568402079748,
+        "energy_kwh": 0.00027805985665996556,
+        "co2_g": 0.10566274553078692,
+        "gpu_power_w": 72.0,
+        "method": "host_profile_estimate"
+      },
+      "inference_steps": [
+        {
+          "role": "ensemble_member_1",
+          "model_id": "google/gemma-4-E4B-it",
+          "latency_ms": 13902.99283299828,
+          "input_tokens": 105,
+          "output_tokens": 295,
+          "api_cost_usd": 0.0,
+          "host_label": "gcp-l4",
+          "duration_s": 13.90299283299828,
+          "energy_kwh": 0.00027805985665996556,
+          "co2_g": 0.10566274553078692,
+          "infra_cost_usd": 0.0028964568402079748,
+          "gpu_power_w": 72.0
+        }
+      ],
+      "prompt_text": "Keri spent 3 hours on her homework. She spent equal amounts of time on all subjects. If Keri spent 1 over 2 hour on science, how many subjects did she study?\n\nA. 4 subjects\nB. 2 subjects\nC. 6 subjects\nD. 5 subjects\n\nChoose the single best answer: A, B, C, D.\nEnd your response with a final line in the format: Answer: <LETTER>",
+      "slm_text": "1. google/gemma-4-E4B-it: Here's the step-by-step solution:\n\n1.  **Identify the total time spent:** Keri spent 3 hours on her homework.\n2.  **Identify the time spent on one subject (Science):** Keri spent $\\frac{1}{2}$ hour on science.\n3.  **Determine the time spent on each subject:** The problem states she spent *equal amounts of time on all subjects*. Therefore, the time spent on every subject is $\\frac{1}{2}$ hour.\n4.  **Calculate the number of subjects:** To find the total number of subjects, divide the total time spent by the time spent on each subject.\n\n$$\\text{Number of subjects} = \\frac{\\text{Total time spent}}{\\text{Time spent per subject}}$$\n\n$$\\text{Number of subjects} = \\frac{3 \\text{ hours}}{\\frac{1}{2} \\text{ hour/subject}}$$\n\n$$\\text{Number of subjects} = 3 \\div \\frac{1}{2}$$\n\n$$\\text{Number of subjects} = 3 \\times 2$$\n\n$$\\text{Number of subjects} = 6$$\n\nKeri studied 6 subjects.\n\nComparing this result to the options:\nA. 4 subjects\nB. 2 subjects\nC. 6 subjects\nD. 5 subjects\n\nThe correct option is C.\n\nAnswer: C",
+      "final_text": "C",
+      "votes": [
+        "C"
+      ],
+      "vote_counts": {
+        "C": 1
+      },
+      "confidences": [
+        0.9082950556371939
+      ],
+      "voting_method": "majority",
+      "n_models": 1,
+      "members": [
+        "google/gemma-4-E4B-it"
+      ],
+      "ensemble_member_responses": [
+        {
+          "member_index": 1,
+          "role": "ensemble_member_1",
+          "model_id": "google/gemma-4-E4B-it",
+          "raw_text": "Here's the step-by-step solution:\n\n1.  **Identify the total time spent:** Keri spent 3 hours on her homework.\n2.  **Identify the time spent on one subject (Science):** Keri spent $\\frac{1}{2}$ hour on science.\n3.  **Determine the time spent on each subject:** The problem states she spent *equal amounts of time on all subjects*. Therefore, the time spent on every subject is $\\frac{1}{2}$ hour.\n4.  **Calculate the number of subjects:** To find the total number of subjects, divide the total time spent by the time spent on each subject.\n\n$$\\text{Number of subjects} = \\frac{\\text{Total time spent}}{\\text{Time spent per subject}}$$\n\n$$\\text{Number of subjects} = \\frac{3 \\text{ hours}}{\\frac{1}{2} \\text{ hour/subject}}$$\n\n$$\\text{Number of subjects} = 3 \\div \\frac{1}{2}$$\n\n$$\\text{Number of subjects} = 3 \\times 2$$\n\n$$\\text{Number of subjects} = 6$$\n\nKeri studied 6 subjects.\n\nComparing this result to the options:\nA. 4 subjects\nB. 2 subjects\nC. 6 subjects\nD. 5 subjects\n\nThe correct option is C.\n\nAnswer: C",
+          "parsed_answer": "C",
+          "parse_status": "parsed",
+          "confidence": 0.9082950556371939,
+          "input_tokens": 105,
+          "output_tokens": 295,
+          "latency_ms": 13902.99283299828,
+          "cost_usd": 0.0
+        }
+      ],
+      "llm_tiebreak": false,
+      "llm_tiebreak_raw_text": null,
+      "llm_tiebreak_parsed_answer": null,
+      "llm_tiebreak_parse_status": null
+    },
+    {
+      "query_id": "mmlu_12066",
+      "query_text": "A teachers union, a nongovernmental entity, seeks to picket the local city school board for its decision to require higher certification for instructors who wish to teach in the gifted and talented classes in elementary school. After a few days of picketing, the school board seeks a temporary injunction in the state court to restrain further picketing of the school board. The school board insists that the teachers union has violated Section 101 of the city's picketing ordinance. Section 101 reads as follows:\"Section 101. No picketing shall be permitted inside of, or on any sidewalk or street immediately adjacent or contiguous to public elementary and secondary schools without express permission of the mayor. Applications for such permission shall be filed at least three days before such picketing is intended to begin and shall state the purpose, place, and time of the proposed picketing. \"The court will most likely",
+      "query_choices": [
+        "grant relief, because the teachers unionfailed to follow the procedure outlined in theordinance.",
+        "grant relief, because the ordinance isconstitutional.",
+        "deny relief, because the picketing ordinancewas unconstitutional on its face.",
+        "deny relief, because the ordinance does notprovide procedural due process."
+      ],
+      "correct": true,
+      "predicted": "C",
+      "ground_truth": "C",
+      "llm_calls": 0,
+      "confidence": 0.7683975197975508,
+      "latency_ms": 27745.485457999166,
+      "cost_usd": 0.005780309470416493,
+      "api_cost_usd": 0.0,
+      "infra_cost_usd": 0.005780309470416493,
+      "energy_kwh": 0.0005549097091599833,
+      "co2_g": 0.21086568948079365,
+      "gpu_power_w": 72.0,
+      "final_model_id": "google/gemma-4-E4B-it",
+      "used_llm": false,
+      "escalated": false,
+      "slm_confidence": 0.7683975197975508,
+      "confidence_threshold": null,
+      "margin_threshold": null,
+      "long_input_token_threshold": null,
+      "confidence_method": null,
+      "slm_raw_text": "1. google/gemma-4-E4B-it: Here is a breakdown of the legal analysis:\n\n1.  **The Issue:** The school board is seeking a temporary injunction based on the teachers union's alleged violation of a local picketing ordinance (Section 101).\n2.  **The Ordinance (Section 101):** It requires *express permission of the mayor* for picketing inside or immediately adjacent to public schools, and this permission must be requested at least three days in advance, detailing the purpose, place, and time.\n3.  **The Legal Conflict:** The right to picket is generally protected under the First Amendment (freedom of speech and assembly). Local ordinances restricting picketing must be narrowly tailored to serve a significant government interest and must not substantially burden protected speech.\n4.  **Analyzing the Ordinance's Validity:**\n    *   Requiring a permit for picketing near public schools is a common, though often challenged, form of time, place, and manner restriction.\n    *   The requirement for *express permission* from the mayor, coupled with the strict advance notice requirement, is a significant hurdle.\n    *   Courts generally scrutinize ordinances that require prior approval for speech activities. If the ordinance is overly restrictive or gives the government too much discretion to deny permits based on content (which is not explicitly stated here, but the structure suggests potential content-based control), it can be unconstitutional.\n5.  **Analyzing the Court's Likely Action (Temporary Injunction):** The court must determine if the ordinance is constitutional *before* granting the injunction.\n    *   **Option A (Grant relief because of procedural failure):** This is a strong possibility if the union clearly failed to follow the procedure. However, the court must first determine if the *procedure itself* is constitutional. If the ordinance is unconstitutional, the procedural failure is irrelevant.\n    *   **Option B (Grant relief because the ordinance is constitutional):** This would require the court to find that the ordinance is a valid, narrowly tailored time, place, and manner restriction.\n    *   **Option C (Deny relief because the ordinance is unconstitutional on its face):** This suggests the ordinance is so restrictive that it violates fundamental rights regardless of whether the union followed the rules. Requiring prior permission for picketing near schools is often found to be an unconstitutional prior restraint on speech.\n    *   **Option D (Deny relief because it lacks procedural due process):** This is less likely to be the primary constitutional challenge here; the challenge is usually to the *substance* of the restriction on speech, not the process of the permit application itself.\n\n**Conclusion:**\nIn First Amendment jurisprudence, ordinances that require prior government approval (a permit) for expressive activity like picketing are subject to intense scrutiny. If the ordinance is deemed to be a prior restraint on speech, it is likely to be struck down as unconstitutional on its face, meaning the court would deny the injunction regardless of the union's compliance with the flawed rule.\n\nTherefore, the court will most likely find the ordinance itself to be unconstitutional.\n\nAnswer: C",
+      "slm_parsed_answer": null,
+      "slm_parse_status": "unparseable",
+      "llm_raw_text": null,
+      "llm_parsed_answer": null,
+      "llm_parse_status": null,
+      "final_raw_text": "C",
+      "final_parsed_answer": "C",
+      "final_answer_source": "ensemble_vote",
+      "escalation_reason": null,
+      "routing_decision": {
+        "accepted_by": "slm",
+        "threshold": null,
+        "confidence_method": null,
+        "signals": {
+          "parse_success": false,
+          "confidence": 0.7683975197975508,
+          "top2_margin": null,
+          "input_tokens": 290,
+          "input_too_long": false,
+          "low_confidence": false,
+          "low_margin": false,
+          "forced_escalation": false
+        }
+      },
+      "slm_latency_ms": null,
+      "llm_latency_ms": null,
+      "slm_input_tokens": null,
+      "slm_output_tokens": null,
+      "llm_input_tokens": null,
+      "llm_output_tokens": null,
+      "slm_cost_usd": null,
+      "llm_cost_usd": null,
+      "resource_estimate": {
+        "api_cost_usd": 0.0,
+        "infra_cost_usd": 0.005780309470416493,
+        "total_cost_usd": 0.005780309470416493,
+        "energy_kwh": 0.0005549097091599833,
+        "co2_g": 0.21086568948079365,
+        "gpu_power_w": 72.0,
+        "method": "host_profile_estimate"
+      },
+      "inference_steps": [
+        {
+          "role": "ensemble_member_1",
+          "model_id": "google/gemma-4-E4B-it",
+          "latency_ms": 27745.485457999166,
+          "input_tokens": 290,
+          "output_tokens": 643,
+          "api_cost_usd": 0.0,
+          "host_label": "gcp-l4",
+          "duration_s": 27.745485457999166,
+          "energy_kwh": 0.0005549097091599833,
+          "co2_g": 0.21086568948079365,
+          "infra_cost_usd": 0.005780309470416493,
+          "gpu_power_w": 72.0
+        }
+      ],
+      "prompt_text": "A teachers union, a nongovernmental entity, seeks to picket the local city school board for its decision to require higher certification for instructors who wish to teach in the gifted and talented classes in elementary school. After a few days of picketing, the school board seeks a temporary injunction in the state court to restrain further picketing of the school board. The school board insists that the teachers union has violated Section 101 of the city's picketing ordinance. Section 101 reads as follows:\"Section 101. No picketing shall be permitted inside of, or on any sidewalk or street immediately adjacent or contiguous to public elementary and secondary schools without express permission of the mayor. Applications for such permission shall be filed at least three days before such picketing is intended to begin and shall state the purpose, place, and time of the proposed picketing. \"The court will most likely\n\nA. grant relief, because the teachers unionfailed to follow the procedure outlined in theordinance.\nB. grant relief, because the ordinance isconstitutional.\nC. deny relief, because the picketing ordinancewas unconstitutional on its face.\nD. deny relief, because the ordinance does notprovide procedural due process.\n\nChoose the single best answer: A, B, C, D.\nEnd your response with a final line in the format: Answer: <LETTER>",
+      "slm_text": "1. google/gemma-4-E4B-it: Here is a breakdown of the legal analysis:\n\n1.  **The Issue:** The school board is seeking a temporary injunction based on the teachers union's alleged violation of a local picketing ordinance (Section 101).\n2.  **The Ordinance (Section 101):** It requires *express permission of the mayor* for picketing inside or immediately adjacent to public schools, and this permission must be requested at least three days in advance, detailing the purpose, place, and time.\n3.  **The Legal Conflict:** The right to picket is generally protected under the First Amendment (freedom of speech and assembly). Local ordinances restricting picketing must be narrowly tailored to serve a significant government interest and must not substantially burden protected speech.\n4.  **Analyzing the Ordinance's Validity:**\n    *   Requiring a permit for picketing near public schools is a common, though often challenged, form of time, place, and manner restriction.\n    *   The requirement for *express permission* from the mayor, coupled with the strict advance notice requirement, is a significant hurdle.\n    *   Courts generally scrutinize ordinances that require prior approval for speech activities. If the ordinance is overly restrictive or gives the government too much discretion to deny permits based on content (which is not explicitly stated here, but the structure suggests potential content-based control), it can be unconstitutional.\n5.  **Analyzing the Court's Likely Action (Temporary Injunction):** The court must determine if the ordinance is constitutional *before* granting the injunction.\n    *   **Option A (Grant relief because of procedural failure):** This is a strong possibility if the union clearly failed to follow the procedure. However, the court must first determine if the *procedure itself* is constitutional. If the ordinance is unconstitutional, the procedural failure is irrelevant.\n    *   **Option B (Grant relief because the ordinance is constitutional):** This would require the court to find that the ordinance is a valid, narrowly tailored time, place, and manner restriction.\n    *   **Option C (Deny relief because the ordinance is unconstitutional on its face):** This suggests the ordinance is so restrictive that it violates fundamental rights regardless of whether the union followed the rules. Requiring prior permission for picketing near schools is often found to be an unconstitutional prior restraint on speech.\n    *   **Option D (Deny relief because it lacks procedural due process):** This is less likely to be the primary constitutional challenge here; the challenge is usually to the *substance* of the restriction on speech, not the process of the permit application itself.\n\n**Conclusion:**\nIn First Amendment jurisprudence, ordinances that require prior government approval (a permit) for expressive activity like picketing are subject to intense scrutiny. If the ordinance is deemed to be a prior restraint on speech, it is likely to be struck down as unconstitutional on its face, meaning the court would deny the injunction regardless of the union's compliance with the flawed rule.\n\nTherefore, the court will most likely find the ordinance itself to be unconstitutional.\n\nAnswer: C",
+      "final_text": "C",
+      "votes": [
+        "C"
+      ],
+      "vote_counts": {
+        "C": 1
+      },
+      "confidences": [
+        0.7683975197975508
+      ],
+      "voting_method": "majority",
+      "n_models": 1,
+      "members": [
+        "google/gemma-4-E4B-it"
+      ],
+      "ensemble_member_responses": [
+        {
+          "member_index": 1,
+          "role": "ensemble_member_1",
+          "model_id": "google/gemma-4-E4B-it",
+          "raw_text": "Here is a breakdown of the legal analysis:\n\n1.  **The Issue:** The school board is seeking a temporary injunction based on the teachers union's alleged violation of a local picketing ordinance (Section 101).\n2.  **The Ordinance (Section 101):** It requires *express permission of the mayor* for picketing inside or immediately adjacent to public schools, and this permission must be requested at least three days in advance, detailing the purpose, place, and time.\n3.  **The Legal Conflict:** The right to picket is generally protected under the First Amendment (freedom of speech and assembly). Local ordinances restricting picketing must be narrowly tailored to serve a significant government interest and must not substantially burden protected speech.\n4.  **Analyzing the Ordinance's Validity:**\n    *   Requiring a permit for picketing near public schools is a common, though often challenged, form of time, place, and manner restriction.\n    *   The requirement for *express permission* from the mayor, coupled with the strict advance notice requirement, is a significant hurdle.\n    *   Courts generally scrutinize ordinances that require prior approval for speech activities. If the ordinance is overly restrictive or gives the government too much discretion to deny permits based on content (which is not explicitly stated here, but the structure suggests potential content-based control), it can be unconstitutional.\n5.  **Analyzing the Court's Likely Action (Temporary Injunction):** The court must determine if the ordinance is constitutional *before* granting the injunction.\n    *   **Option A (Grant relief because of procedural failure):** This is a strong possibility if the union clearly failed to follow the procedure. However, the court must first determine if the *procedure itself* is constitutional. If the ordinance is unconstitutional, the procedural failure is irrelevant.\n    *   **Option B (Grant relief because the ordinance is constitutional):** This would require the court to find that the ordinance is a valid, narrowly tailored time, place, and manner restriction.\n    *   **Option C (Deny relief because the ordinance is unconstitutional on its face):** This suggests the ordinance is so restrictive that it violates fundamental rights regardless of whether the union followed the rules. Requiring prior permission for picketing near schools is often found to be an unconstitutional prior restraint on speech.\n    *   **Option D (Deny relief because it lacks procedural due process):** This is less likely to be the primary constitutional challenge here; the challenge is usually to the *substance* of the restriction on speech, not the process of the permit application itself.\n\n**Conclusion:**\nIn First Amendment jurisprudence, ordinances that require prior government approval (a permit) for expressive activity like picketing are subject to intense scrutiny. If the ordinance is deemed to be a prior restraint on speech, it is likely to be struck down as unconstitutional on its face, meaning the court would deny the injunction regardless of the union's compliance with the flawed rule.\n\nTherefore, the court will most likely find the ordinance itself to be unconstitutional.\n\nAnswer: C",
+          "parsed_answer": "C",
+          "parse_status": "parsed",
+          "confidence": 0.7683975197975508,
+          "input_tokens": 290,
+          "output_tokens": 643,
+          "latency_ms": 27745.485457999166,
+          "cost_usd": 0.0
+        }
+      ],
+      "llm_tiebreak": false,
+      "llm_tiebreak_raw_text": null,
+      "llm_tiebreak_parsed_answer": null,
+      "llm_tiebreak_parse_status": null
+    },
+    {
+      "query_id": "mmlu_1679",
+      "query_text": "The surface of Planet Earth loses energy to outer space due mostly to",
+      "query_choices": [
+        "conduction.",
+        "convection.",
+        "radiation.",
+        "radioactivity."
+      ],
+      "correct": true,
+      "predicted": "C",
+      "ground_truth": "C",
+      "llm_calls": 0,
+      "confidence": 0.9176763512484032,
+      "latency_ms": 9484.627083002124,
+      "cost_usd": 0.0019759639756254423,
+      "api_cost_usd": 0.0,
+      "infra_cost_usd": 0.0019759639756254423,
+      "energy_kwh": 0.00018969254166004246,
+      "co2_g": 0.07208316583081613,
+      "gpu_power_w": 72.0,
+      "final_model_id": "google/gemma-4-E4B-it",
+      "used_llm": false,
+      "escalated": false,
+      "slm_confidence": 0.9176763512484032,
+      "confidence_threshold": null,
+      "margin_threshold": null,
+      "long_input_token_threshold": null,
+      "confidence_method": null,
+      "slm_raw_text": "1. google/gemma-4-E4B-it: The correct answer is **C. radiation**.\n\nHere's why:\n\n* **Radiation:** The primary mechanism by which the Earth loses energy to space is through the emission of longwave infrared radiation (heat). This is how the Earth's surface and atmosphere radiate energy outward.\n* **Conduction:** This is the transfer of heat through direct contact (e.g., heat moving through the ground). While it occurs within the Earth, it is not the dominant mechanism for energy loss *to outer space*.\n* **Convection:** This is the transfer of heat through the movement of fluids (like air or water). Convection is crucial for heat transfer *within* the atmosphere and oceans, but the final energy loss to space is radiative.\n* **Radioactivity:** Radioactive decay is a source of internal heat within the Earth, not the primary mechanism for energy loss *to* space.\n\nAnswer: C",
+      "slm_parsed_answer": null,
+      "slm_parse_status": "unparseable",
+      "llm_raw_text": null,
+      "llm_parsed_answer": null,
+      "llm_parse_status": null,
+      "final_raw_text": "C",
+      "final_parsed_answer": "C",
+      "final_answer_source": "ensemble_vote",
+      "escalation_reason": null,
+      "routing_decision": {
+        "accepted_by": "slm",
+        "threshold": null,
+        "confidence_method": null,
+        "signals": {
+          "parse_success": false,
+          "confidence": 0.9176763512484032,
+          "top2_margin": null,
+          "input_tokens": 74,
+          "input_too_long": false,
+          "low_confidence": false,
+          "low_margin": false,
+          "forced_escalation": false
+        }
+      },
+      "slm_latency_ms": null,
+      "llm_latency_ms": null,
+      "slm_input_tokens": null,
+      "slm_output_tokens": null,
+      "llm_input_tokens": null,
+      "llm_output_tokens": null,
+      "slm_cost_usd": null,
+      "llm_cost_usd": null,
+      "resource_estimate": {
+        "api_cost_usd": 0.0,
+        "infra_cost_usd": 0.0019759639756254423,
+        "total_cost_usd": 0.0019759639756254423,
+        "energy_kwh": 0.00018969254166004246,
+        "co2_g": 0.07208316583081613,
+        "gpu_power_w": 72.0,
+        "method": "host_profile_estimate"
+      },
+      "inference_steps": [
+        {
+          "role": "ensemble_member_1",
+          "model_id": "google/gemma-4-E4B-it",
+          "latency_ms": 9484.627083002124,
+          "input_tokens": 74,
+          "output_tokens": 187,
+          "api_cost_usd": 0.0,
+          "host_label": "gcp-l4",
+          "duration_s": 9.484627083002124,
+          "energy_kwh": 0.00018969254166004246,
+          "co2_g": 0.07208316583081613,
+          "infra_cost_usd": 0.0019759639756254423,
+          "gpu_power_w": 72.0
+        }
+      ],
+      "prompt_text": "The surface of Planet Earth loses energy to outer space due mostly to\n\nA. conduction.\nB. convection.\nC. radiation.\nD. radioactivity.\n\nChoose the single best answer: A, B, C, D.\nEnd your response with a final line in the format: Answer: <LETTER>",
+      "slm_text": "1. google/gemma-4-E4B-it: The correct answer is **C. radiation**.\n\nHere's why:\n\n* **Radiation:** The primary mechanism by which the Earth loses energy to space is through the emission of longwave infrared radiation (heat). This is how the Earth's surface and atmosphere radiate energy outward.\n* **Conduction:** This is the transfer of heat through direct contact (e.g., heat moving through the ground). While it occurs within the Earth, it is not the dominant mechanism for energy loss *to outer space*.\n* **Convection:** This is the transfer of heat through the movement of fluids (like air or water). Convection is crucial for heat transfer *within* the atmosphere and oceans, but the final energy loss to space is radiative.\n* **Radioactivity:** Radioactive decay is a source of internal heat within the Earth, not the primary mechanism for energy loss *to* space.\n\nAnswer: C",
+      "final_text": "C",
+      "votes": [
+        "C"
+      ],
+      "vote_counts": {
+        "C": 1
+      },
+      "confidences": [
+        0.9176763512484032
+      ],
+      "voting_method": "majority",
+      "n_models": 1,
+      "members": [
+        "google/gemma-4-E4B-it"
+      ],
+      "ensemble_member_responses": [
+        {
+          "member_index": 1,
+          "role": "ensemble_member_1",
+          "model_id": "google/gemma-4-E4B-it",
+          "raw_text": "The correct answer is **C. radiation**.\n\nHere's why:\n\n* **Radiation:** The primary mechanism by which the Earth loses energy to space is through the emission of longwave infrared radiation (heat). This is how the Earth's surface and atmosphere radiate energy outward.\n* **Conduction:** This is the transfer of heat through direct contact (e.g., heat moving through the ground). While it occurs within the Earth, it is not the dominant mechanism for energy loss *to outer space*.\n* **Convection:** This is the transfer of heat through the movement of fluids (like air or water). Convection is crucial for heat transfer *within* the atmosphere and oceans, but the final energy loss to space is radiative.\n* **Radioactivity:** Radioactive decay is a source of internal heat within the Earth, not the primary mechanism for energy loss *to* space.\n\nAnswer: C",
+          "parsed_answer": "C",
+          "parse_status": "parsed",
+          "confidence": 0.9176763512484032,
+          "input_tokens": 74,
+          "output_tokens": 187,
+          "latency_ms": 9484.627083002124,
+          "cost_usd": 0.0
+        }
+      ],
+      "llm_tiebreak": false,
+      "llm_tiebreak_raw_text": null,
+      "llm_tiebreak_parsed_answer": null,
+      "llm_tiebreak_parse_status": null
+    }
+  ]
+}

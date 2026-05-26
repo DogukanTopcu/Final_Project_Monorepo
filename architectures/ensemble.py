@@ -77,6 +77,7 @@ class EnsembleArchitecture(BaseArchitecture):
         member_responses: list[dict[str, object]] = []
         llm_tiebreak_text: str | None = None
         llm_tiebreak_parsed: str | None = None
+        llm_generation_metadata: dict[str, object] = {}
 
         for idx, member in enumerate(self.slms):
             slm_budget = compute_completion_budget(
@@ -92,6 +93,7 @@ class EnsembleArchitecture(BaseArchitecture):
                 temperature=self.slm_temperature,
                 max_tokens=slm_budget,
             )
+            member_generation_metadata = dict(getattr(member, "last_generation_metadata", {}) or {})
             total_in += in_t
             total_out += out_t
             total_cost += cost
@@ -115,6 +117,8 @@ class EnsembleArchitecture(BaseArchitecture):
                     "output_tokens": out_t,
                     "latency_ms": lat,
                     "cost_usd": cost,
+                    "effective_max_tokens": member_generation_metadata.get("effective_max_tokens"),
+                    "finish_reason": member_generation_metadata.get("finish_reason"),
                 }
             )
             inference_steps.append(
@@ -125,6 +129,8 @@ class EnsembleArchitecture(BaseArchitecture):
                     "input_tokens": in_t,
                     "output_tokens": out_t,
                     "api_cost_usd": cost,
+                    "effective_max_tokens": member_generation_metadata.get("effective_max_tokens"),
+                    "finish_reason": member_generation_metadata.get("finish_reason"),
                 }
             )
             if parsed:
@@ -159,6 +165,7 @@ class EnsembleArchitecture(BaseArchitecture):
                 temperature=self.llm_temperature,
                 max_tokens=llm_budget,
             )
+            llm_generation_metadata = dict(getattr(self.llm, "last_generation_metadata", {}) or {})
             llm_tiebreak_text = llm_text
             llm_tiebreak_parsed = (
                 parse_mcq_answer(llm_text)
@@ -178,6 +185,8 @@ class EnsembleArchitecture(BaseArchitecture):
                     "input_tokens": l_in,
                     "output_tokens": l_out,
                     "api_cost_usd": l_cost,
+                    "effective_max_tokens": llm_generation_metadata.get("effective_max_tokens"),
+                    "finish_reason": llm_generation_metadata.get("finish_reason"),
                 }
             )
             final_answer = llm_tiebreak_parsed
@@ -219,6 +228,16 @@ class EnsembleArchitecture(BaseArchitecture):
                 "llm_tiebreak": self.llm_tiebreak,
                 "llm_tiebreak_raw_text": llm_tiebreak_text,
                 "llm_tiebreak_parsed_answer": llm_tiebreak_parsed,
+                "llm_tiebreak_effective_max_tokens": (
+                    llm_generation_metadata.get("effective_max_tokens")
+                    if llm_tiebreak_text is not None
+                    else None
+                ),
+                "llm_tiebreak_finish_reason": (
+                    llm_generation_metadata.get("finish_reason")
+                    if llm_tiebreak_text is not None
+                    else None
+                ),
                 "llm_tiebreak_parse_status": (
                     None
                     if llm_tiebreak_text is None

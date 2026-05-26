@@ -12,6 +12,20 @@ from benchmarks.base import BaseBenchmark
 from core.types import Query
 
 
+def _normalize_choice_label(value: str) -> str:
+    token = value.strip().upper()
+    if len(token) == 1 and token.isalpha():
+        return token
+    if token.isdigit():
+        return chr(64 + int(token))
+    raise ValueError(f"Unsupported ARC choice label: {value!r}")
+
+
+def _choice_index(value: str) -> int:
+    normalized = _normalize_choice_label(value)
+    return ord(normalized) - 65
+
+
 class ARCBenchmark(BaseBenchmark):
     name = "arc"
     task_type = "mcq"
@@ -27,18 +41,12 @@ class ARCBenchmark(BaseBenchmark):
             choice_labels = choices["label"]
             answer_key = row["answerKey"]
 
-            # Normalize label to A/B/C/D
-            if answer_key in "ABCD":
-                label = answer_key
-            elif answer_key.isdigit():
-                label = chr(64 + int(answer_key))
-            else:
-                label = answer_key
+            label = _normalize_choice_label(answer_key)
 
-            # Re-order choices to always be A/B/C/D
+            # Re-order choices to canonical A/B/C/... label order.
             ordered_texts: list[str] = [""] * len(choice_texts)
             for text, lbl in zip(choice_texts, choice_labels):
-                idx = ord(lbl[0]) - 65 if lbl[0] in "ABCD" else (int(lbl) - 1)
+                idx = _choice_index(str(lbl))
                 if 0 <= idx < len(ordered_texts):
                     ordered_texts[idx] = text
 

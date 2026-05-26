@@ -9,13 +9,14 @@
 \usepackage{listings}
 \usepackage{caption}
 \usepackage{tabularx}
-\usepackage{titlesec}
+\IfFileExists{titlesec.sty}{\usepackage{titlesec}}{}
+\usepackage[table]{xcolor}
 \usepackage{fancyhdr}
 \usepackage{setspace}
-\usepackage[sfdefault]{roboto}
 \usepackage[T1]{fontenc}
 
 \renewcommand{\bibname}{REFERENCES}
+\hypersetup{hidelinks}
 
 \pagestyle{fancy}
 \fancyhf{}
@@ -29,8 +30,10 @@
     columns=fullflexible
 }
 
-\titleformat{\chapter}[block]{\sffamily\bfseries\LARGE}{\thechapter.}{1em}{}
-\titleformat{\section}[block]{\sffamily\bfseries\Large}{\thesection}{1em}{}
+\IfFileExists{titlesec.sty}{
+    \titleformat{\chapter}[block]{\sffamily\bfseries\LARGE}{\thechapter.}{1em}{}
+    \titleformat{\section}[block]{\sffamily\bfseries\Large}{\thesection}{1em}{}
+}{}
 
 \begin{document}
 

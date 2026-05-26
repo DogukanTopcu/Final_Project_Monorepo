@@ -6,10 +6,13 @@ from typing import Any
 from urllib.parse import urlparse
 
 import requests
+from core.model_catalog import get_model_spec
 
 
 _DEFAULT_COMPLETION_BUDGET = 512
 _SAFETY_MARGIN_TOKENS = 512
+_MIN_SLM_AUTO_BUDGET = 128
+_MIN_LLM_AUTO_BUDGET = 256
 
 
 def compute_completion_budget(
@@ -25,11 +28,19 @@ def compute_completion_budget(
     Policy:
     - If `requested_max_tokens > 0`, treat it as an explicit override.
     - Otherwise use a task/role-specific default budget.
+    - In auto mode, never go below separate SLM/LLM floor budgets unless the
+      model context window leaves less room than that.
     - If the provider exposes a vLLM/OpenAI-compatible `/models` endpoint with
       `max_model_len`, clamp the result so prompt + output stays below that cap
       with a safety margin.
     """
-    desired = requested_max_tokens if requested_max_tokens > 0 else _policy_default(task_type, role)
+    if requested_max_tokens > 0:
+        desired = requested_max_tokens
+    else:
+        desired = max(
+            _policy_default(task_type, role),
+            _minimum_auto_budget(provider, role),
+        )
     desired = max(1, desired)
 
     context_limit = _get_context_limit(provider)
@@ -56,6 +67,31 @@ def _policy_default(task_type: str, role: str) -> int:
     if role in {"llm_fallback", "llm_tiebreak"}:
         return 512
     return 256
+
+
+def _minimum_auto_budget(provider: Any, role: str) -> int:
+    model_id = getattr(provider, "model_id", None)
+    if isinstance(model_id, str):
+        spec = get_model_spec(model_id)
+        if spec is not None:
+            return _MIN_SLM_AUTO_BUDGET if spec.kind == "slm" else _MIN_LLM_AUTO_BUDGET
+
+    llm_roles = {
+        "llm_fallback",
+        "llm_tiebreak",
+        "monolithic_llm",
+    }
+    slm_roles = {
+        "slm_draft",
+        "ensemble_member",
+        "proponent",
+        "opponent",
+    }
+    if role in llm_roles:
+        return _MIN_LLM_AUTO_BUDGET
+    if role in slm_roles:
+        return _MIN_SLM_AUTO_BUDGET
+    return _MIN_LLM_AUTO_BUDGET
 
 
 def _estimate_prompt_tokens(prompt: str) -> int:
