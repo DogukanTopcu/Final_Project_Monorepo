@@ -35,10 +35,6 @@ const navGroups: Array<{
       { href: "/analysis", label: "Analysis" },
     ],
   },
-  {
-    title: "Infra",
-    items: [{ href: "/infrastructure", label: "EC2 & costs" }],
-  },
 ];
 
 export function SideNav() {
