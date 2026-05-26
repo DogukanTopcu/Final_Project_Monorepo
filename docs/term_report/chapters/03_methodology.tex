@@ -15,12 +15,12 @@ The selected model pool spans small, mid-tier, and heavy model classes. SLMs are
     \caption{Current model and host topology used by the experiment platform.}
     \label{tab:model-topology}
     \small
-    \begin{tabularx}{\linewidth}{@{} l l X @{}}
+    \begin{tabularx}{\linewidth}{@{} >{\raggedright\arraybackslash}p{2.1cm} >{\raggedright\arraybackslash}p{5.2cm} >{\raggedright\arraybackslash}X @{}}
         \toprule
         \textbf{Tier} & \textbf{Representative aliases} & \textbf{Deployment role} \\
         \midrule
-        SLM tier & \texttt{gemma4-4b}, \texttt{qwen3.5-4b}, \texttt{llama3.2-3b}, \texttt{ministral3-3b}, \texttt{phi4-mini} & Dedicated Google Cloud L4 hosts for low-cost primary inference. \\
-        Mid-tier LLM / MoE tier & \texttt{gpt-oss-20b}, \texttt{qwen3.5-27b}, \texttt{gemma4-31b}, \texttt{qwen3.5-35b-a3b}, \texttt{gemma4-26b-a4b} & Shared Google Cloud RTX PRO6000 host for escalation, verification, and stronger baselines. \\
+        SLM tier & \texttt{gemma4-4b}\\ \texttt{qwen3.5-4b}\\ \texttt{llama3.2-3b}\\ \texttt{ministral3-3b}\\ \texttt{phi4-mini} & Dedicated Google Cloud L4 hosts for low-cost primary inference. \\
+        Mid-tier LLM / MoE tier & \texttt{gpt-oss-20b}\\ \texttt{qwen3.5-27b}\\ \texttt{gemma4-31b}\\ \texttt{qwen3.5-35b-a3b}\\ \texttt{gemma4-26b-a4b} & Shared Google Cloud RTX PRO6000 host for escalation, verification, and stronger baselines. \\
         Heavy LLM tier & \texttt{llama3.3-70b}, \texttt{gpt-oss-120b} & Separate Nebius heavy host for frontier baselines and expensive fallback paths. \\
         \bottomrule
     \end{tabularx}
@@ -37,13 +37,13 @@ The architecture surface is intentionally broader than a single baseline. In the
     \caption{Architecture groups used in the current thesis platform.}
     \label{tab:architecture-groups}
     \small
-    \begin{tabularx}{\linewidth}{@{} l l X @{}}
+    \begin{tabularx}{\linewidth}{@{} >{\raggedright\arraybackslash}p{3.2cm} >{\raggedright\arraybackslash}p{4.4cm} >{\raggedright\arraybackslash}X @{}}
         \toprule
         \textbf{Status} & \textbf{Architectures} & \textbf{Purpose in the thesis} \\
         \midrule
-        Implemented comparison surface & \texttt{monolithic}, \texttt{routing}, \texttt{multi\_agent}, \texttt{ensemble} & Core thesis comparison set: direct LLM baseline, selective router, debate-style multi-agent flow, and voting ensemble. \\
+        Implemented comparison surface & \texttt{monolithic}, \texttt{routing},\\ \texttt{multi\_agent}, \texttt{ensemble} & Core thesis comparison set: direct LLM baseline, selective router, debate-style multi-agent flow, and voting ensemble. \\
         Exposed but experimental & \texttt{speculative}, \texttt{multi\_agent\_crew} & Available in the repository and UI, but not treated as validated result surfaces in this report. \\
-        Project-proposed preliminary swarm family & \texttt{blackboard}, \texttt{entropy\_blackboard}, \texttt{pure\_swarm} & Decentralized architecture proposals under development and awaiting benchmark-backed validation. \\
+        Project-proposed preliminary swarm family & \texttt{blackboard},\\ \texttt{entropy\_blackboard},\\ \texttt{pure\_swarm} & Decentralized architecture proposals under development and awaiting benchmark-backed validation. \\
         \bottomrule
     \end{tabularx}
 \end{table}

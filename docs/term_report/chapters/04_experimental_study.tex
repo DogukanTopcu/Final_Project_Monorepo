@@ -9,8 +9,9 @@
 \chapter{EXPERIMENTAL STUDY}
 
 This chapter documents the current state of the experimental study in two
-complementary ways. First, it reports two completed MMLU experiments that
-already provide a concrete architecture comparison under a shared setup.
+complementary ways. First, it reports two completed pilot comparisons under a
+shared setup: an MMLU routing-versus-monolithic comparison and a same-model
+GSM8K three-way comparison across single-SLM, hybrid, and single-LLM modes.
 Second, it clarifies which parts of the broader thesis evaluation pipeline are
 already usable and which still remain preliminary. This separation is important
 because the repository can already produce meaningful pilot evidence, but not
@@ -221,6 +222,110 @@ reporting stack, experiment runner, and cost-energy instrumentation can support
 meaningful architecture analysis, but they do not yet replace the broader coding
 benchmark that the thesis is designed around.
 
+\section{Same-Model GSM8K Three-Way Comparison}
+
+This report also includes a second pilot comparison that keeps the model family
+fixed and changes only the response-generation mode. The three runs all evaluate
+\texttt{gsm8k} with 100 samples at zero temperature. The goal is to compare three
+operating points within the same Gemma family: a single-SLM baseline, a routing
+hybrid, and a monolithic LLM baseline. The single-SLM baseline is
+\texttt{exp\_efec5356}. Behaviorally, it is a single-model \texttt{gemma4-4b}
+baseline, although the implementation path uses the repository's
+\texttt{ensemble} architecture with \texttt{n\_models=1}. The hybrid run,
+\texttt{exp\_b4a9b415}, answers first with \texttt{gemma4-4b} and escalates to
+\texttt{gemma4-31b} when needed. The monolithic baseline,
+\texttt{exp\_a7d53595}, answers every sample directly with \texttt{gemma4-31b}.
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\caption{Configuration of the three GSM8K comparison runs}
+\label{tab:gsm8k-config}
+\begin{tabularx}{\linewidth}{@{} l X X X @{}}
+\toprule
+\textbf{Setting} & \textbf{SLM baseline} & \textbf{Routing hybrid} & \textbf{LLM baseline} \\
+\midrule
+Experiment id & \texttt{exp\_efec5356} & \texttt{exp\_b4a9b415} & \texttt{exp\_a7d53595} \\
+Architecture & \texttt{ensemble} & \texttt{routing} & \texttt{monolithic} \\
+Benchmark & \texttt{gsm8k} & \texttt{gsm8k} & \texttt{gsm8k} \\
+Samples & 100 & 100 & 100 \\
+Active model(s) & \texttt{gemma4-4b} only & \texttt{gemma4-4b} draft + \texttt{gemma4-31b} fallback & \texttt{gemma4-31b} only \\
+Confidence threshold & 0.7 recorded, not active for routing & 0.8 active for escalation & 0.7 recorded, not used for routing \\
+LLM call ratio & 0\% & 19\% & 100\% \\
+Implementation note & Single-member ensemble used as a single-SLM baseline & Two-stage control flow with selective escalation & Single-pass monolithic inference \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\caption{Outcome summary for the GSM8K three-way comparison}
+\label{tab:gsm8k-summary}
+\begin{tabularx}{\linewidth}{@{} l c c c @{}}
+\toprule
+\textbf{Metric} & \textbf{SLM baseline} & \textbf{Routing hybrid} & \textbf{LLM baseline} \\
+\midrule
+Accuracy & 83.0\% & 91.0\% & 95.0\% \\
+Average latency & 10.24 s & 11.51 s & 5.93 s \\
+Latency p95 & 28.84 s & 35.78 s & 9.47 s \\
+Total cost & \$0.2133 & \$0.2888 & \$0.3869 \\
+Total energy & 0.0205 kWh & 0.0306 kWh & 0.0527 kWh \\
+Total CO$_2$ & 7.78 g & 11.63 g & 20.02 g \\
+Total tokens & 30,574 & 35,141 & 25,233 \\
+LLM call ratio & 0\% & 19\% & 100\% \\
+EATS & 83.0 & 4.55 & 0.9406 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The raw-quality ordering is straightforward. The monolithic LLM baseline
+produced the highest GSM8K accuracy at 95\%. The routing hybrid reached 91\%,
+which is 4 percentage points lower than the monolithic LLM but 8 percentage
+points higher than the single-SLM baseline at 83\%. This places the routing
+system between the two extremes: it does not match the best-quality operating
+point, but it meaningfully improves answer quality over the lightweight-only
+baseline while still limiting heavy-model usage.
+
+The efficiency side is more mixed. Relative to the monolithic LLM run, routing
+reduced total cost from \$0.3869 to \$0.2888, a savings of about 25.4\%. The
+same hybrid run also reduced total energy and estimated CO$_2$ from 0.0527 to
+0.0306 kWh and from 20.02 to 11.63 g respectively, which corresponds to about
+41.9\% lower energy use and emissions. The single-SLM baseline remained the
+cheapest and least energy-intensive operating point overall, but it trailed the
+LLM baseline by 12 percentage points of accuracy and the routing hybrid by 8
+points.
+
+Latency requires more careful interpretation. Routing was about 94\% slower on
+average than the monolithic LLM run, increasing mean latency from 5.93 to 11.51
+seconds. It was also about 12.4\% slower than the single-SLM baseline. This
+does not mean that the smaller model is inherently slower. In this setup, the
+monolithic LLM benefits from a different host class and a single-stage control
+flow, while the routing system pays for an initial SLM pass and, on some
+samples, an additional LLM pass. The apparent speed advantage of the monolithic
+LLM therefore reflects deployment and orchestration effects rather than model
+size alone.
+
+The escalation behavior helps explain where the hybrid gains come from and where
+it still leaves quality on the table. The routing run escalated 19 samples in
+total: 17 because confidence fell below the threshold and 2 because the draft
+answer could not be parsed. Among those escalations, 9 corrected an SLM error,
+8 merely confirmed an answer that was already correct, 1 remained wrong, and 1
+introduced a new error. At the same time, there were 5 non-escalated cases in
+which the routing system stayed with the SLM answer even though the monolithic
+LLM answered correctly. In other words, the current threshold policy clearly
+captures several useful recoveries, but it also misses some salvageable cases.
+
+EATS is still useful in this table, but it should be read carefully. The
+single-SLM baseline reaches an EATS of 83.0 because the current formula applies
+a special-case reward when the LLM-call ratio is zero. That makes the value
+structurally inflated relative to mixed or always-LLM systems. For this reason,
+EATS in the GSM8K comparison should be treated as an efficiency signal rather
+than as a standalone quality ranking. The more reliable interpretation comes
+from reading EATS together with accuracy, latency, cost, and resource metrics.
+
 \section{Implemented and Usable Today}
 
 The following pieces are already implemented and useful for development, smoke
@@ -252,7 +357,7 @@ methodological cleanup:
 \end{itemize}
 
 For these reasons, the current experimental outputs are treated as exploratory
-outside the specific MMLU comparison reported above. No broader quantitative
+outside the specific pilot comparisons reported above. No broader quantitative
 claim is made in this term report for the unfinished benchmark surfaces. This is
 intentional: fabricated or unstable numbers would weaken the thesis rather than
 strengthen it.
