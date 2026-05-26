@@ -1,0 +1,34 @@
+\begin{block}{Orchestration Architectures}
+  All architectures share one contract and run on the same hosts and metric stack,
+  so they can be compared head-to-head.
+
+  \vspace{4pt}
+  \textbf{Baselines from the literature.}
+  \begin{itemize}
+    \item \textbf{Monolithic} --- single heavy LLM answers everything (quality / cost ceiling).
+    \item \textbf{Routing} --- SLM answers; escalate to LLM only when confidence is low.
+    \item \textbf{Multi-agent} --- proponent / opponent / arbitrator SLM debate.
+    \item \textbf{Ensemble} --- parallel SLMs vote; LLM only as optional tiebreaker.
+    \item \textbf{Speculative} --- SLM drafts, LLM verifies token-wise.
+  \end{itemize}
+
+  \vspace{6pt}
+  \begin{tikzpicture}
+    \node[noveltybox, text width=0.92\linewidth] {
+      \textbf{Novel contribution: decentralized ``swarm'' family.}
+      No central router. SLMs autonomously \textbf{bid} on tasks posted to a shared
+      \textbf{blackboard}; the best bidder claims a task.
+      \[
+        \text{Utility} \;=\; \text{Confidence} \;-\; w_{\text{cost}}\cdot\text{ComputePenalty}
+      \]
+      \begin{itemize}
+        \item \textbf{Blackboard} --- decentralized bidding; heavy-LLM \emph{sweeper}
+              solves any task left unclaimed when its TTL expires.
+        \item \textbf{Entropy blackboard} --- bid also penalized by Shannon entropy,
+              routing uncertain tasks to the sweeper earlier (fewer hallucinations).
+        \item \textbf{Pure swarm} --- SLM-only, \emph{no} LLM sweeper; bid threshold
+              decays over time to prevent deadlock.
+      \end{itemize}
+    };
+  \end{tikzpicture}
+\end{block}

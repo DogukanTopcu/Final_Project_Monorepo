@@ -1,0 +1,42 @@
+\begin{block}{System Architecture}
+  A local \textbf{control plane} (FastAPI + Next.js + MLflow + Python runner) launches
+  experiments and stores results. Every model is served with \textbf{Docker + vLLM}
+  behind an \textbf{OpenAI-compatible HTTP} endpoint, and a \textbf{metrics proxy}
+  records cost, energy, CO\textsubscript{2}, tokens, and latency on each call.
+
+  \vspace{8pt}
+  \begin{center}
+  \resizebox{\linewidth}{!}{%
+  \begin{tikzpicture}[
+      font=\small,
+      box/.style={draw, rounded corners=5pt, inner sep=8pt, align=center, line width=1pt},
+      ctrl/.style={box, fill=posterDark, text=white, text width=24cm},
+      proxy/.style={box, draw=posterBlue, fill=posterBlue!12, text width=24cm},
+      tier/.style={box, text width=15cm},
+      slm/.style={tier, draw=posterTeal, fill=posterTeal!12},
+      mid/.style={tier, draw=posterBlue, fill=posterBlue!10},
+      heavy/.style={tier, draw=posterAmber, fill=posterAmber!12},
+      flow/.style={-{Latex[length=4mm]}, line width=1.2pt}
+    ]
+    \node[ctrl]  (ctrl)  {\textbf{Control Plane}\\\footnotesize FastAPI \textbullet\ Next.js UI \textbullet\ MLflow \textbullet\ runner};
+    \node[proxy, below=10pt of ctrl] (proxy) {\textbf{Metrics Proxy}\\\footnotesize latency \textbullet\ tokens \textbullet\ cost \textbullet\ energy \textbullet\ CO\textsubscript{2}};
+
+    \node[slm,   below=26pt of proxy, xshift=-16cm] (slm)
+      {\textbf{GCP L4}\\\footnotesize SLM tier ($<$7B)\\\scriptsize gemma4-4b, qwen3.5-4b,\\\scriptsize llama3.2-3b, ministral3-3b, phi4-mini};
+    \node[mid,   below=26pt of proxy] (mid)
+      {\textbf{GCP RTX PRO6000}\\\footnotesize Mid tier (20--40B, shared)\\\scriptsize gpt-oss-20b, qwen3.5-27b,\\\scriptsize gemma4-31b, MoE variants};
+    \node[heavy, below=26pt of proxy, xshift=16cm] (heavy)
+      {\textbf{Nebius H200 141GB}\\\footnotesize Heavy tier\\\scriptsize llama3.3-70b,\\\scriptsize gpt-oss-120b};
+
+    \draw[flow] (ctrl) -- (proxy);
+    \draw[flow] (proxy.south) -- (slm.north);
+    \draw[flow] (proxy.south) -- (mid.north);
+    \draw[flow] (proxy.south) -- (heavy.north);
+  \end{tikzpicture}%
+  }
+  \end{center}
+
+  \vspace{4pt}
+  \footnotesize A shared \textbf{host-lock} mechanism coordinates the shared mid/heavy
+  hosts so that only one large model is active at a time.
+\end{block}

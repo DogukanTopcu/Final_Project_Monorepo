@@ -1,0 +1,90 @@
+% ===========================================================================
+%  Poster: A Systematic Comparison of Large Language Models and Small Language
+%  Models in Multimodal, Hybrid and Monolithic Architectures
+%  Department of Computer Engineering, Izmir Institute of Technology
+%
+%  KICKSTART TEMPLATE (beamerposter, A0 portrait). Experiments are not yet
+%  valid; result blocks are intentionally marked PRELIMINARY / PENDING and use
+%  placeholder figures.
+%
+%  Build:  latexmk -pdf main.tex      (from this directory)
+%  Needs:  beamerposter, qrcode  (install via: sudo tlmgr install beamerposter qrcode)
+% ===========================================================================
+\documentclass[final]{beamer}
+\usepackage[size=a0, orientation=portrait, scale=1.35]{beamerposter}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tikz}
+\usepackage{qrcode}
+\usetikzlibrary{positioning, arrows.meta, shapes.geometric, fit, backgrounds}
+
+\graphicspath{{./}{figures/}}
+\input{theme}
+
+% --- Poster metadata --------------------------------------------------------
+\newcommand{\postertitle}{A Systematic Comparison of Large Language Models and Small Language Models in Multimodal, Hybrid and Monolithic Architectures}
+\newcommand{\posterauthors}{Do\u{g}ukan Top\c{c}u \quad\textbullet\quad Abdulbaki \c{C}eltik \quad\textbullet\quad Berkhan Karg\i l\i \quad\textbullet\quad Meri\c{c} Kelemeden \quad\textbullet\quad H\"useyin \"Unl\"u \quad\textbullet\quad Onur Demir\"ors}
+\newcommand{\posterinstitute}{Department of Computer Engineering, \.Izmir Institute of Technology, \.Izmir, Turkey}
+
+% --- Custom header with IYTE logo ------------------------------------------
+\setbeamercolor{headline}{bg=posterDark, fg=white}
+\setbeamertemplate{headline}{
+  \begin{beamercolorbox}[wd=\paperwidth]{headline}
+    \vspace{1.2cm}
+    \begin{columns}[c]
+      \begin{column}{0.16\paperwidth}
+        \centering
+        \includegraphics[height=11cm,keepaspectratio]{iyte_logo.png}
+      \end{column}
+      \begin{column}{0.80\paperwidth}
+        \raggedright
+        {\usebeamerfont{title}\bfseries\boldmath \postertitle \par}
+        \vspace{0.7cm}
+        {\large \posterauthors \par}
+        \vspace{0.4cm}
+        {\normalsize \posterinstitute \par}
+      \end{column}
+    \end{columns}
+    \vspace{1.2cm}
+  \end{beamercolorbox}
+  \vspace{0.4cm}
+}
+\setbeamertemplate{footline}{}
+
+\begin{document}
+\begin{frame}[t]
+
+\begin{columns}[t]
+
+  % ----------------------------- LEFT COLUMN -----------------------------
+  \begin{column}{0.32\paperwidth}
+    \input{blocks/01_introduction}
+    \input{blocks/02_slr}
+    \input{blocks/05_eats}
+  \end{column}
+
+  % ---------------------------- MIDDLE COLUMN ----------------------------
+  \begin{column}{0.32\paperwidth}
+    \input{blocks/03_system}
+    \input{blocks/04_architectures}
+  \end{column}
+
+  % ----------------------------- RIGHT COLUMN ----------------------------
+  \begin{column}{0.32\paperwidth}
+    \input{blocks/06_benchmark}
+    \input{blocks/07_results}
+    \input{blocks/08_conclusion}
+    \input{blocks/09_references}
+  \end{column}
+
+\end{columns}
+
+\end{frame}
+\end{document}

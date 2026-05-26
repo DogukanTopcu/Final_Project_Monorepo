@@ -1,0 +1,43 @@
+% ---------------------------------------------------------------------------
+% beamerposter theme for the Collaborative SLM-LLM Systems poster.
+% Colorblind-safe palette (slate / blue / teal / amber) on a light background.
+% ---------------------------------------------------------------------------
+
+\usetheme{Boadilla}
+\usecolortheme{default}
+
+% ---- Palette --------------------------------------------------------------
+\definecolor{posterDark}{HTML}{1F2937}   % near-black slate (text / titles)
+\definecolor{posterBlue}{HTML}{2563EB}   % primary blue
+\definecolor{posterTeal}{HTML}{0D9488}   % secondary teal
+\definecolor{posterAmber}{HTML}{D97706}  % accent amber (novelty highlight)
+\definecolor{posterGray}{HTML}{6B7280}   % muted gray
+\definecolor{posterBg}{HTML}{F1F5F9}     % light page background
+\definecolor{posterBlockBg}{HTML}{FFFFFF}% block body background
+
+% ---- Global colors --------------------------------------------------------
+\setbeamercolor{background canvas}{bg=posterBg}
+\setbeamercolor{normal text}{fg=posterDark, bg=posterBg}
+\setbeamercolor{structure}{fg=posterBlue}
+\setbeamercolor{item}{fg=posterBlue}
+
+% ---- Block (title + body) styling -----------------------------------------
+\setbeamercolor{block title}{bg=posterBlue, fg=white}
+\setbeamercolor{block body}{bg=posterBlockBg, fg=posterDark}
+\setbeamercolor{block title example}{bg=posterTeal, fg=white}
+\setbeamercolor{block body example}{bg=posterBlockBg, fg=posterDark}
+\setbeamercolor{block title alerted}{bg=posterAmber, fg=white}
+\setbeamercolor{block body alerted}{bg=posterAmber!10, fg=posterDark}
+
+\setbeamerfont{block title}{size=\large, series=\bfseries}
+\setbeamertemplate{blocks}[rounded][shadow=true]
+\setbeamertemplate{itemize items}[circle]
+\setbeamertemplate{navigation symbols}{}
+
+% ---- Reusable highlight box for the NOVEL contribution --------------------
+\tikzset{
+  noveltybox/.style={
+    draw=posterAmber, line width=2pt, rounded corners=8pt,
+    fill=posterAmber!10, inner sep=10pt
+  }
+}
