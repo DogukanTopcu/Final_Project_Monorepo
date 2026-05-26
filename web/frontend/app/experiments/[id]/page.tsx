@@ -54,6 +54,8 @@ const KNOWN_ARCHITECTURES: Architecture[] = [
   "monolithic",
   "routing",
   "multi_agent",
+  "active_oracle",
+  "rtos_watchdog",
   "ensemble",
   "multi_agent_crew",
   "speculative",
@@ -137,6 +139,8 @@ function isArchitectureWithDirectLlm(architecture: DetailArchitecture): boolean 
     architecture === "monolithic" ||
     architecture === "routing" ||
     architecture === "multi_agent" ||
+    architecture === "active_oracle" ||
+    architecture === "rtos_watchdog" ||
     architecture === "speculative"
   );
 }
@@ -156,6 +160,7 @@ function formatFieldLabel(key: string): string {
     votes: "Votes",
     llm_tiebreak: "LLM tiebreak",
     llm_calls: "LLM calls",
+    oracle_calls_made: "Oracle calls",
     used_llm: "Used LLM",
     escalated: "Escalated",
     confidence: "Confidence",
@@ -195,6 +200,9 @@ function formatFieldLabel(key: string): string {
     low_confidence: "Low confidence",
     low_margin: "Low margin",
     forced_escalation: "Forced escalation",
+    interrupted: "Interrupted",
+    slm_tokens_before_interrupt: "SLM tokens (pre-interrupt)",
+    investigation_trace: "Investigation trace",
   };
   if (labels[key]) return labels[key];
 
@@ -319,6 +327,8 @@ function getCoreTextFields(
       "predicted",
       "ground_truth",
     ],
+    active_oracle: ["prompt_text", "investigation_trace", "slm_raw_text", "predicted", "ground_truth"],
+    rtos_watchdog: ["prompt_text", "slm_text", "final_text", "predicted", "ground_truth"],
     speculative: [
       "prompt_text",
       "slm_text",
@@ -398,6 +408,36 @@ function getSampleSummaryCards(
         value: (
           <Badge variant={sampleUsesLlm(sample) ? "warning" : "secondary"}>
             {sampleUsesLlm(sample) ? "used" : "enabled"}
+          </Badge>
+        ),
+      });
+    }
+    if (typeof sample.confidence === "number") {
+      cards.push({
+        label: "Confidence",
+        value: formatPercent(sample.confidence),
+      });
+    }
+  } else if (architecture === "active_oracle") {
+    if (typeof sample.oracle_calls_made === "number") {
+      cards.push({
+        label: "Oracle calls",
+        value: formatNumber(sample.oracle_calls_made),
+      });
+    }
+    if (typeof sample.confidence === "number") {
+      cards.push({
+        label: "Confidence",
+        value: formatPercent(sample.confidence),
+      });
+    }
+  } else if (architecture === "rtos_watchdog") {
+    if (typeof sample.interrupted === "boolean") {
+      cards.push({
+        label: "Interrupted",
+        value: (
+          <Badge variant={sample.interrupted ? "warning" : "secondary"}>
+            {sample.interrupted ? "yes" : "no"}
           </Badge>
         ),
       });
@@ -522,6 +562,18 @@ function getArchitectureDetailEntries(
 
   if (architecture === "multi_agent" || architecture === "speculative") {
     return hybridEntries;
+  }
+
+  if (architecture === "active_oracle") {
+    const entries = [...hybridEntries];
+    entries.push(...collectScalarEntries(sample, ["oracle_calls_made"]));
+    return entries;
+  }
+
+  if (architecture === "rtos_watchdog") {
+    const entries = [...hybridEntries];
+    entries.push(...collectScalarEntries(sample, ["interrupted", "slm_tokens_before_interrupt"]));
+    return entries;
   }
 
   if (architecture === "blackboard" || architecture === "entropy_blackboard") {
@@ -711,7 +763,7 @@ function getOverviewRows({
     value: experiment?.n_samples ?? valueOrDash(metrics?.n_total),
   });
 
-  if (architecture === "routing") {
+  if (architecture === "routing" || architecture === "rtos_watchdog") {
     rows.push({
       label: "Threshold",
       value: formatPercent(Number(config.confidence_threshold ?? 0.7)),
@@ -882,6 +934,22 @@ export default function ExperimentDetailPage({
         <p>
           Proponent / opponent debate flow between SLM <strong>{slm}</strong> and LLM{" "}
           <strong>{llm}</strong>. The arbitrator decides the final answer.
+        </p>
+      );
+    }
+    if (architecture === "active_oracle") {
+      return (
+        <p>
+          The SLM <strong>{slm}</strong> reasons step-by-step and queries the oracle{" "}
+          <strong>{llm}</strong> when it needs a factual sub-answer.
+        </p>
+      );
+    }
+    if (architecture === "rtos_watchdog") {
+      return (
+        <p>
+          The SLM <strong>{slm}</strong> streams tokens under a watchdog; when confidence
+          drops below the threshold it hands off to <strong>{llm}</strong>.
         </p>
       );
     }

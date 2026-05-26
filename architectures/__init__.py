@@ -2,6 +2,8 @@ from architectures.base import BaseArchitecture
 from architectures.routing import RoutingArchitecture
 from architectures.multi_agent import MultiAgentArchitecture
 from architectures.ensemble import EnsembleArchitecture
+from architectures.active_oracle import ActiveOracleArchitecture
+from architectures.rtos_watchdog import RTOSWatchdogArchitecture
 from architectures.monolithic import MonolithicArchitecture
 from architectures.multi_agent_crew import MultiAgentCrewArchitecture
 from architectures.speculative_decoding import SpeculativeDecodingArchitecture
@@ -15,6 +17,8 @@ def get_architecture(name: str, **kwargs) -> BaseArchitecture:
         "routing":            RoutingArchitecture,
         "multi_agent":        MultiAgentArchitecture,
         "ensemble":           EnsembleArchitecture,
+        "active_oracle":      ActiveOracleArchitecture,
+        "rtos_watchdog":      RTOSWatchdogArchitecture,
         "monolithic":         MonolithicArchitecture,
         "multi_agent_crew":   MultiAgentCrewArchitecture,
         "speculative":        SpeculativeDecodingArchitecture,
@@ -33,6 +37,8 @@ __all__ = [
     "RoutingArchitecture",
     "MultiAgentArchitecture",
     "EnsembleArchitecture",
+    "ActiveOracleArchitecture",
+    "RTOSWatchdogArchitecture",
     "MonolithicArchitecture",
     "MultiAgentCrewArchitecture",
     "SpeculativeDecodingArchitecture",

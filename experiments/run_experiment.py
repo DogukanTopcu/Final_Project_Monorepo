@@ -25,6 +25,8 @@ def parse_args() -> argparse.Namespace:
         choices=[
             "routing",
             "multi_agent",
+            "active_oracle",
+            "rtos_watchdog",
             "ensemble",
             "blackboard",
             "entropy_blackboard",
@@ -63,6 +65,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--margin_threshold", type=float)
     p.add_argument("--long-input-token-threshold", dest="long_input_token_threshold", type=int)
     p.add_argument("--arbitrator", choices=["slm", "llm"], default="slm")
+    p.add_argument("--max_oracle_calls", type=int, default=3)
     p.add_argument("--n_models", type=int, default=3)
     p.add_argument("--voting", choices=["majority", "weighted"], default="majority")
     p.add_argument("--bid_threshold", type=float, default=0.65)
@@ -97,6 +100,7 @@ def build_config(args: argparse.Namespace, architecture: str) -> ExperimentConfi
         margin_threshold=args.margin_threshold,
         long_input_token_threshold=args.long_input_token_threshold,
         arbitrator=args.arbitrator,
+        max_oracle_calls=args.max_oracle_calls,
         n_models=args.n_models,
         voting=args.voting,
         bid_threshold=args.bid_threshold,
@@ -117,7 +121,16 @@ def main() -> None:
         return
 
     architectures = (
-        ["routing", "multi_agent", "ensemble", "blackboard", "entropy_blackboard", "pure_swarm"]
+        [
+            "routing",
+            "multi_agent",
+            "active_oracle",
+            "rtos_watchdog",
+            "ensemble",
+            "blackboard",
+            "entropy_blackboard",
+            "pure_swarm",
+        ]
         if args.architecture == "all"
         else [args.architecture]
     )

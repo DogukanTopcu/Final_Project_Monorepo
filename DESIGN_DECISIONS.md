@@ -11,9 +11,9 @@ These rules are non-negotiable:
 - `eats` is a metric.
 - The experiment product surface is organised into three **modes**:
   - **Monolithic** — `monolithic`. Required as a baseline.
-  - **Hybrid** — `routing`, `multi_agent`, and experimental `speculative`.
+  - **Hybrid** — `routing`, `multi_agent`, `active_oracle`, `rtos_watchdog`, and experimental `speculative`.
   - **Ensemble** — `ensemble` and experimental `multi_agent_crew`.
-- The frontend renders all six architectures. The original "active surface"
+- The frontend renders all eight architectures. The original "active surface"
   recommendation for thesis runs remains `routing`, `multi_agent`,
   `ensemble`, plus `monolithic` as a ceiling baseline.
 - Ensemble accepts **multiple distinct SLMs**. Each SLM contributes exactly
@@ -110,6 +110,23 @@ Flow:
 Why it is kept:
 - it tests whether redundancy can replace frequent escalation
 - it is easier to reason about than legacy speculative experiments
+
+## Architecture D — `active_oracle`
+
+Flow:
+- SLM reasons step-by-step and calls a truth oracle (LLM) for stuck sub-questions.
+
+Why it is kept:
+- it isolates oracle-style interventions without full escalation to the LLM
+
+## Architecture E — `rtos_watchdog`
+
+Flow:
+- Stream SLM tokens with logprob-based watchdog.
+- Interrupt to the LLM when token confidence drops below a threshold.
+
+Why it is kept:
+- it simulates real-time interrupt handoff without full rerouting
 
 ## 5. Status of Monolithic, Speculative, and Multi-Agent Crew
 

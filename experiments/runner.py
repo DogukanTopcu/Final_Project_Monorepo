@@ -105,7 +105,7 @@ class ExperimentRunner:
             slm = get_model(cfg.slm)
             secondary_slm = get_model(cfg.secondary_slm)
         else:
-            # routing, multi_agent, multi_agent_crew, speculative
+            # routing, multi_agent, active_oracle, multi_agent_crew, speculative
             assert_model_runnable(cfg.slm)
             assert_model_runnable(cfg.llm)
             slm = get_model(cfg.slm)
@@ -144,6 +144,9 @@ class ExperimentRunner:
             arch_kwargs["long_input_token_threshold"] = cfg.long_input_token_threshold
             arch_kwargs["force_escalate"] = cfg.force_escalate
             arch_kwargs["confidence_method"] = cfg.confidence_method
+        elif cfg.architecture == "rtos_watchdog":
+            arch_kwargs["confidence_threshold"] = cfg.confidence_threshold
+            arch_kwargs["slm_url"] = getattr(cfg, "slm_url", "auto")
         elif cfg.architecture == "multi_agent":
             arch_kwargs["arbitrator"] = cfg.arbitrator
             arch_kwargs["n_rounds"] = getattr(cfg, "n_debate_rounds", 3)
@@ -151,6 +154,8 @@ class ExperimentRunner:
             arch_kwargs["n_models"] = cfg.n_models
             arch_kwargs["voting"] = cfg.voting
             arch_kwargs["llm_tiebreak"] = cfg.llm_tiebreak
+        elif cfg.architecture == "active_oracle":
+            arch_kwargs["max_oracle_calls"] = cfg.max_oracle_calls
         elif cfg.architecture == "speculative":
             arch_kwargs["acceptance_threshold"] = getattr(cfg, "speculative_acceptance_threshold", 0.8)
 

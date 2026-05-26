@@ -11,6 +11,8 @@ class Architecture(str, Enum):
     MONOLITHIC = "monolithic"
     ROUTING = "routing"
     MULTI_AGENT = "multi_agent"
+    ACTIVE_ORACLE = "active_oracle"
+    RTOS_WATCHDOG = "rtos_watchdog"
     ENSEMBLE = "ensemble"
     MULTI_AGENT_CREW = "multi_agent_crew"
     SPECULATIVE = "speculative"

@@ -15,6 +15,8 @@ const ARCH_OPTIONS = [
   "monolithic",
   "routing",
   "multi_agent",
+  "active_oracle",
+  "rtos_watchdog",
   "ensemble",
   "multi_agent_crew",
   "speculative",

@@ -9,6 +9,8 @@ from core.models import ModelProvider
 from architectures.routing import RoutingArchitecture, should_escalate
 from architectures.multi_agent import MultiAgentArchitecture
 from architectures.ensemble import EnsembleArchitecture
+from architectures.active_oracle import ActiveOracleArchitecture
+from architectures.rtos_watchdog import RTOSWatchdogArchitecture
 
 
 class StubModel(ModelProvider):
@@ -324,6 +326,75 @@ class TestEnsembleArchitecture:
             {"temperature": 0.25, "max_tokens": 144},
         ]
         assert llm.calls == [{"temperature": 0.55, "max_tokens": 377}]
+
+
+class TestActiveOracleArchitecture:
+    def test_oracle_loop_calls_llm_and_returns_final_answer(self):
+        slm = SequenceRecordingStubModel(
+            "slm",
+            answers=["CALL_ORACLE: What is 2+2?", "Final Answer: B"],
+            confidence=0.85,
+        )
+        llm = RecordingStubModel("llm", answer="4", confidence=0.9)
+        arch = ActiveOracleArchitecture(slm=slm, llm=llm, max_oracle_calls=2)
+        resp = arch.run(QUERY)
+
+        assert resp.llm_calls == 1
+        assert resp.predicted_answer == "B"
+        assert resp.metadata["oracle_calls_made"] == 1
+        assert resp.metadata["oracle_queries"][0] == "What is 2+2?"
+
+
+class TestRTOSWatchdogArchitecture:
+    def test_interrupt_triggers_llm_handoff(self, monkeypatch):
+        class StreamResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def raise_for_status(self):
+                return None
+
+            def iter_lines(self):
+                payload = {
+                    "choices": [
+                        {
+                            "delta": {"content": "A"},
+                            "logprobs": {"content": [{"logprob": -2.0}]},
+                        }
+                    ]
+                }
+                yield f"data: {__import__('json').dumps(payload)}".encode("utf-8")
+                yield b"data: [DONE]"
+
+        class StreamSLM(StubModel):
+            def __init__(self, model_id: str):
+                super().__init__(model_id=model_id, answer="A", confidence=0.9)
+                self.base_url = "http://localhost:8001/v1"
+
+        def fake_post(*args, **kwargs):
+            return StreamResponse()
+
+        monkeypatch.setattr(
+            "architectures.rtos_watchdog.requests.post",
+            fake_post,
+        )
+
+        slm = StreamSLM("slm")
+        llm = RecordingStubModel("llm", answer="B", confidence=0.9)
+        arch = RTOSWatchdogArchitecture(
+            slm=slm,
+            llm=llm,
+            confidence_threshold=0.6,
+            slm_max_tokens=32,
+            llm_max_tokens=32,
+        )
+        resp = arch.run(QUERY)
+
+        assert resp.llm_calls == 1
+        assert resp.metadata["interrupted"] is True
 
 
 class TestEATSMetric:

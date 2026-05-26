@@ -105,6 +105,7 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         "dry_run",
         "arbitrator",
         "n_debate_rounds",
+        "max_oracle_calls",
         "n_models",
         "voting",
         "llm_tiebreak",
@@ -117,6 +118,7 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         "cost_weight",
         "bid_threshold",
         "ttl_ms",
+        "slm_url",
     }
     unexpected = sorted(set(overrides) - allowed_override_keys)
     if unexpected:
@@ -157,9 +159,11 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         confidence_threshold=float(overrides.get("confidence_threshold", 0.7)),
         arbitrator=str(overrides.get("arbitrator", "llm")),
         n_debate_rounds=int(overrides.get("n_debate_rounds", 1)),
+        max_oracle_calls=int(overrides.get("max_oracle_calls", 3)),
         n_models=n_models,
         voting=str(overrides.get("voting", "majority")),
         llm_tiebreak=bool(overrides.get("llm_tiebreak", False)),
+        slm_url=str(overrides.get("slm_url", "auto")),
         speculative_acceptance_threshold=float(
             overrides.get("speculative_acceptance_threshold", 0.7)
         ),

@@ -2,6 +2,8 @@ export type Architecture =
   | "monolithic"
   | "routing"
   | "multi_agent"
+  | "active_oracle"
+  | "rtos_watchdog"
   | "ensemble"
   | "multi_agent_crew"
   | "speculative"
@@ -183,6 +185,9 @@ export interface ResultSample {
   llm_tiebreak?: boolean;
   llm_tiebreak_raw_text?: string | null;
   llm_tiebreak_parsed_answer?: string | null;
+  oracle_calls_made?: number | null;
+  interrupted?: boolean | null;
+  slm_tokens_before_interrupt?: number | null;
   prompt_text?: string | null;
   slm_text?: string | null;
   final_text?: string | null;
