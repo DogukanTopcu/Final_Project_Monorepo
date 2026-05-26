@@ -22,7 +22,15 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--architecture",
         # ADDED: The two new blackboard variants
-        choices=["routing", "multi_agent", "ensemble", "blackboard", "entropy_blackboard", "all"],
+        choices=[
+            "routing",
+            "multi_agent",
+            "ensemble",
+            "blackboard",
+            "entropy_blackboard",
+            "pure_swarm",
+            "all",
+        ],
         default="routing",
     )
     p.add_argument(
@@ -57,6 +65,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--arbitrator", choices=["slm", "llm"], default="slm")
     p.add_argument("--n_models", type=int, default=3)
     p.add_argument("--voting", choices=["majority", "weighted"], default="majority")
+    p.add_argument("--bid_threshold", type=float, default=0.65)
+    p.add_argument("--ttl_ms", type=int, default=1500)
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--output", default="results")
     p.add_argument("--dry_run", action="store_true")
@@ -69,8 +79,8 @@ def parse_args() -> argparse.Namespace:
 
 
 def build_config(args: argparse.Namespace, architecture: str) -> ExperimentConfig:
-    if architecture in {"blackboard", "entropy_blackboard"} and not args.secondary_slm:
-        raise ValueError("blackboard architectures require --secondary_slm")
+    if architecture in {"blackboard", "entropy_blackboard", "pure_swarm"} and not args.secondary_slm:
+        raise ValueError("swarm architectures require --secondary_slm")
     return ExperimentConfig(
         architecture=architecture,
         benchmark=args.benchmark,
@@ -89,6 +99,8 @@ def build_config(args: argparse.Namespace, architecture: str) -> ExperimentConfi
         arbitrator=args.arbitrator,
         n_models=args.n_models,
         voting=args.voting,
+        bid_threshold=args.bid_threshold,
+        ttl_ms=args.ttl_ms,
         dry_run=args.dry_run,
         seed=args.seed,
         output_dir=args.output,
@@ -105,7 +117,7 @@ def main() -> None:
         return
 
     architectures = (
-        ["routing", "multi_agent", "ensemble", "blackboard", "entropy_blackboard"]
+        ["routing", "multi_agent", "ensemble", "blackboard", "entropy_blackboard", "pure_swarm"]
         if args.architecture == "all"
         else [args.architecture]
     )

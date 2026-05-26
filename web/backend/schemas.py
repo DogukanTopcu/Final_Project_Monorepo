@@ -15,6 +15,8 @@ class Architecture(str, Enum):
     MULTI_AGENT_CREW = "multi_agent_crew"
     SPECULATIVE = "speculative"
     BLACKBOARD = "blackboard"
+    ENTROPY_BLACKBOARD = "entropy_blackboard"
+    PURE_SWARM = "pure_swarm"
 
 
 class ArchitectureMode(str, Enum):

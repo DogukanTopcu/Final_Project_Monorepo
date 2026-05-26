@@ -57,6 +57,9 @@ const KNOWN_ARCHITECTURES: Architecture[] = [
   "ensemble",
   "multi_agent_crew",
   "speculative",
+  "blackboard",
+  "entropy_blackboard",
+  "pure_swarm",
 ];
 
 function isKnownArchitecture(value: string): value is Architecture {
@@ -326,6 +329,8 @@ function getCoreTextFields(
     ],
     multi_agent_crew: ["prompt_text", "slm_text", "final_text", "predicted", "ground_truth"],
     blackboard: ["prompt_text", "final_text", "predicted", "ground_truth"],
+    entropy_blackboard: ["prompt_text", "final_text", "predicted", "ground_truth"],
+    pure_swarm: ["prompt_text", "final_text", "predicted", "ground_truth"],
     unknown: ["prompt_text", "slm_text", "final_text", "predicted", "ground_truth"],
   };
 
@@ -519,11 +524,25 @@ function getArchitectureDetailEntries(
     return hybridEntries;
   }
 
-  if (architecture === "blackboard") {
+  if (architecture === "blackboard" || architecture === "entropy_blackboard") {
     return collectScalarEntries(sample, [
       "final_model_id",
       "confidence",
       "llm_calls",
+      "latency_ms",
+      "cost_usd",
+      "api_cost_usd",
+      "infra_cost_usd",
+      "energy_kwh",
+      "co2_g",
+      "gpu_power_w",
+    ]);
+  }
+
+  if (architecture === "pure_swarm") {
+    return collectScalarEntries(sample, [
+      "final_model_id",
+      "confidence",
       "latency_ms",
       "cost_usd",
       "api_cost_usd",
@@ -652,7 +671,7 @@ function getOverviewRows({
       label: "Crew",
       value: "reasoning / code / factual specialists",
     });
-  } else if (architecture === "blackboard") {
+  } else if (architecture === "blackboard" || architecture === "entropy_blackboard") {
     rows.push({
       label: "Primary SLM",
       value: slm ?? "—",
@@ -664,6 +683,15 @@ function getOverviewRows({
     rows.push({
       label: "Heavy Sweeper",
       value: llm ?? "—",
+    });
+  } else if (architecture === "pure_swarm") {
+    rows.push({
+      label: "Primary SLM",
+      value: slm ?? "—",
+    });
+    rows.push({
+      label: "Secondary SLM",
+      value: (config.secondary_slm as string | undefined) ?? "—",
     });
   } else {
     rows.push({
@@ -897,6 +925,25 @@ export default function ExperimentDetailPage({
           Bossless swarm: <strong>{slm}</strong> and <strong>{secondarySlm ?? "secondary SLM"}</strong>{" "}
           competed autonomously on the shared board. <strong>{llm}</strong> acted as the heavy
           sweeper — woken only when a task exceeded its TTL.
+        </p>
+      );
+    }
+    if (architecture === "entropy_blackboard") {
+      const secondarySlm = config.secondary_slm as string | undefined;
+      return (
+        <p>
+          Entropy swarm: <strong>{slm}</strong> and <strong>{secondarySlm ?? "secondary SLM"}</strong>{" "}
+          competed via entropy-based bids. <strong>{llm}</strong> acted as the heavy sweeper —
+          woken only when a task exceeded its TTL.
+        </p>
+      );
+    }
+    if (architecture === "pure_swarm") {
+      const secondarySlm = config.secondary_slm as string | undefined;
+      return (
+        <p>
+          Pure swarm: <strong>{slm}</strong> and <strong>{secondarySlm ?? "secondary SLM"}</strong>{" "}
+          competed autonomously without any LLM fallback.
         </p>
       );
     }

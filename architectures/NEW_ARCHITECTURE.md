@@ -1,58 +1,85 @@
-# Decentralized Blackboard Architecture
+# Swarm Architecture Variants
 
-An event-driven, bossless SLM swarm with TTL fallback.
+This document describes three related swarm architectures used in the thesis:
 
-This architecture replaces the usual centralized "orchestrator" with a shared memory board. Models are autonomous async workers that watch the board, bid on tasks based on confidence and cost, and only wake the big 70B model when the system stalls.
+- Blackboard: decentralized swarm with heavy LLM fallback.
+- Entropy Blackboard: same as Blackboard, but bidding uses entropy.
+- Pure Swarm: fully SLM-only, no heavy fallback.
 
-## Why this is different (and useful for the thesis)
+All three share the same core idea: remove centralized routing and let autonomous workers claim tasks from a shared board.
 
-Standard architectures (routing, speculative decoding, debate) assume:
+## Common mechanics
 
-- Synchronous execution: models run in a fixed order.
-- Centralized control: a router or arbiter decides who answers.
-- Query = single unit of work: prompt in, answer out.
+1. Shared board (blackboard)
 
-We break all three. Here, tasks are stateful objects on a board (OPEN, IN_PROGRESS, BLOCKED, RESOLVED). The SLMs handle micro-tasks concurrently, and the heavy model is a lazy fallback that only burns tokens when a task truly stalls.
+Queries and sub-queries are posted as tasks with a status (OPEN, IN_PROGRESS, BLOCKED, RESOLVED) and a TTL. Workers continuously scan the board and react to OPEN tasks.
 
-## Core mechanics
+2. Bidding
 
-1. Blackboard (shared memory)
-
-Queries are posted as `BlackboardTask` objects with a status and a TTL.
-
-2. Autonomous bidding
-
-When a task is OPEN, idle SLMs evaluate it and compute a bid:
+Workers compute a bid and claim a task if the bid exceeds the configured threshold:
 
 $$
 Utility = Predicted\_Confidence - (Cost\_Weight \times Compute\_Penalty)
 $$
 
-If the utility clears the threshold (e.g., 0.65), the SLM claims the task and flips it to IN_PROGRESS.
+3. Sub-tasking
 
-3. Sub-tasking (Active Oracle)
+If a worker gets stuck, it emits a strict token: `SUB_TASK: <query>`. The system posts a sub-task, blocks the parent, and resumes once the sub-task resolves.
 
-If an SLM gets stuck, it emits a strict token: `SUB_TASK: <query>`. The worker loop catches that, marks the main task as BLOCKED, and posts the sub-task to the board. Once the sub-task is resolved, the main task resumes.
+4. Async execution
 
-4. 70B heavy sweeper
+Workers run concurrently. The system ends when the root task is RESOLVED. `Response.metadata` records async inference steps.
 
-The monolithic model watches the board but avoids fresh tasks due to its high compute penalty. If a task sits unresolved for $>600$ ms or stays BLOCKED, the 70B model wakes up, solves it, and goes back to sleep.
+## 1) Blackboard (Geleneksel Merkezi Olmayan Suru)
 
-## Integration and setup
+Blackboard replaces routing with an async bidding system:
 
-1. File placement
+- SLMs compute a quick confidence-based bid.
+- The first SLM that clears the threshold claims the task.
+- If no SLM claims the task before TTL expires, the heavy LLM (sweeper) wakes and solves it.
 
-Place the implementation as [architectures/blackboard.py](architectures/blackboard.py).
+Project role: baseline decentralized swarm with safety fallback.
 
-2. Instantiate in the runner
+Implementation: [architectures/blackboard.py](architectures/blackboard.py)
 
-In `ExperimentRunner` or `main.py`, pass two SLMs and one heavy LLM.
+## 2) Entropy-Based Blackboard (Entropi Tabanli Guvenlik Agi)
+
+Entropy Blackboard shares the same flow as Blackboard, but changes the bidding calculation:
+
+- The model produces token probabilities (logprobs).
+- Shannon entropy is computed from the distribution.
+- High entropy indicates uncertainty, so the bid is penalized.
+
+Advantage: reduces hallucinations by preventing overconfident claims from uncertain SLMs, sending hard cases to the sweeper earlier.
+
+Project role: improves routing quality using objective information-theoretic signals.
+
+Implementation: [architectures/entropy_based_blackboard.py](architectures/entropy_based_blackboard.py)
+
+## 3) Pure Swarm (Saf Suru Zekasi - Tam Otonomi)
+
+Pure Swarm removes the heavy LLM entirely:
+
+- All SLMs are peers; no hierarchy.
+- There is no sweeper fallback.
+- To avoid deadlock, the bid threshold decays after TTL (it drops to 0).
+
+Project role: shows how far a pure SLM-only swarm can go on constrained hardware.
+
+Implementation: [architectures/pure_swarm.py](architectures/pure_swarm.py)
+
+## Key parameters (shared)
+
+- `cost_weight`: penalizes expensive workers in the bid.
+- `bid_threshold`: minimum bid required to claim an OPEN task.
+- `ttl_ms`: TTL for tasks; after this, Blackboard variants allow the sweeper to claim, and Pure Swarm drops the threshold to 0.
+
+## Example usage
 
 ```python
 from architectures.blackboard import DecentralizedBlackboardArchitecture
 from core.models import OpenAICompatibleModel
 
-# Initialize vLLM endpoints
 slm_primary = OpenAICompatibleModel(
     model_id="Qwen/Qwen3.5-4B",
     base_url="http://localhost:8001/v1",
@@ -70,20 +97,16 @@ arch = DecentralizedBlackboardArchitecture(
     slm=slm_primary,
     secondary_slm=slm_secondary,
     llm=llm_sweeper,
-    cost_weight=0.15,  # Higher => heavier penalty for the 70B model
-    task_type="mcq",  # or "open"
+    cost_weight=0.15,
+    bid_threshold=0.65,
+    ttl_ms=1500,
+    task_type="mcq",
 )
 
 response = arch.run(query)
 print(f"Final Answer: {response.predicted_answer} | Cost: ${response.cost_usd:.5f}")
 ```
 
-## Hyperparameters to tune
+## Thesis narrative summary
 
-- `cost_weight` (default: 0.15): higher means the swarm avoids the 70B longer.
-- `ttl_expiry` (default: 600 ms): lower gives stable latency but higher cost; higher lets SLMs resolve longer chains.
-- Bid threshold (default: 0.65, in `_worker_loop`): how confident an SLM must be to claim an OPEN task.
-
-## Expected metadata output
-
-`Response.metadata` contains a flat log of async `inference_steps`. Because execution is non-linear, steps may interleave across models, and latency reflects wall-clock async time rather than a simple sum of per-model generation times.
+We first enabled agent coordination using Blackboard. We then improved decision quality with Entropy Blackboard. Finally, Pure Swarm answers the question: can small agents solve tasks without a 70B safety net?

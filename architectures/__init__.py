@@ -7,6 +7,7 @@ from architectures.multi_agent_crew import MultiAgentCrewArchitecture
 from architectures.speculative_decoding import SpeculativeDecodingArchitecture
 from architectures.blackboard import DecentralizedBlackboardArchitecture
 from architectures.entropy_based_blackboard import DecentralizedBlackboardArchitecture as EntropyBlackboardArchitecture
+from architectures.pure_swarm import PureSwarmArchitecture
 
 
 def get_architecture(name: str, **kwargs) -> BaseArchitecture:
@@ -19,6 +20,7 @@ def get_architecture(name: str, **kwargs) -> BaseArchitecture:
         "speculative":        SpeculativeDecodingArchitecture,
         "blackboard":         DecentralizedBlackboardArchitecture,
         "entropy_blackboard": EntropyBlackboardArchitecture,
+        "pure_swarm":         PureSwarmArchitecture,
     }
     cls = arch_map.get(name)
     if cls is None:
@@ -36,5 +38,6 @@ __all__ = [
     "SpeculativeDecodingArchitecture",
     "DecentralizedBlackboardArchitecture",
     "EntropyBlackboardArchitecture",
+    "PureSwarmArchitecture",
     "get_architecture",
 ]

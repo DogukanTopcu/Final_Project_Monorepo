@@ -64,6 +64,8 @@ class ExperimentConfig:
     speculative_acceptance_threshold: float = 0.7
     # Blackboard params
     cost_weight: float = 0.15
+    bid_threshold: float = 0.65
+    ttl_ms: int = 1500
     # Runtime
     dry_run: bool = False
     seed: int = 42
