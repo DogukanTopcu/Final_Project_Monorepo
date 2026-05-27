@@ -22,6 +22,7 @@ class DecentralizedBlackboardArchitecture(BaseBlackboardArchitecture):
         bid_threshold: float = 0.65,
         ttl_ms: int = 1500,
         task_type: str = "mcq",
+        max_subtasks: int = 2,
     ) -> None:
         super().__init__(
             slm=slm,
@@ -35,6 +36,7 @@ class DecentralizedBlackboardArchitecture(BaseBlackboardArchitecture):
             bid_threshold=bid_threshold,
             ttl_ms=ttl_ms,
             task_type=task_type,
+            max_subtasks=max_subtasks,
         )
 
     async def _calculate_bid(self, provider: ModelProvider, prompt: str, compute_penalty: float) -> float:

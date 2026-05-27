@@ -38,19 +38,20 @@ class ActiveOracleArchitecture(BaseArchitecture):
         self.task_type = task_type
 
     def run(self, query: Query) -> Response:
-        base_prompt = mcq_prompt(query) if self.task_type == "mcq" else open_prompt(query)
+        # Clean the task prompt from contradictory instructions
+        clean_prompt = base_prompt = mcq_prompt(query) if self.task_type == "mcq" else open_prompt(query)
+        clean_prompt = clean_prompt.replace("Do not include chain-of-thought or explanation.", "").strip()
         
         format_reminder = "'Final Answer: <letter>'" if self.task_type == "mcq" else "'Answer: <number>'"
         
         execution_prompt = (
             "You are a smart logical reasoning agent. You MUST work step-by-step.\n"
-            "CRITICAL: IGNORE any instructions in the problem text that tell you not to include explanations or chain-of-thought.\n"
             "If you encounter a specific factual detail, formula, or sub-calculation that you are unsure about, DO NOT GUESS. \n"
             "Instead, pause and ask the Oracle by writing exactly:\n"
             "CALL_ORACLE: <your specific question>\n\n"
             "Wait for the ORACLE_ANSWER. Once you receive it, or if you don't need the Oracle, continue your reasoning.\n"
             f"When you are completely finished, you MUST conclude on a new line with exactly: {format_reminder}\n\n"
-            f"Problem:\n{base_prompt.strip()}\n\n"
+            f"Problem:\n{clean_prompt}\n\n"
         )
         
         current_prompt = execution_prompt
@@ -68,8 +69,13 @@ class ActiveOracleArchitecture(BaseArchitecture):
             # Modelin matematik yaparken yarıda kesilmemesi için bütçeyi yüksek tutuyoruz
             slm_budget = self.slm_max_tokens if self.slm_max_tokens > 0 else 1536
             
+            # If we are on the final run (oracle calls exhausted), append a reminder instructing the model not to call Oracle
+            active_prompt = current_prompt
+            if oracle_calls_made == self.max_oracle_calls:
+                active_prompt += "\n(Note: Oracle calls are now exhausted. Do not use CALL_ORACLE. You must write your final reasoning and answer now.)\n"
+
             slm_text, conf, in_t, out_t, cost, lat = self._timed_generate(
-                self.slm, current_prompt, temperature=self.slm_temperature, max_tokens=slm_budget
+                self.slm, active_prompt, temperature=self.slm_temperature, max_tokens=slm_budget
             )
             
             total_in += in_t
@@ -84,8 +90,8 @@ class ActiveOracleArchitecture(BaseArchitecture):
                 "output_preview": slm_text[:50] + "..."
             })
 
-            # Eğer SLM "Kahin" çağırdıysa
-            if "CALL_ORACLE:" in slm_text:
+            # Eğer SLM "Kahin" çağırdıysa ve bütçe aşılmadıysa
+            if "CALL_ORACLE:" in slm_text and oracle_calls_made < self.max_oracle_calls:
                 pre_call_text = slm_text.split("CALL_ORACLE:")[0]
                 oracle_query = slm_text.split("CALL_ORACLE:")[1].split("\n")[0].strip()
                 oracle_queries.append(oracle_query)

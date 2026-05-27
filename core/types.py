@@ -66,10 +66,10 @@ class ExperimentConfig:
     max_oracle_calls: int = 3
     # Speculative params
     speculative_acceptance_threshold: float = 0.7
-    # Blackboard params
     cost_weight: float = 0.15
     bid_threshold: float = 0.65
     ttl_ms: int = 1500
+    max_subtasks: int = 2
     # Runtime
     dry_run: bool = False
     seed: int = 42

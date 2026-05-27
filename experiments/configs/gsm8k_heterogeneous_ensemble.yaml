@@ -1,0 +1,15 @@
+# GSM8k Heterogeneous Ensemble Configuration
+architecture: ensemble
+benchmark: gsm8k
+n_samples: 50
+ensemble_slms:
+  - qwen3.5-4b
+  - llama3.2-3b
+  - qwen3.5-4b
+slm_temperature: 0.7
+slm_max_tokens: 800
+slm_only: true
+voting: majority
+seed: 42
+output_dir: results
+mlflow_tracking_uri: "http://localhost:5000"

@@ -188,9 +188,8 @@ class MultiAgentCrewArchitecture:
 
     def _build_prompt(self, query: Query) -> str:
         from core.prompt import mcq_prompt, open_prompt
-        if query.choices:
-            return mcq_prompt(query)
-        return open_prompt(query)
+        p = mcq_prompt(query) if query.choices else open_prompt(query)
+        return p.replace("Do not include chain-of-thought or explanation.", "").strip()
 
     def _parse_answer(self, text: str, query: Query) -> str:
         from core.prompt import parse_mcq_answer, parse_open_answer

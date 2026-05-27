@@ -30,6 +30,7 @@ class BlackboardTask:
     dependencies: list[str] = field(default_factory=list)
     results: dict[str, Any] = field(default_factory=dict)
     ttl_expiry: float = 0.0
+    subtask_spawned: int = 0
 
 
 class BaseBlackboardArchitecture(BaseArchitecture):
@@ -48,6 +49,7 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         bid_threshold: float = 0.65,
         ttl_ms: int = 1500,
         task_type: str = "mcq",
+        max_subtasks: int = 2,
     ) -> None:
         super().__init__(slm, llm)
         self.secondary_slm = secondary_slm
@@ -59,6 +61,7 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         self.llm_temperature = llm_temperature
         self.slm_max_tokens = slm_max_tokens
         self.llm_max_tokens = llm_max_tokens
+        self.max_subtasks = max_subtasks
 
         self.total_in = 0
         self.total_out = 0
@@ -74,7 +77,7 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         self.inference_steps = []
 
         t0 = time.perf_counter()
-        final_answer_text, used_model = asyncio.run(self._orchestrate_blackboard(query))
+        final_answer_text, used_model, final_confidence = asyncio.run(self._orchestrate_blackboard(query))
         self.total_latency = (time.perf_counter() - t0) * 1000
 
         parsed = (
@@ -87,7 +90,7 @@ class BaseBlackboardArchitecture(BaseArchitecture):
             query_id=query.id,
             text=final_answer_text,
             predicted_answer=parsed,
-            confidence=0.90,
+            confidence=final_confidence,
             model_id=used_model,
             latency_ms=self.total_latency,
             input_tokens=self.total_in,
@@ -133,7 +136,7 @@ class BaseBlackboardArchitecture(BaseArchitecture):
             wt.cancel()
 
         root_task = blackboard[root_id]
-        return root_task.results.get("final_output", ""), root_task.assigned_worker or "unknown"
+        return root_task.results.get("final_output", ""), root_task.assigned_worker or "unknown", root_task.results.get("confidence", 0.5)
 
     async def _worker_loop(
         self,
@@ -185,12 +188,23 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         blackboard: dict[str, BlackboardTask],
     ) -> None:
         loop = asyncio.get_running_loop()
-        execution_prompt = (
-            "Solve the following problem step-by-step.\n"
-            "If you lack the information to solve it, or need a sub-calculation, format a request exactly as: "
-            "SUB_TASK: <query>\n\n"
-            f"Problem: {task.prompt}"
-        )
+        
+        # Clean the task prompt from contradictory instructions
+        clean_prompt = task.prompt.replace("Do not include chain-of-thought or explanation.", "").strip()
+        
+        can_spawn = task.subtask_spawned < self.max_subtasks and task.id.count("sub_") < self.max_subtasks
+        if can_spawn:
+            execution_prompt = (
+                "Solve the following problem step-by-step.\n"
+                "If you lack the information to solve it, or need a sub-calculation, format a request exactly as:\n"
+                "SUB_TASK: <query>\n\n"
+                f"Problem: {clean_prompt}"
+            )
+        else:
+            execution_prompt = (
+                "Solve the following problem step-by-step and provide the final answer.\n\n"
+                f"Problem: {clean_prompt}"
+            )
 
         budget = compute_completion_budget(provider, execution_prompt, task_type="open", role="swarm_node")
         is_sweeper = "Sweeper" in worker_name
@@ -221,10 +235,11 @@ class BaseBlackboardArchitecture(BaseArchitecture):
             "cost_usd": cost,
         })
 
-        if "SUB_TASK:" in text and task.id.count("sub_") < 2:
+        if "SUB_TASK:" in text and task.subtask_spawned < self.max_subtasks and task.id.count("sub_") < self.max_subtasks:
             raw_sub = text.split("SUB_TASK:")[1].strip()
             sub_query = raw_sub.split("\n")[0].strip()
             sub_id = f"sub_{task.id}_{int(time.time() * 1000)}"
+            task.subtask_spawned += 1
             blackboard[sub_id] = BlackboardTask(
                 id=sub_id,
                 type="sub_probe",
@@ -236,6 +251,7 @@ class BaseBlackboardArchitecture(BaseArchitecture):
             asyncio.create_task(self._await_dependencies_and_resume(task, blackboard))
         else:
             task.results["final_output"] = text
+            task.results["confidence"] = conf
             task.status = TaskStatus.RESOLVED
 
     async def _await_dependencies_and_resume(

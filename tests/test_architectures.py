@@ -530,3 +530,48 @@ class TestBlackboardArchitecture:
         # Verify the inference steps reflect the sub-tasking loop
         steps = resp.metadata["inference_steps"]
         assert len(steps) >= 3 # 1. Main task blocks, 2. Sub-task resolves, 3. Main task resumes
+
+
+class TestSwarmAndBlackboardPromptWrapping:
+    def test_pure_swarm_prompt_wrapping(self, monkeypatch):
+        from architectures.pure_swarm import PureSwarmArchitecture, SwarmTask
+        
+        slm = RecordingStubModel("slm", answer="B", confidence=0.9)
+        arch = PureSwarmArchitecture(slm=slm, secondary_slm=slm, max_subtasks=1)
+        
+        # 1. Test when can_spawn is True
+        task_can_spawn = SwarmTask(
+            id="task_root",
+            type="main_query",
+            prompt="Do not include chain-of-thought or explanation. Final Problem Text.",
+            subtask_spawned=0,
+        )
+        
+        captured_prompt = ""
+        def fake_timed_generate(provider, prompt, **kwargs):
+            nonlocal captured_prompt
+            captured_prompt = prompt
+            return "B", 0.9, 10, 5, 0.0, 1.0
+            
+        monkeypatch.setattr(arch, "_timed_generate", fake_timed_generate)
+        
+        import asyncio
+        asyncio.run(arch._execute_task("worker1", slm, task_can_spawn, {}))
+        
+        assert "Do not include chain-of-thought" not in captured_prompt
+        assert "SUB_TASK:" in captured_prompt
+        assert "You MUST solve the problem step-by-step." in captured_prompt
+        
+        # 2. Test when can_spawn is False (subtask limit reached)
+        task_cannot_spawn = SwarmTask(
+            id="task_root",
+            type="main_query",
+            prompt="Do not include chain-of-thought or explanation. Final Problem Text.",
+            subtask_spawned=1,
+        )
+        
+        asyncio.run(arch._execute_task("worker1", slm, task_cannot_spawn, {}))
+        
+        assert "Do not include chain-of-thought" not in captured_prompt
+        assert "SUB_TASK:" not in captured_prompt
+        assert "Solve the problem step-by-step and provide the final answer." in captured_prompt

@@ -119,6 +119,7 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         "bid_threshold",
         "ttl_ms",
         "slm_url",
+        "max_subtasks",
     }
     unexpected = sorted(set(overrides) - allowed_override_keys)
     if unexpected:
@@ -170,6 +171,7 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         cost_weight=float(overrides.get("cost_weight", 0.15)),
         bid_threshold=float(overrides.get("bid_threshold", 0.65)),
         ttl_ms=int(overrides.get("ttl_ms", 1500)),
+        max_subtasks=int(overrides.get("max_subtasks", 2)),
         dry_run=bool(overrides.get("dry_run", False)),
         seed=int(overrides.get("seed", 42)),
         output_dir=settings.results_dir,

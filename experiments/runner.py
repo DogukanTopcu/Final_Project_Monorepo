@@ -74,7 +74,10 @@ class ExperimentRunner:
             assert_model_runnable(cfg.llm)
             llm = get_model(cfg.llm)
         elif cfg.architecture == "ensemble":
-            ensemble_ids = cfg.ensemble_slms or ([cfg.slm] if cfg.slm else [])
+            if cfg.ensemble_slms:
+                ensemble_ids = cfg.ensemble_slms
+            else:
+                ensemble_ids = [cfg.slm] * max(int(cfg.n_models), 1) if cfg.slm else []
             if not ensemble_ids:
                 raise ValueError("ensemble requires at least one SLM (set ensemble_slms or slm).")
             for sid in ensemble_ids:
@@ -124,12 +127,14 @@ class ExperimentRunner:
             arch_kwargs["cost_weight"] = getattr(cfg, "cost_weight", 0.15)
             arch_kwargs["bid_threshold"] = getattr(cfg, "bid_threshold", 0.65)
             arch_kwargs["ttl_ms"] = getattr(cfg, "ttl_ms", 1500)
+            arch_kwargs["max_subtasks"] = getattr(cfg, "max_subtasks", 2)
 
         if cfg.architecture == "pure_swarm":
             arch_kwargs["secondary_slm"] = secondary_slm
             arch_kwargs["cost_weight"] = getattr(cfg, "cost_weight", 0.15)
             arch_kwargs["bid_threshold"] = getattr(cfg, "bid_threshold", 0.65)
             arch_kwargs["ttl_ms"] = getattr(cfg, "ttl_ms", 1500)
+            arch_kwargs["max_subtasks"] = getattr(cfg, "max_subtasks", 2)
 
         arch_kwargs["slm_temperature"] = cfg.slm_temperature
         arch_kwargs["slm_max_tokens"] = cfg.slm_max_tokens

@@ -82,6 +82,18 @@ def _slm_params() -> list[ArchitectureParamSpec]:
     ]
 
 
+def _max_subtasks_param() -> ArchitectureParamSpec:
+    return ArchitectureParamSpec(
+        key="max_subtasks",
+        label="Max sub-tasks limit",
+        type="int",
+        default=2,
+        min=0,
+        max=5,
+        description="Maximum sub-tasks spawned and nesting depth allowed to prevent infinite loops.",
+    )
+
+
 _SPECS: list[ArchitectureSpec] = [
     ArchitectureSpec(
         id=Architecture.MONOLITHIC,
@@ -308,6 +320,7 @@ _SPECS: list[ArchitectureSpec] = [
                 max=10000,
                 description="After TTL, the heavy sweeper can claim the task.",
             ),
+            _max_subtasks_param(),
             *_temp_params(),
         ],
     ),
@@ -347,6 +360,7 @@ _SPECS: list[ArchitectureSpec] = [
                 max=10000,
                 description="After TTL, the heavy sweeper can claim the task.",
             ),
+            _max_subtasks_param(),
             *_temp_params(),
         ],
     ),
@@ -386,6 +400,7 @@ _SPECS: list[ArchitectureSpec] = [
                 max=10000,
                 description="After TTL, the bid threshold drops to 0.",
             ),
+            _max_subtasks_param(),
             *_slm_params(),
         ],
     ),
