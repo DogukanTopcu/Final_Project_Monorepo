@@ -20,7 +20,8 @@ class Response:
     predicted_answer: str | None = None # parsed answer (A/B/C/D or text)
     confidence: float | None = 1.0      # 0-1, used by routing arch
     model_id: str = ""
-    latency_ms: float = 0.0
+    latency_ms: float = 0.0             # observed end-to-end latency
+    algorithmic_latency_ms: float = 0.0 # intrinsic inference + orchestration latency
     input_tokens: int = 0
     output_tokens: int = 0
     cost_usd: float = 0.0               # total estimated cost (API + infra)
@@ -113,6 +114,12 @@ class ExperimentResult:
         return sum(s.response.latency_ms for s in self.samples) / self.n_total if self.n_total else 0.0
 
     @property
+    def avg_algorithmic_latency_ms(self) -> float:
+        if not self.n_total:
+            return 0.0
+        return sum(self._algorithmic_latency_of(s.response) for s in self.samples) / self.n_total
+
+    @property
     def total_cost_usd(self) -> float:
         return sum(s.response.cost_usd for s in self.samples)
 
@@ -132,11 +139,33 @@ class ExperimentResult:
     def total_co2_g(self) -> float:
         return sum(s.response.co2_g for s in self.samples)
 
+    @staticmethod
+    def _algorithmic_latency_of(response: Response) -> float:
+        if response.algorithmic_latency_ms > 0:
+            return response.algorithmic_latency_ms
+        metadata_latency = response.metadata.get("algorithmic_latency_ms")
+        if isinstance(metadata_latency, (int, float)) and metadata_latency > 0:
+            return float(metadata_latency)
+        steps = response.metadata.get("inference_steps")
+        if isinstance(steps, list):
+            total = 0.0
+            found = False
+            for step in steps:
+                if isinstance(step, dict):
+                    latency = step.get("latency_ms")
+                    if isinstance(latency, (int, float)):
+                        total += float(latency)
+                        found = True
+            if found:
+                return total
+        return response.latency_ms
+
     def to_metrics(self) -> dict[str, float]:
         return {
             "accuracy": self.accuracy,
             "llm_call_ratio": self.llm_call_ratio,
             "avg_latency_ms": self.avg_latency_ms,
+            "avg_algorithmic_latency_ms": self.avg_algorithmic_latency_ms,
             "total_cost_usd": self.total_cost_usd,
             "total_api_cost_usd": self.total_api_cost_usd,
             "total_infra_cost_usd": self.total_infra_cost_usd,

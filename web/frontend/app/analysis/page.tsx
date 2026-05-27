@@ -138,9 +138,9 @@ export default function AnalysisPage() {
           results={filtered}
         />
         <ParetoScatter
-          title="EATS vs LLM-call ratio"
-          xKey="llm_call_ratio"
-          xLabel="LLM-call ratio"
+          title="EATS vs total energy"
+          xKey="total_energy_kwh"
+          xLabel="Total energy (kWh)"
           yKey="eats_score"
           yLabel="EATS"
           results={filtered}

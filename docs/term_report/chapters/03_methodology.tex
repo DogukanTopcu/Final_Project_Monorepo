@@ -57,10 +57,12 @@ The measurement stack was designed to keep operational costs visible throughout 
 The thesis introduces the Efficiency-Accuracy Trade-off Score (EATS) to make this comparison explicit:
 
 \begin{equation}
-\text{EATS} = \frac{A}{r_{\text{llm}} \times c_{\text{norm}} + \varepsilon}
+\text{EATS} =
+\frac{A^2}
+{A^2 + c_{\text{norm}}^{0.5}\, l_{\text{norm}}^{0.3}\, e_{\text{norm}}^{0.2}}
 \end{equation}
 
-where $A$ is the experiment accuracy, $r_{\text{llm}}$ is the fraction of samples that required an LLM call, $c_{\text{norm}}$ is the experiment cost normalized against a full-LLM baseline, and $\varepsilon$ is a small constant that prevents division by zero. Higher EATS values indicate a better balance between answer quality and resource efficiency. EATS does not replace raw accuracy. Rather, it complements it by penalizing architectures that obtain modest quality gains only by invoking expensive models too frequently.
+where $A$ is the experiment accuracy, $c_{\text{norm}}$ is total cost normalized against a full-LLM baseline, $l_{\text{norm}}$ is average algorithmic latency normalized against the same baseline, and $e_{\text{norm}}$ is total energy normalized against that baseline. Here, algorithmic latency refers to the intrinsic inference-and-orchestration time of the architecture rather than the full observed wall-clock delay, so unrelated queueing, proxy bookkeeping, and concurrent-run noise are excluded from the primary score as much as possible. The squared accuracy term makes answer quality the dominant objective, while the multiplicative penalty term discourages systems that only achieve quality through expensive, slow, or energy-intensive execution. The score is bounded to the interval $[0,1]$. EATS does not replace raw accuracy. Rather, it complements it by compressing the main efficiency-quality trade-off into a single primary ranking signal.
 
 The measurement data comes from two complementary mechanisms. First, the proxy layer in front of selected vLLM hosts measures host-side latency and can expose \texttt{energy\_kwh}, \texttt{co2\_g}, and GPU power values directly in the response metadata. Second, the platform supports resource-profile estimation based on model-to-host mappings when direct host measurement is unavailable or when experiment-level aggregation is needed. These measurements are then propagated into MLflow, JSON summaries, Markdown reports, and the frontend result views. This design reflects the concern raised in prior work that energy and resource use should be treated as first-class inference outcomes rather than as afterthoughts \cite{energytoken2025}.
 

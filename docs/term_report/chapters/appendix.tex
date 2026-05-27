@@ -75,10 +75,13 @@ The intended record shape for the human preference benchmark is:
 The project-specific EATS metric is defined as:
 
 \[
-\text{EATS} = \frac{\text{accuracy}}{\text{llm\_call\_ratio} \times \text{normalized\_cost} + \varepsilon}
+\text{EATS} =
+\frac{\text{accuracy}^2}
+{\text{accuracy}^2 + \text{normalized\_cost}^{0.5}\,
+\text{normalized\_algorithmic\_latency}^{0.3}\,\text{normalized\_energy}^{0.2}}
 \]
 
-Its purpose is to reward architectures that preserve useful answer quality while reducing unnecessary large-model usage and normalized cost.
+Its purpose is to reward architectures that preserve useful answer quality while reducing normalized cost, algorithmic latency, and energy relative to a full-LLM baseline.
 
 \section{Example Experiment Configuration Placeholder}
 

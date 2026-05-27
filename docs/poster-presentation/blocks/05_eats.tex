@@ -1,6 +1,6 @@
 \begin{block}{EATS: Efficiency-Aware Task Score}
   A single score that rewards architectures preserving answer quality while
-  avoiding unnecessary large-model usage and cost.
+  avoiding unnecessary cost, algorithmic latency, and energy.
 
   \vspace{4pt}
   \begin{center}
@@ -9,8 +9,11 @@
           text width=0.88\linewidth, align=center] {
       \[
         \mathrm{EATS} \;=\;
-        \frac{\text{accuracy}}
-             {\text{llm\_call\_ratio} \times \text{normalized\_cost} + \varepsilon}
+        \frac{\text{accuracy}^2}
+             {\text{accuracy}^2 +
+              \text{normalized\_cost}^{0.5}
+              \text{normalized\_algorithmic\_latency}^{0.3}
+              \text{normalized\_energy}^{0.2}}
       \]
     };
   \end{tikzpicture}
@@ -19,13 +22,13 @@
   \vspace{2pt}
   \begin{itemize}
     \item \textbf{accuracy} --- fraction of correct answers.
-    \item \textbf{llm\_call\_ratio} --- share of queries that trigger an LLM call
-          ($0=$ fully SLM, $1=$ always LLM).
     \item \textbf{normalized\_cost} --- total cost $\div$ full-LLM-baseline cost.
-    \item $\boldsymbol{\varepsilon}$ --- small constant ($0.01$) avoiding division by zero.
+    \item \textbf{normalized\_algorithmic\_latency} --- average intrinsic inference-and-orchestration latency $\div$ full-LLM-baseline value.
+    \item \textbf{normalized\_energy} --- total energy $\div$ full-LLM-baseline energy.
   \end{itemize}
-  Higher is better: a system at $0.75$ accuracy that calls the LLM only $10\%$ of
-  the time scores far above $0.80$ accuracy that always uses the LLM.
+  Higher is better: the squared accuracy term keeps answer quality primary,
+  while the multiplicative penalty suppresses systems that are costly, slow, or
+  energy-hungry. The score is bounded to $[0,1]$.
 
   \vspace{4pt}
   \textbf{Measured per request} via a vLLM metrics proxy (\texttt{\_thesis} block):

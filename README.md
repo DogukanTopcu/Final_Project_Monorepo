@@ -200,7 +200,7 @@ The frontend is organised around the three modes plus a dedicated playground:
   cost / latency.
 - **Analysis** (`/analysis`) — multi-result view: filter by architecture,
   benchmark or model, see per-architecture averages and three Pareto
-  scatters (accuracy vs cost, accuracy vs latency, EATS vs LLM-call ratio).
+  scatters (accuracy vs cost, accuracy vs latency, EATS vs total energy).
 - **Infrastructure** (`/infrastructure`) — EC2 instance controls and monthly
   cost estimate (unchanged).
 

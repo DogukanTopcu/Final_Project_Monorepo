@@ -7,59 +7,89 @@ Defined to fill the gap identified in SLR RQ2:
   "cost and energy remain far less reported than accuracy"
 
 Formula:
-    EATS = accuracy / (llm_call_ratio * normalized_cost + epsilon)
+    efficiency_penalty = (
+        normalized_cost^0.5 *
+        normalized_algorithmic_latency^0.3 *
+        normalized_energy^0.2
+    )
+    EATS = accuracy^2 / (accuracy^2 + efficiency_penalty)
 
 Where:
     - accuracy        : fraction of correct answers
-    - llm_call_ratio  : fraction of samples that triggered an LLM call
-                        (0.0 = fully local, 1.0 = always LLM)
     - normalized_cost : total_cost_usd / cost_usd_full_llm_baseline
                         (1.0 = same cost as running all samples on LLM)
-    - epsilon         : small constant to avoid division by zero (default 0.01)
+    - normalized_algorithmic_latency :
+                        avg_algorithmic_latency_ms / full_llm_avg_algorithmic_latency_ms
+    - normalized_energy  : total_energy_kwh / total_energy_kwh_full_llm_baseline
 
 Interpretation: Higher EATS is better. A system with 0.75 accuracy that only
-calls the LLM 10% of the time scores much higher than one with 0.80 accuracy
-that always uses the LLM.
-
-Special case: if llm_call_ratio == 0 (pure SLM), EATS = accuracy / epsilon
-so pure SLM is rewarded heavily for not using any LLM budget.
+uses low cost, low algorithmic latency, and low energy will score higher than
+one with similar accuracy but heavier resource usage. The score is bounded in
+[0, 1].
 """
 from __future__ import annotations
 
 from core.types import ExperimentResult
 
 
+def _normalize_metric(value: float, baseline: float | None) -> float:
+    if baseline and baseline > 0:
+        return value / baseline
+    return 1.0
+
+
 def compute_eats(
     accuracy: float,
-    llm_call_ratio: float,
     normalized_cost: float = 1.0,
-    epsilon: float = 0.01,
+    normalized_algorithmic_latency: float = 1.0,
+    normalized_energy: float = 1.0,
 ) -> float:
-    denom = llm_call_ratio * normalized_cost + epsilon
-    return accuracy / denom
+    accuracy_term = max(accuracy, 0.0) ** 2
+    efficiency_penalty = (
+        (max(normalized_cost, 0.0) ** 0.5) *
+        (max(normalized_algorithmic_latency, 0.0) ** 0.3) *
+        (max(normalized_energy, 0.0) ** 0.2)
+    )
+    denom = accuracy_term + efficiency_penalty
+    return (accuracy_term / denom) if denom > 0 else 0.0
 
 
 def compute_metrics(
     result: ExperimentResult,
     full_llm_cost_usd: float | None = None,
+    full_llm_avg_algorithmic_latency_ms: float | None = None,
+    full_llm_energy_kwh: float | None = None,
 ) -> dict[str, float]:
     """
     Compute all metrics from an ExperimentResult.
     full_llm_cost_usd: cost of running the same n_samples entirely through LLM.
                        Used to normalize cost for EATS. If None, normalized_cost=1.
+    full_llm_avg_algorithmic_latency_ms: average algorithmic latency of
+                             running the same n_samples entirely through LLM.
+                             Used to normalize latency inside EATS.
+    full_llm_energy_kwh: total energy of running the same n_samples entirely
+                         through LLM. Used to normalize energy.
     """
     base = result.to_metrics()
+    avg_algorithmic_latency_ms = base["avg_algorithmic_latency_ms"]
 
-    # Normalized cost
-    if full_llm_cost_usd and full_llm_cost_usd > 0:
-        normalized_cost = base["total_cost_usd"] / full_llm_cost_usd
-    else:
-        normalized_cost = 1.0
+    normalized_cost = _normalize_metric(base["total_cost_usd"], full_llm_cost_usd)
+    normalized_algorithmic_latency = _normalize_metric(
+        avg_algorithmic_latency_ms,
+        full_llm_avg_algorithmic_latency_ms,
+    )
+    normalized_energy = _normalize_metric(base["total_energy_kwh"], full_llm_energy_kwh)
+    efficiency_penalty = (
+        (normalized_cost ** 0.5) *
+        (normalized_algorithmic_latency ** 0.3) *
+        (normalized_energy ** 0.2)
+    )
 
     eats = compute_eats(
         accuracy=base["accuracy"],
-        llm_call_ratio=base["llm_call_ratio"],
         normalized_cost=normalized_cost,
+        normalized_algorithmic_latency=normalized_algorithmic_latency,
+        normalized_energy=normalized_energy,
     )
 
     # Per-sample averages
@@ -99,6 +129,9 @@ def compute_metrics(
         **base,
         "eats_score": eats,
         "normalized_cost": normalized_cost,
+        "normalized_algorithmic_latency": normalized_algorithmic_latency,
+        "normalized_energy": normalized_energy,
+        "normalized_efficiency_penalty": efficiency_penalty,
         "latency_p50_ms": p50,
         "latency_p95_ms": p95,
         "total_tokens": base["n_total"] and sum(

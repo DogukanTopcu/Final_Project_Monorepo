@@ -55,7 +55,8 @@ isolates the effect of architecture choice rather than dataset variation.
 The comparison focuses on five outcome families: accuracy, EATS, latency,
 cost, and resource usage. In this repository, EATS is the
 ``Efficiency-Accuracy Trade-off Score'' and rewards architectures that preserve
-accuracy while reducing heavy LLM usage and normalized cost. Therefore, a
+accuracy while reducing normalized cost, latency, and energy relative to a
+full-LLM baseline. Therefore, a
 higher EATS indicates a better efficiency-quality balance.
 
 \begin{table}[htbp]
@@ -95,11 +96,13 @@ correct answers out of 100, while the routing design reached 76 correct
 answers. This 9 percentage point gap is expected because the monolithic
 baseline always uses the stronger \texttt{gemma4-31b} model.
 
-The more interesting result is the EATS comparison. Routing reached an EATS of
-2.171, while the monolithic baseline remained at 0.842. This means the routing
-architecture delivered a 2.58 times better efficiency-accuracy trade-off even
-though its raw accuracy was lower. The main driver is selective escalation:
-66 samples were accepted at the SLM stage and only 34 required the heavy LLM.
+The EATS comparison now tells a more conservative story. Routing reached an
+EATS of 0.325, while the monolithic baseline reached 0.419. Under the current
+bounded accuracy-first formulation, routing no longer wins the primary score
+because its large latency penalty outweighs its small cost and energy savings.
+The main driver is selective escalation overhead: 66 samples were accepted at
+the SLM stage, but 34 required the heavy LLM and every routing request still
+paid for an initial SLM pass.
 
 \begin{figure}[htbp]
 \centering
@@ -116,8 +119,8 @@ Monolithic & \metricbar{monolithiccolor}{4.00cm} & 85.0 \\
 \centering
 \textbf{EATS (higher is better)}\\[0.6em]
 \begin{tabular}{@{}l l r@{}}
-Routing & \metricbar{routingcolor}{4.00cm} & 2.171 \\
-Monolithic & \metricbar{monolithiccolor}{1.55cm} & 0.842 \\
+Routing & \metricbar{routingcolor}{3.10cm} & 0.325 \\
+Monolithic & \metricbar{monolithiccolor}{4.00cm} & 0.419 \\
 \end{tabular}
 \end{minipage}
 \caption{Score comparison between routing and monolithic architectures on MMLU}
@@ -136,7 +139,7 @@ Monolithic & \metricbar{monolithiccolor}{1.55cm} & 0.842 \\
 \hline
 Accuracy & 76.0\% & 85.0\% \\
 \hline
-EATS & 2.171 & 0.842 \\
+EATS & 0.325 & 0.419 \\
 \hline
 Correct answers & 76 / 100 & 85 / 100 \\
 \hline
@@ -276,7 +279,7 @@ Total energy & 0.0205 kWh & 0.0306 kWh & 0.0527 kWh \\
 Total CO$_2$ & 7.78 g & 11.63 g & 20.02 g \\
 Total tokens & 30,574 & 35,141 & 25,233 \\
 LLM call ratio & 0\% & 19\% & 100\% \\
-EATS & 83.0 & 4.55 & 0.9406 \\
+EATS & 0.488 & 0.467 & 0.474 \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -318,13 +321,16 @@ which the routing system stayed with the SLM answer even though the monolithic
 LLM answered correctly. In other words, the current threshold policy clearly
 captures several useful recoveries, but it also misses some salvageable cases.
 
-EATS is still useful in this table, but it should be read carefully. The
-single-SLM baseline reaches an EATS of 83.0 because the current formula applies
-a special-case reward when the LLM-call ratio is zero. That makes the value
-structurally inflated relative to mixed or always-LLM systems. For this reason,
-EATS in the GSM8K comparison should be treated as an efficiency signal rather
-than as a standalone quality ranking. The more reliable interpretation comes
-from reading EATS together with accuracy, latency, cost, and resource metrics.
+EATS is still useful in this table, but it now behaves much more reasonably.
+The single-SLM baseline reaches the highest EATS at 0.488 because its strong
+cost and energy savings slightly outweigh its accuracy loss under the current
+accuracy-squared versus efficiency-penalty formulation. The monolithic LLM
+baseline follows at 0.474, and the routing hybrid reaches 0.467 because its
+two-stage control flow raises latency enough to offset some of its resource
+savings. The scores are close, which is the right signal: none of the three
+operating points dominates all dimensions. The more reliable interpretation
+still comes from reading EATS together with accuracy, latency, cost, and
+resource metrics.
 
 \section{Implemented and Usable Today}
 

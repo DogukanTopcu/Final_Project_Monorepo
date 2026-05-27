@@ -103,6 +103,7 @@ export interface ResultSummary {
   ensemble_slms: string[];
   accuracy: number;
   avg_latency_ms: number | null;
+  avg_algorithmic_latency_ms: number | null;
   eats_score: number | null;
   llm_call_ratio: number | null;
   total_cost_usd: number | null;

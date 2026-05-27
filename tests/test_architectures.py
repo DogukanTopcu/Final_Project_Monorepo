@@ -437,11 +437,21 @@ class TestRTOSWatchdogArchitecture:
 
 
 class TestEATSMetric:
-    def test_lower_llm_ratio_gives_higher_eats(self):
+    def test_lower_resource_penalty_gives_higher_eats(self):
         from evaluation.metrics import compute_eats
 
-        eats_efficient = compute_eats(accuracy=0.75, llm_call_ratio=0.1)
-        eats_expensive = compute_eats(accuracy=0.80, llm_call_ratio=1.0)
+        eats_efficient = compute_eats(
+            accuracy=0.75,
+            normalized_cost=0.3,
+            normalized_algorithmic_latency=0.4,
+            normalized_energy=0.5,
+        )
+        eats_expensive = compute_eats(
+            accuracy=0.80,
+            normalized_cost=1.5,
+            normalized_algorithmic_latency=1.4,
+            normalized_energy=1.3,
+        )
         assert eats_efficient > eats_expensive
 
 

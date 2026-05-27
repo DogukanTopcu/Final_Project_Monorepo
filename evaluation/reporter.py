@@ -94,7 +94,7 @@ class Reporter:
             "## EATS Score Interpretation",
             f"**EATS = {metrics.get('eats_score', 0):.4f}**  ",
             f"Accuracy: {metrics.get('accuracy', 0):.2%}  ",
-            f"LLM Call Ratio: {metrics.get('llm_call_ratio', 0):.2%}  ",
+            f"Normalized Efficiency Penalty: {metrics.get('normalized_efficiency_penalty', 0):.4f}  ",
             f"Total Cost: ${metrics.get('total_cost_usd', 0):.4f}  ",
         ]
 
@@ -104,6 +104,7 @@ class Reporter:
     @staticmethod
     def _sample_payload(sample) -> dict:
         metadata = sample.response.metadata
+        algorithmic_latency_ms = Reporter._algorithmic_latency_of(sample.response)
         escalated = bool(metadata.get("escalated", sample.response.llm_calls))
         slm_raw_text = metadata.get("slm_raw_text", metadata.get("slm_text"))
         slm_parsed_answer = metadata.get("slm_parsed_answer")
@@ -147,6 +148,7 @@ class Reporter:
             "llm_calls": sample.response.llm_calls,
             "confidence": sample.response.confidence,
             "latency_ms": sample.response.latency_ms,
+            "algorithmic_latency_ms": algorithmic_latency_ms,
             "cost_usd": sample.response.cost_usd,
             "api_cost_usd": sample.response.api_cost_usd,
             "infra_cost_usd": sample.response.infra_cost_usd,
@@ -189,3 +191,24 @@ class Reporter:
         for key, value in metadata.items():
             payload.setdefault(key, value)
         return payload
+
+    @staticmethod
+    def _algorithmic_latency_of(response) -> float:
+        if response.algorithmic_latency_ms > 0:
+            return response.algorithmic_latency_ms
+        metadata_latency = response.metadata.get("algorithmic_latency_ms")
+        if isinstance(metadata_latency, (int, float)) and metadata_latency > 0:
+            return float(metadata_latency)
+        steps = response.metadata.get("inference_steps")
+        if isinstance(steps, list):
+            total = 0.0
+            found = False
+            for step in steps:
+                if isinstance(step, dict):
+                    latency = step.get("latency_ms")
+                    if isinstance(latency, (int, float)):
+                        total += float(latency)
+                        found = True
+            if found:
+                return total
+        return response.latency_ms

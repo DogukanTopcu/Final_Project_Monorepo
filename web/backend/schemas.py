@@ -120,6 +120,7 @@ class ResultSummary(BaseModel):
     ensemble_slms: list[str] = Field(default_factory=list)
     accuracy: float
     avg_latency_ms: float | None = None
+    avg_algorithmic_latency_ms: float | None = None
     eats_score: float | None = None
     llm_call_ratio: float | None = None
     total_cost_usd: float | None = None

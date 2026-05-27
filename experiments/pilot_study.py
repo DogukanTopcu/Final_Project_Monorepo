@@ -58,7 +58,7 @@ def run_pilot(
             a_llm_calls += resp.llm_calls
         a_acc = a_correct / n_queries
         a_ratio = a_llm_calls / n_queries
-        a_eats = compute_eats(a_acc, a_ratio)
+        a_eats = compute_eats(a_acc)
         results["routing"][threshold] = {"accuracy": a_acc, "llm_ratio": a_ratio, "eats": a_eats}
         print(f"  Routing    acc={a_acc:.3f}  llm_ratio={a_ratio:.3f}  EATS={a_eats:.3f}")
 
