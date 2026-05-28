@@ -73,15 +73,32 @@ handoff; `speculative` and `multi_agent_crew` are exposed under an
 ## Supported Benchmarks
 
 Launchable automated benchmarks:
+
+Reasoning:
 - `mmlu`
 - `arc`
 - `hellaswag`
 - `gsm8k`
 - `truthfulqa`
-- `custom_stratified`
+
+Coding (execution-based, pass@1):
+- `humaneval_plus` — 164 function-completion problems with 80× augmented test cases (EvalPlus)
+- `livecodebench` — contamination-free competitive programming (LeetCode/AtCoder/Codeforces, post-training-cutoff), with easy/medium/hard difficulty labels
+
+Deprecated:
+- `custom_stratified` — MMLU+GSM8K difficulty mix, not a real coding benchmark; use `humaneval_plus` or `livecodebench` instead
 
 Special case:
 - `humaneval` is reserved for the UI-backed human preference workflow and is intentionally not part of the normal automated benchmark launcher.
+
+## EATS Score
+
+```
+efficiency_penalty = 0.5 × normalized_cost + 0.3 × normalized_algorithmic_latency + 0.2 × normalized_energy
+EATS = accuracy / (accuracy + efficiency_penalty)
+```
+
+All three terms are normalized to the full-LLM baseline (1.0 = same as running all samples on the LLM alone). Weights sum to 1 (cost 50%, latency 30%, energy 20%). Score is bounded [0, 1]; higher is better. The additive form ensures that unmeasured dimensions (e.g. energy ≈ 0 for API-only runs) do not collapse the entire penalty.
 
 ## Measurement Model
 
@@ -206,7 +223,7 @@ The frontend is organised around the three modes plus a dedicated playground:
 
 ### CLI
 
-Example:
+Single run (default):
 
 ```bash
 python -m experiments.run_experiment \
@@ -220,8 +237,53 @@ python -m experiments.run_experiment \
 ```
 
 Results are written to:
-- `results/exp_<id>.json`
-- `results/exp_<id>.md`
+- `results/exp_<id>.json` — full per-sample data
+- `results/exp_<id>.md` — human-readable report with Accuracy / Latency / Cost / Energy sections
+
+### Multi-run (thesis grade)
+
+A single run is not sufficient for thesis results. Use `--n_runs 3` (minimum) to
+produce statistically reportable mean ± std numbers across independent runs:
+
+```bash
+python -m experiments.run_experiment \
+  --architecture routing \
+  --benchmark mmlu \
+  --n_samples 100 \
+  --slm qwen3.5-4b \
+  --llm gpt-oss-20b \
+  --n_runs 3 \
+  --seed 42
+```
+
+This runs the same config three times with seeds 42, 43, 44 (seeds always start
+from `--seed` and increment by 1). Each run gets its own report plus a combined
+summary:
+
+- `results/exp_<id1>.json` / `.md` — run 1 (seed 42)
+- `results/exp_<id2>.json` / `.md` — run 2 (seed 43)
+- `results/exp_<id3>.json` / `.md` — run 3 (seed 44)
+- `results/multi_routing_mmlu_3runs.json` — aggregated data (all metrics as mean + std)
+- `results/multi_routing_mmlu_3runs.md` — summary table for the thesis
+
+The terminal prints the aggregated accuracy at the end:
+
+```
+[multi-run] 3 runs complete. accuracy=0.812 ±0.018
+```
+
+**When to use multi-run:**
+
+| Situation | `--n_runs` |
+|---|---|
+| Smoke test / debugging | 1 (default) |
+| Calibration run | 1 |
+| Thesis result table | 3 minimum |
+| Publication-grade | 5+ |
+
+Note: at temperature=0 on deterministic factual benchmarks (MMLU, ARC, etc.)
+variance across runs reflects query-sampling differences only. The std measures
+sensitivity to the sample set, not model stochasticity.
 
 ## Working Deployment Notes
 

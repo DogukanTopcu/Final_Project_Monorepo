@@ -76,12 +76,14 @@ The project-specific EATS metric is defined as:
 
 \[
 \text{EATS} =
-\frac{\text{accuracy}^2}
-{\text{accuracy}^2 + \text{normalized\_cost}^{0.5}\,
-\text{normalized\_algorithmic\_latency}^{0.3}\,\text{normalized\_energy}^{0.2}}
+\frac{\text{accuracy}}
+{\text{accuracy} +
+ 0.5\,\text{normalized\_cost} +
+ 0.3\,\text{normalized\_algorithmic\_latency} +
+ 0.2\,\text{normalized\_energy}}
 \]
 
-Its purpose is to reward architectures that preserve useful answer quality while reducing normalized cost, algorithmic latency, and energy relative to a full-LLM baseline.
+Its purpose is to reward architectures that preserve useful answer quality while reducing normalized cost, algorithmic latency, and energy relative to a full-LLM baseline. The weighted additive penalty (weights summing to 1: cost 50\%, latency 30\%, energy 20\%) avoids multiplicative collapse when any single efficiency dimension is unmeasured. The form $\text{accuracy} / (\text{accuracy} + \text{penalty})$ is structurally analogous to the F-score harmonic mean, where the penalty acts as a resource-consumption counterpart to accuracy.
 
 \section{Example Experiment Configuration Placeholder}
 

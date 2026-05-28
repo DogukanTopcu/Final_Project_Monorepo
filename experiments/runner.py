@@ -26,7 +26,7 @@ from core.models import assert_model_runnable, get_model
 from core.types import ExperimentConfig, ExperimentResult, SampleResult
 from evaluation.baselines import load_recommended_references
 from evaluation.energy import annotate_response_resource_usage
-from evaluation.metrics import compute_metrics
+from evaluation.metrics import aggregate_runs, compute_metrics
 from evaluation.reporter import Reporter
 
 
@@ -305,6 +305,56 @@ class ExperimentRunner:
             "avg_algorithmic_latency_ms": float(record.get("avg_algorithmic_latency_ms", 0.0) or 0.0),
             "total_energy_kwh": float(record.get("total_energy_kwh", 0.0) or 0.0),
         }
+
+    def multi_run(
+        self,
+        n_runs: int = 3,
+        seeds: list[int] | None = None,
+    ) -> dict:
+        """Run the same config N times with different seeds and aggregate results.
+
+        Returns a dict with:
+          - ``runs``: list of ExperimentResult (one per run)
+          - ``aggregated``: mean ± std metrics dict from aggregate_runs()
+
+        Seeds default to [42, 43, 44, ...] when not provided. Per CLAUDE.md §9,
+        minimum n_runs=3 is required for thesis-grade reporting.
+        """
+        if seeds is None:
+            seeds = list(range(42, 42 + n_runs))
+        if len(seeds) < n_runs:
+            raise ValueError(f"Need {n_runs} seeds, got {len(seeds)}")
+
+        import dataclasses
+
+        baseline_metrics = self._resolve_recommended_baseline(self.config.benchmark)
+        all_results: list[ExperimentResult] = []
+        all_metrics: list[dict] = []
+
+        for i, seed in enumerate(seeds[:n_runs]):
+            cfg = dataclasses.replace(self.config, seed=seed)
+            runner = ExperimentRunner(cfg, callbacks=self.callbacks)
+            result = runner.run()
+            all_results.append(result)
+            m = compute_metrics(
+                result,
+                full_llm_cost_usd=baseline_metrics.get("total_cost_usd"),
+                full_llm_avg_algorithmic_latency_ms=baseline_metrics.get("avg_algorithmic_latency_ms"),
+                full_llm_energy_kwh=baseline_metrics.get("total_energy_kwh"),
+            )
+            all_metrics.append(m)
+            print(f"  [run {i + 1}/{n_runs}] seed={seed} acc={m.get('accuracy', 0):.3f}")
+
+        aggregated = aggregate_runs(all_metrics)
+
+        reporter = Reporter(output_dir=self.config.output_dir)
+        reporter.save_multi_run(
+            config=self.config,
+            runs=all_results,
+            aggregated=aggregated,
+        )
+
+        return {"runs": all_results, "aggregated": aggregated}
 
     def batch_run(self, configs: list[ExperimentConfig], max_workers: int = 4) -> list[ExperimentResult]:
         """Run multiple experiments in parallel."""

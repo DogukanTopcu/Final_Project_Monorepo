@@ -19,7 +19,7 @@ import time
 import requests
 
 from core.models import ModelProvider, OpenAICompatibleModel
-from core.prompt import mcq_prompt, open_prompt, parse_mcq_answer, parse_open_answer
+from core.prompt import build_prompt, parse_answer
 from core.token_budget import compute_completion_budget
 from core.types import Query, Response
 
@@ -182,9 +182,7 @@ class MonolithicArchitecture:
     # ------------------------------------------------------------------
 
     def _build_prompt(self, query: Query) -> str:
-        if query.choices:
-            return mcq_prompt(query)
-        return open_prompt(query)
+        return build_prompt(query, self.task_type)
 
     def _extract_confidence(self, choice: dict) -> float:
         try:
@@ -197,9 +195,7 @@ class MonolithicArchitecture:
         return 1.0
 
     def _parse_answer(self, text: str, query: Query) -> str | None:
-        if query.choices:
-            return parse_mcq_answer(text)
-        return parse_open_answer(text)
+        return parse_answer(text, self.task_type)
 
     def _estimate_cost(self, prompt_tokens: int, completion_tokens: int) -> float:
         return (prompt_tokens * 0.90 + completion_tokens * 0.90) / 1_000_000

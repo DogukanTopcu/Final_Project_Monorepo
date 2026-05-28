@@ -32,8 +32,6 @@ from __future__ import annotations
 import random
 from enum import Enum
 
-from datasets import load_dataset
-
 from core.types import Query
 from benchmarks.base import BaseBenchmark
 
@@ -87,6 +85,8 @@ class CustomStratifiedBenchmark(BaseBenchmark):
         super().__init__(n_samples=n_samples, seed=seed)
 
     def _load_all(self) -> list[Query]:
+        from datasets import load_dataset  # type: ignore
+
         rng = random.Random(self.seed)
         buckets: dict[Difficulty, list[Query]] = {d: [] for d in Difficulty}
 

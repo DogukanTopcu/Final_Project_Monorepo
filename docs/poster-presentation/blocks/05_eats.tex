@@ -9,11 +9,11 @@
           text width=0.88\linewidth, align=center] {
       \[
         \mathrm{EATS} \;=\;
-        \frac{\text{accuracy}^2}
-             {\text{accuracy}^2 +
-              \text{normalized\_cost}^{0.5}
-              \text{normalized\_algorithmic\_latency}^{0.3}
-              \text{normalized\_energy}^{0.2}}
+        \frac{\text{accuracy}}
+             {\text{accuracy} +
+              0.5\,\text{normalized\_cost} +
+              0.3\,\text{normalized\_algorithmic\_latency} +
+              0.2\,\text{normalized\_energy}}
       \]
     };
   \end{tikzpicture}
@@ -26,9 +26,10 @@
     \item \textbf{normalized\_algorithmic\_latency} --- average intrinsic inference-and-orchestration latency $\div$ full-LLM-baseline value.
     \item \textbf{normalized\_energy} --- total energy $\div$ full-LLM-baseline energy.
   \end{itemize}
-  Higher is better: the squared accuracy term keeps answer quality primary,
-  while the multiplicative penalty suppresses systems that are costly, slow, or
-  energy-hungry. The score is bounded to $[0,1]$.
+  Higher is better: the additive weighted penalty suppresses systems that are costly, slow, or
+  energy-hungry without collapsing when any single dimension is unmeasured.
+  Weights sum to 1 (cost 50\%, latency 30\%, energy 20\%). The score is bounded to $[0,1]$.
+  Structurally analogous to the F-score: accuracy / (accuracy + penalty).
 
   \vspace{4pt}
   \textbf{Measured per request} via a vLLM metrics proxy (\texttt{\_thesis} block):

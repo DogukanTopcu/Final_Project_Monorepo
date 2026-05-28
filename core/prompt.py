@@ -70,6 +70,26 @@ def parse_mcq_answer(text: str) -> str | None:
     return None
 
 
+def build_prompt(query: Query, task_type: str) -> str:
+    """Single entry point for prompt construction across all task types."""
+    if task_type == "mcq":
+        return mcq_prompt(query)
+    if task_type == "code":
+        return query.text  # query text already contains full coding instructions
+    return open_prompt(query)
+
+
+def parse_answer(text: str | None, task_type: str) -> str | None:
+    """Single entry point for answer extraction across all task types."""
+    if text is None:
+        return None
+    if task_type == "mcq":
+        return parse_mcq_answer(text)
+    if task_type == "code":
+        return text  # raw code is the answer; correctness is via execution
+    return parse_open_answer(text)
+
+
 def parse_open_answer(text: str) -> str | None:
     """Extract numeric answer from open-ended output (GSM8K)."""
     stripped = text.strip()

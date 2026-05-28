@@ -8,7 +8,7 @@ from typing import Any
 
 from architectures.base import BaseArchitecture
 from core.models import ModelProvider
-from core.prompt import mcq_prompt, open_prompt, parse_mcq_answer, parse_open_answer
+from core.prompt import build_prompt, parse_answer
 from core.token_budget import compute_completion_budget
 from core.types import Query, Response
 
@@ -82,11 +82,7 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         final_answer_text, used_model, final_confidence = asyncio.run(self._orchestrate_blackboard(query))
         self.total_latency = (time.perf_counter() - t0) * 1000
 
-        parsed = (
-            parse_mcq_answer(final_answer_text)
-            if self.task_type == "mcq"
-            else parse_open_answer(final_answer_text)
-        )
+        parsed = parse_answer(final_answer_text, self.task_type)
 
         return Response(
             query_id=query.id,
@@ -106,7 +102,7 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         )
 
     async def _orchestrate_blackboard(self, query: Query) -> tuple[str, str]:
-        base_prompt = mcq_prompt(query) if self.task_type == "mcq" else open_prompt(query)
+        base_prompt = build_prompt(query, self.task_type)
 
         blackboard: dict[str, BlackboardTask] = {}
         root_id = "task_root"

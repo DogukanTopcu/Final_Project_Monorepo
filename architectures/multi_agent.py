@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from architectures.base import BaseArchitecture
 from core.models import ModelProvider
-from core.prompt import mcq_prompt, open_prompt, parse_mcq_answer, parse_open_answer
+from core.prompt import build_prompt, parse_answer
 from core.token_budget import compute_completion_budget
 from core.types import Query, Response
 
@@ -76,9 +76,7 @@ class MultiAgentArchitecture(BaseArchitecture):
         self.llm_max_tokens = llm_max_tokens
 
     def run(self, query: Query) -> Response:
-        base_prompt = (
-            mcq_prompt(query) if self.task_type == "mcq" else open_prompt(query)
-        )
+        base_prompt = build_prompt(query, self.task_type)
         proponent_budget = compute_completion_budget(
             self.slm,
             _PROPONENT_TEMPLATE.format(question=base_prompt),
@@ -189,11 +187,7 @@ class MultiAgentArchitecture(BaseArchitecture):
             }
         )
 
-        parsed = (
-            parse_mcq_answer(arb_text)
-            if self.task_type == "mcq"
-            else parse_open_answer(arb_text)
-        )
+        parsed = parse_answer(arb_text, self.task_type)
 
         return Response(
             query_id=query.id,

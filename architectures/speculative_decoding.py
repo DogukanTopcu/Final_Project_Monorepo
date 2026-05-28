@@ -132,6 +132,7 @@ class SpeculativeDecodingArchitecture:
         self.max_tokens = (
             llm_max_tokens if llm_max_tokens is not None else max_tokens
         )
+        self.task_type = task_type or "open"
 
     @property
     def name(self) -> str:
@@ -236,16 +237,12 @@ class SpeculativeDecodingArchitecture:
         return sum(math.exp(lp) for lp in logprobs) / len(logprobs)
 
     def _build_prompt(self, query: Query) -> str:
-        from core.prompt import mcq_prompt, open_prompt
-        if query.choices:
-            return mcq_prompt(query)
-        return open_prompt(query)
+        from core.prompt import build_prompt
+        return build_prompt(query, self.task_type)
 
     def _parse_answer(self, text: str, query: Query) -> str:
-        from core.prompt import parse_mcq_answer, parse_open_answer
-        if query.choices:
-            return parse_mcq_answer(text)
-        return parse_open_answer(text)
+        from core.prompt import parse_answer
+        return parse_answer(text, self.task_type) or ""
 
     def _estimate_cost(self, draft_tokens: int, verifier_tokens: int) -> float:
         # Drafter (4B): ~$0.10/1M tokens; Verifier (70B): ~$0.90/1M tokens

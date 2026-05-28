@@ -7,7 +7,7 @@ from core.types import Query
 
 
 class BaseBenchmark(ABC):
-    task_type: str = "mcq"   # "mcq" | "open"
+    task_type: str = "mcq"   # "mcq" | "open" | "code"
     name: str = "base"
 
     def __init__(self, n_samples: int = 100, seed: int = 42) -> None:

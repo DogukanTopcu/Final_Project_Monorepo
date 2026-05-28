@@ -38,8 +38,14 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument(
         "--benchmark",
-        # ADDED: halueval for hallucination detection
-        choices=["mmlu", "arc", "hellaswag", "gsm8k", "truthfulqa", "halueval", "custom_stratified"],
+        choices=[
+            # Reasoning benchmarks
+            "mmlu", "arc", "hellaswag", "gsm8k", "truthfulqa",
+            # Coding benchmarks (execution-based, literature-standard)
+            "humaneval_plus", "livecodebench",
+            # Deprecated
+            "custom_stratified",
+        ],
         default="mmlu",
     )
     p.add_argument("--n_samples", type=int, default=100)
@@ -74,6 +80,17 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--max_subtasks", type=int, default=2)
     p.add_argument("--allow_nested_subtasks", action="store_true")
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument(
+        "--n_runs",
+        type=int,
+        default=1,
+        help=(
+            "Number of independent runs with different seeds (default 1). "
+            "Set to 3+ for thesis-grade results (CLAUDE.md §9). "
+            "Seeds start from --seed and increment by 1. "
+            "Produces a multi-run summary report alongside individual run reports."
+        ),
+    )
     p.add_argument("--output", default="results")
     p.add_argument("--dry_run", action="store_true")
     p.add_argument(
@@ -143,7 +160,17 @@ def main() -> None:
 
     if len(architectures) == 1:
         cfg = build_config(args, architectures[0])
-        ExperimentRunner(cfg).run()
+        runner = ExperimentRunner(cfg)
+        if args.n_runs > 1:
+            seeds = list(range(args.seed, args.seed + args.n_runs))
+            result = runner.multi_run(n_runs=args.n_runs, seeds=seeds)
+            print(
+                f"\n[multi-run] {args.n_runs} runs complete. "
+                f"accuracy={result['aggregated'].get('accuracy_mean', 0):.3f} "
+                f"±{result['aggregated'].get('accuracy_std', 0):.3f}"
+            )
+        else:
+            runner.run()
     else:
         configs = [build_config(args, arch) for arch in architectures]
         ExperimentRunner(configs[0]).batch_run(configs)

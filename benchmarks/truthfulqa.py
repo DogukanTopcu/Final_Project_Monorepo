@@ -28,16 +28,16 @@ class TruthfulQABenchmark(BaseBenchmark):
             labels = mc1["labels"]  # 1 = correct
 
             correct_idx = next((j for j, l in enumerate(labels) if l == 1), 0)
-            # Rotate so correct is always option A (simplifies evaluation)
-            rotated = [choices[correct_idx]] + [c for j, c in enumerate(choices) if j != correct_idx]
-            rotated = rotated[:4]  # max 4 choices
-
+            # Keep original shuffled order — rotating to always place the
+            # correct answer at A introduces position bias (models favour A).
+            # The dataset was pre-shuffled at creation time, so correct_idx
+            # is already uniformly distributed across positions.
             queries.append(
                 Query(
                     id=f"truthfulqa_{i}",
                     text=row["question"],
-                    choices=rotated,
-                    answer="A",  # always A after rotation
+                    choices=choices,
+                    answer=chr(65 + correct_idx),
                 )
             )
         return queries

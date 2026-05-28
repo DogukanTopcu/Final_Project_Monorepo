@@ -10,7 +10,7 @@ import requests
 
 from architectures.base import BaseArchitecture
 from core.models import ModelProvider, OpenAICompatibleModel
-from core.prompt import mcq_prompt, open_prompt, parse_mcq_answer, parse_open_answer
+from core.prompt import build_prompt, parse_answer
 from core.types import Query, Response
 
 
@@ -39,7 +39,7 @@ class RTOSWatchdogArchitecture(BaseArchitecture):
         self.task_type = task_type
 
     def run(self, query: Query) -> Response:
-        prompt = mcq_prompt(query) if self.task_type == "mcq" else open_prompt(query)
+        prompt = build_prompt(query, self.task_type)
         slm_budget = self.slm_max_tokens if self.slm_max_tokens > 0 else 512
         llm_budget = self.llm_max_tokens if self.llm_max_tokens > 0 else 512
         
@@ -178,11 +178,7 @@ class RTOSWatchdogArchitecture(BaseArchitecture):
 
         total_latency = (time.perf_counter() - t0) * 1000
 
-        parsed = (
-            parse_mcq_answer(final_text)
-            if self.task_type == "mcq"
-            else parse_open_answer(final_text)
-        )
+        parsed = parse_answer(final_text, self.task_type)
 
         actual_confidence = sum(token_probs) / len(token_probs) if token_probs else 0.5
         return Response(
@@ -199,9 +195,7 @@ class RTOSWatchdogArchitecture(BaseArchitecture):
             metadata={
                 "prompt_text": prompt,
                 "slm_raw_text": generated_prefix,
-                "slm_parsed_answer": parse_mcq_answer(generated_prefix)
-                if self.task_type == "mcq"
-                else parse_open_answer(generated_prefix),
+                "slm_parsed_answer": parse_answer(generated_prefix, self.task_type),
                 "final_raw_text": final_text,
                 "final_parsed_answer": parsed,
                 "final_answer_source": "llm" if interrupted else "slm",

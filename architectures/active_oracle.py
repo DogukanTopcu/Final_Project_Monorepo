@@ -5,7 +5,7 @@ from typing import Any
 
 from architectures.base import BaseArchitecture
 from core.models import ModelProvider
-from core.prompt import mcq_prompt, open_prompt, parse_mcq_answer, parse_open_answer
+from core.prompt import build_prompt, parse_answer
 from core.token_budget import compute_completion_budget
 from core.types import Query, Response
 
@@ -38,9 +38,14 @@ class ActiveOracleArchitecture(BaseArchitecture):
         self.task_type = task_type
 
     def run(self, query: Query) -> Response:
-        base_prompt = mcq_prompt(query) if self.task_type == "mcq" else open_prompt(query)
+        base_prompt = build_prompt(query, self.task_type)
         
-        format_reminder = "'Final Answer: <letter>'" if self.task_type == "mcq" else "'Answer: <number>'"
+        if self.task_type == "mcq":
+            format_reminder = "'Final Answer: <letter>'"
+        elif self.task_type == "code":
+            format_reminder = "a complete code solution"
+        else:
+            format_reminder = "'Answer: <number>'"
         
         execution_prompt = (
             "You are a smart logical reasoning agent. You MUST work step-by-step.\n"
@@ -127,11 +132,7 @@ class ActiveOracleArchitecture(BaseArchitecture):
 
         total_latency = (time.perf_counter() - t0) * 1000
         
-        parsed = (
-            parse_mcq_answer(current_prompt)
-            if self.task_type == "mcq"
-            else parse_open_answer(current_prompt)
-        )
+        parsed = parse_answer(current_prompt, self.task_type)
 
         return Response(
             query_id=query.id,

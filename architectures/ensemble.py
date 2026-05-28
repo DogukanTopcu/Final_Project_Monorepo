@@ -22,7 +22,7 @@ from collections import Counter
 
 from architectures.base import BaseArchitecture
 from core.models import ModelProvider
-from core.prompt import mcq_prompt, open_prompt, parse_mcq_answer, parse_open_answer
+from core.prompt import build_prompt, parse_answer
 from core.token_budget import compute_completion_budget
 from core.types import Query, Response
 
@@ -64,9 +64,7 @@ class EnsembleArchitecture(BaseArchitecture):
         self.llm_max_tokens = llm_max_tokens
 
     def run(self, query: Query) -> Response:
-        prompt = (
-            mcq_prompt(query) if self.task_type == "mcq" else open_prompt(query)
-        )
+        prompt = build_prompt(query, self.task_type)
 
         votes: list[str] = []
         confidences: list[float] = []
@@ -99,11 +97,7 @@ class EnsembleArchitecture(BaseArchitecture):
             total_cost += cost
             total_latency += lat
             member_models.append(member.model_id)
-            parsed = (
-                parse_mcq_answer(text)
-                if self.task_type == "mcq"
-                else parse_open_answer(text)
-            )
+            parsed = parse_answer(text, self.task_type)
             member_responses.append(
                 {
                     "member_index": idx + 1,
@@ -167,11 +161,7 @@ class EnsembleArchitecture(BaseArchitecture):
             )
             llm_generation_metadata = dict(getattr(self.llm, "last_generation_metadata", {}) or {})
             llm_tiebreak_text = llm_text
-            llm_tiebreak_parsed = (
-                parse_mcq_answer(llm_text)
-                if self.task_type == "mcq"
-                else parse_open_answer(llm_text)
-            )
+            llm_tiebreak_parsed = parse_answer(llm_text, self.task_type)
             total_in += l_in
             total_out += l_out
             total_cost += l_cost
