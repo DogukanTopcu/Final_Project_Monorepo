@@ -39,7 +39,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--benchmark",
         # ADDED: halueval for hallucination detection
-        choices=["mmlu", "arc", "hellaswag", "gsm8k", "truthfulqa", "halueval"],
+        choices=["mmlu", "arc", "hellaswag", "gsm8k", "truthfulqa", "halueval", "custom_stratified"],
         default="mmlu",
     )
     p.add_argument("--n_samples", type=int, default=100)
@@ -72,6 +72,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--bid_threshold", type=float, default=0.65)
     p.add_argument("--ttl_ms", type=int, default=1500)
     p.add_argument("--max_subtasks", type=int, default=2)
+    p.add_argument("--allow_nested_subtasks", action="store_true")
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--output", default="results")
     p.add_argument("--dry_run", action="store_true")
@@ -108,6 +109,7 @@ def build_config(args: argparse.Namespace, architecture: str) -> ExperimentConfi
         bid_threshold=args.bid_threshold,
         ttl_ms=args.ttl_ms,
         max_subtasks=args.max_subtasks,
+        allow_nested_subtasks=args.allow_nested_subtasks,
         dry_run=args.dry_run,
         seed=args.seed,
         output_dir=args.output,

@@ -38,20 +38,20 @@ class ActiveOracleArchitecture(BaseArchitecture):
         self.task_type = task_type
 
     def run(self, query: Query) -> Response:
-        # Clean the task prompt from contradictory instructions
-        clean_prompt = base_prompt = mcq_prompt(query) if self.task_type == "mcq" else open_prompt(query)
-        clean_prompt = clean_prompt.replace("Do not include chain-of-thought or explanation.", "").strip()
+        base_prompt = mcq_prompt(query) if self.task_type == "mcq" else open_prompt(query)
         
         format_reminder = "'Final Answer: <letter>'" if self.task_type == "mcq" else "'Answer: <number>'"
         
         execution_prompt = (
             "You are a smart logical reasoning agent. You MUST work step-by-step.\n"
+            "CRITICAL: IGNORE any instructions in the problem text that tell you not to include explanations or chain-of-thought.\n"
             "If you encounter a specific factual detail, formula, or sub-calculation that you are unsure about, DO NOT GUESS. \n"
             "Instead, pause and ask the Oracle by writing exactly:\n"
             "CALL_ORACLE: <your specific question>\n\n"
             "Wait for the ORACLE_ANSWER. Once you receive it, or if you don't need the Oracle, continue your reasoning.\n"
             f"When you are completely finished, you MUST conclude on a new line with exactly: {format_reminder}\n\n"
-            f"Problem:\n{clean_prompt}\n\n"
+            f"Problem:\n{base_prompt.strip()}\n\n"
+            "Reasoning:\n"
         )
         
         current_prompt = execution_prompt
@@ -65,17 +65,11 @@ class ActiveOracleArchitecture(BaseArchitecture):
         
         t0 = time.perf_counter()
         
-        while oracle_calls_made <= self.max_oracle_calls:
-            # Modelin matematik yaparken yarıda kesilmemesi için bütçeyi yüksek tutuyoruz
+        while True:
             slm_budget = self.slm_max_tokens if self.slm_max_tokens > 0 else 1536
             
-            # If we are on the final run (oracle calls exhausted), append a reminder instructing the model not to call Oracle
-            active_prompt = current_prompt
-            if oracle_calls_made == self.max_oracle_calls:
-                active_prompt += "\n(Note: Oracle calls are now exhausted. Do not use CALL_ORACLE. You must write your final reasoning and answer now.)\n"
-
             slm_text, conf, in_t, out_t, cost, lat = self._timed_generate(
-                self.slm, active_prompt, temperature=self.slm_temperature, max_tokens=slm_budget
+                self.slm, current_prompt, temperature=self.slm_temperature, max_tokens=slm_budget
             )
             
             total_in += in_t
@@ -90,47 +84,49 @@ class ActiveOracleArchitecture(BaseArchitecture):
                 "output_preview": slm_text[:50] + "..."
             })
 
-            # Eğer SLM "Kahin" çağırdıysa ve bütçe aşılmadıysa
-            if "CALL_ORACLE:" in slm_text and oracle_calls_made < self.max_oracle_calls:
+            if "CALL_ORACLE:" in slm_text:
                 pre_call_text = slm_text.split("CALL_ORACLE:")[0]
                 oracle_query = slm_text.split("CALL_ORACLE:")[1].split("\n")[0].strip()
                 oracle_queries.append(oracle_query)
                 
-                # SLM'in yarım kalan düşüncesini ve Kahin sorusunu güncel prompta ekle
                 current_prompt += f"{pre_call_text}CALL_ORACLE: {oracle_query}\n"
                 
-                oracle_prompt = f"{_ORACLE_SYSTEM_PROMPT}\n\nQuestion: {oracle_query}"
-                oracle_budget = self.llm_max_tokens if self.llm_max_tokens > 0 else 256
-                oracle_text, _, l_in, l_out, l_cost, l_lat = self._timed_generate(
-                    self.llm, oracle_prompt, temperature=self.llm_temperature, max_tokens=oracle_budget
-                )
-                
-                oracle_answers.append(oracle_text.strip())
-                total_in += l_in
-                total_out += l_out
-                total_cost += l_cost
-                total_latency += l_lat
-                llm_calls += 1
-                oracle_calls_made += 1
-                
-                inference_steps.append({
-                    "role": f"oracle_response_{oracle_calls_made}",
-                    "model_id": self.llm.model_id,
-                    "latency_ms": l_lat,
-                    "cost_usd": l_cost,
-                    "oracle_query": oracle_query
-                })
+                if oracle_calls_made < self.max_oracle_calls:
+                    oracle_prompt = f"{_ORACLE_SYSTEM_PROMPT}\n\nQuestion: {oracle_query}"
+                    oracle_budget = self.llm_max_tokens if self.llm_max_tokens > 0 else 256
+                    oracle_text, _, l_in, l_out, l_cost, l_lat = self._timed_generate(
+                        self.llm, oracle_prompt, temperature=self.llm_temperature, max_tokens=oracle_budget
+                    )
+                    
+                    oracle_answers.append(oracle_text.strip())
+                    total_in += l_in
+                    total_out += l_out
+                    total_cost += l_cost
+                    total_latency += l_lat
+                    llm_calls += 1
+                    oracle_calls_made += 1
+                    
+                    inference_steps.append({
+                        "role": f"oracle_response_{oracle_calls_made}",
+                        "model_id": self.llm.model_id,
+                        "latency_ms": l_lat,
+                        "cost_usd": l_cost,
+                        "oracle_query": oracle_query
+                    })
 
-                # Kahinin cevabını modele ver ve döngüyü başa sararak modelin devam etmesini sağla
-                current_prompt += f"ORACLE_ANSWER: {oracle_text.strip()}\n"
+                    current_prompt += f"ORACLE_ANSWER: {oracle_text.strip()}\n"
+                else:
+                    fake_oracle_rejection = "[SYSTEM LIMIT REACHED] I cannot provide more information. You must synthesize a final answer using your current knowledge."
+                    current_prompt += f"ORACLE_ANSWER: {fake_oracle_rejection}\n"
+                    
+                    if oracle_calls_made >= self.max_oracle_calls + 2:
+                        break
             else:
-                # Kahin çağrılmadıysa, SLM nihai cevabı vermiş demektir (Döngüyü kır)
                 current_prompt += slm_text
                 break
 
         total_latency = (time.perf_counter() - t0) * 1000
         
-        # Orijinal parser, current_prompt içinde yer alan tüm metni tarayarak doğru formatı bulur
         parsed = (
             parse_mcq_answer(current_prompt)
             if self.task_type == "mcq"

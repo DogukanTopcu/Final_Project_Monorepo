@@ -79,10 +79,9 @@ class MultiAgentArchitecture(BaseArchitecture):
         base_prompt = (
             mcq_prompt(query) if self.task_type == "mcq" else open_prompt(query)
         )
-        clean_prompt = base_prompt.replace("Do not include chain-of-thought or explanation.", "").strip()
         proponent_budget = compute_completion_budget(
             self.slm,
-            _PROPONENT_TEMPLATE.format(question=clean_prompt),
+            _PROPONENT_TEMPLATE.format(question=base_prompt),
             task_type=self.task_type,
             role="proponent",
             requested_max_tokens=self.slm_max_tokens,
@@ -101,7 +100,7 @@ class MultiAgentArchitecture(BaseArchitecture):
         inference_steps: list[dict[str, object]] = []
 
         # --- Proponent (SLM) ---
-        prop_prompt = _PROPONENT_TEMPLATE.format(question=clean_prompt)
+        prop_prompt = _PROPONENT_TEMPLATE.format(question=base_prompt)
         prop_text, _, in_t, out_t, cost, lat = self._timed_generate(
             self.slm,
             prop_prompt,
@@ -148,7 +147,7 @@ class MultiAgentArchitecture(BaseArchitecture):
 
         # --- Arbitrator (SLM or LLM) ---
         arb_prompt = _ARBITRATOR_TEMPLATE.format(
-            question=clean_prompt,
+            question=base_prompt,
             proponent_output=prop_text,
             opponent_output=opp_text,
         )

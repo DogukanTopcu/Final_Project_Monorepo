@@ -401,6 +401,13 @@ _SPECS: list[ArchitectureSpec] = [
                 description="After TTL, the bid threshold drops to 0.",
             ),
             _max_subtasks_param(),
+            ArchitectureParamSpec(
+                key="allow_nested_subtasks",
+                label="Allow nested sub-tasks",
+                type="bool",
+                default=False,
+                description="Allows sub-tasks to spawn their own nested sub-tasks (sub-task of sub-task).",
+            ),
             *_slm_params(),
         ],
     ),

@@ -136,6 +136,7 @@ class ExperimentRunner:
             arch_kwargs["bid_threshold"] = getattr(cfg, "bid_threshold", 0.65)
             arch_kwargs["ttl_ms"] = getattr(cfg, "ttl_ms", 1500)
             arch_kwargs["max_subtasks"] = getattr(cfg, "max_subtasks", 2)
+            arch_kwargs["allow_nested_subtasks"] = getattr(cfg, "allow_nested_subtasks", False)
 
         arch_kwargs["slm_temperature"] = cfg.slm_temperature
         arch_kwargs["slm_max_tokens"] = cfg.slm_max_tokens

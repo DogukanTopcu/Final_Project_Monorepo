@@ -50,6 +50,7 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         ttl_ms: int = 1500,
         task_type: str = "mcq",
         max_subtasks: int = 2,
+        allow_nested_subtasks: bool = False,
     ) -> None:
         super().__init__(slm, llm)
         self.secondary_slm = secondary_slm
@@ -62,6 +63,7 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         self.slm_max_tokens = slm_max_tokens
         self.llm_max_tokens = llm_max_tokens
         self.max_subtasks = max_subtasks
+        self.allow_nested_subtasks = allow_nested_subtasks
 
         self.total_in = 0
         self.total_out = 0
@@ -189,21 +191,19 @@ class BaseBlackboardArchitecture(BaseArchitecture):
     ) -> None:
         loop = asyncio.get_running_loop()
         
-        # Clean the task prompt from contradictory instructions
-        clean_prompt = task.prompt.replace("Do not include chain-of-thought or explanation.", "").strip()
-        
-        can_spawn = task.subtask_spawned < self.max_subtasks and task.id.count("sub_") < self.max_subtasks
+        depth_limit = self.max_subtasks if self.allow_nested_subtasks else 1
+        can_spawn = task.subtask_spawned < self.max_subtasks and task.id.count("sub_") < depth_limit
         if can_spawn:
             execution_prompt = (
                 "Solve the following problem step-by-step.\n"
                 "If you lack the information to solve it, or need a sub-calculation, format a request exactly as:\n"
                 "SUB_TASK: <query>\n\n"
-                f"Problem: {clean_prompt}"
+                f"Problem: {task.prompt}"
             )
         else:
             execution_prompt = (
                 "Solve the following problem step-by-step and provide the final answer.\n\n"
-                f"Problem: {clean_prompt}"
+                f"Problem: {task.prompt}"
             )
 
         budget = compute_completion_budget(provider, execution_prompt, task_type="open", role="swarm_node")
@@ -235,7 +235,8 @@ class BaseBlackboardArchitecture(BaseArchitecture):
             "cost_usd": cost,
         })
 
-        if "SUB_TASK:" in text and task.subtask_spawned < self.max_subtasks and task.id.count("sub_") < self.max_subtasks:
+        depth_limit = self.max_subtasks if self.allow_nested_subtasks else 1
+        if "SUB_TASK:" in text and task.subtask_spawned < self.max_subtasks and task.id.count("sub_") < depth_limit:
             raw_sub = text.split("SUB_TASK:")[1].strip()
             sub_query = raw_sub.split("\n")[0].strip()
             sub_id = f"sub_{task.id}_{int(time.time() * 1000)}"

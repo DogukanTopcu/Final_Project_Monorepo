@@ -71,6 +71,7 @@ class ExperimentConfig:
     bid_threshold: float = 0.65
     ttl_ms: int = 1500
     max_subtasks: int = 2
+    allow_nested_subtasks: bool = False
     # Runtime
     dry_run: bool = False
     seed: int = 42
