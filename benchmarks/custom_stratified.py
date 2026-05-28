@@ -83,11 +83,10 @@ def _gsm8k_difficulty(answer: str) -> Difficulty:
 class CustomStratifiedBenchmark(BaseBenchmark):
     name = "custom_stratified"
 
-    def __init__(self, seed: int = _SEED) -> None:
-        self.seed = seed
-        self._queries: list[Query] = []
+    def __init__(self, n_samples: int = 100, seed: int = _SEED) -> None:
+        super().__init__(n_samples=n_samples, seed=seed)
 
-    def load(self) -> list[Query]:
+    def _load_all(self) -> list[Query]:
         rng = random.Random(self.seed)
         buckets: dict[Difficulty, list[Query]] = {d: [] for d in Difficulty}
 
@@ -133,5 +132,5 @@ class CustomStratifiedBenchmark(BaseBenchmark):
             + buckets[Difficulty.HARD][:_HARD_N]
         )
         rng.shuffle(selected)
-        self._queries = selected
         return selected
+

@@ -46,8 +46,8 @@ def test_qwen_requests_disable_thinking(monkeypatch):
     assert captured["json"]["chat_template_kwargs"] == {"enable_thinking": False}
 
 
-def test_open_prompt_discourages_chain_of_thought():
+def test_open_prompt_encourages_chain_of_thought():
     query = Query(id="q1", text="2+2?", answer="4")
     prompt = open_prompt(query)
-    assert "Think step by step" not in prompt
-    assert "Do not include chain-of-thought" in prompt
+    assert "step-by-step" in prompt
+    assert "Answer: <number>" in prompt

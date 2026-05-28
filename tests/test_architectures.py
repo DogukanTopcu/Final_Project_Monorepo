@@ -543,7 +543,7 @@ class TestSwarmAndBlackboardPromptWrapping:
         task_can_spawn = SwarmTask(
             id="task_root",
             type="main_query",
-            prompt="Do not include chain-of-thought or explanation. Final Problem Text.",
+            prompt="Final Problem Text.",
             subtask_spawned=0,
         )
         
@@ -558,7 +558,6 @@ class TestSwarmAndBlackboardPromptWrapping:
         import asyncio
         asyncio.run(arch._execute_task("worker1", slm, task_can_spawn, {}))
         
-        assert "Do not include chain-of-thought" not in captured_prompt
         assert "SUB_TASK:" in captured_prompt
         assert "You MUST solve the problem step-by-step." in captured_prompt
         
@@ -566,12 +565,70 @@ class TestSwarmAndBlackboardPromptWrapping:
         task_cannot_spawn = SwarmTask(
             id="task_root",
             type="main_query",
-            prompt="Do not include chain-of-thought or explanation. Final Problem Text.",
+            prompt="Final Problem Text.",
             subtask_spawned=1,
         )
         
         asyncio.run(arch._execute_task("worker1", slm, task_cannot_spawn, {}))
         
-        assert "Do not include chain-of-thought" not in captured_prompt
         assert "SUB_TASK:" not in captured_prompt
         assert "Solve the problem step-by-step and provide the final answer." in captured_prompt
+
+    def test_pure_swarm_nested_subtasks_blocking(self, monkeypatch):
+        from architectures.pure_swarm import PureSwarmArchitecture, SwarmTask
+        import asyncio
+
+        captured_prompt = ""
+        def fake_timed_generate(provider, prompt, **kwargs):
+            nonlocal captured_prompt
+            captured_prompt = prompt
+            return "SUB_TASK: solve subtask", 0.9, 10, 5, 0.0, 1.0
+
+        slm = RecordingStubModel("slm", answer="SUB_TASK: solve sub-sub task", confidence=0.9)
+        
+        # 1. With allow_nested_subtasks=False (Default): should NOT spawn sub-sub-task
+        arch_default = PureSwarmArchitecture(slm=slm, secondary_slm=slm, max_subtasks=2, allow_nested_subtasks=False)
+        monkeypatch.setattr(arch_default, "_timed_generate", fake_timed_generate)
+        subtask_1 = SwarmTask(
+            id="sub_task_123",
+            type="sub_probe",
+            prompt="Find factorials",
+            subtask_spawned=0,
+        )
+        
+        blackboard = {}
+        asyncio.run(arch_default._execute_task("worker1", slm, subtask_1, blackboard))
+        # Should not spawn nested subtask because allow_nested_subtasks=False
+        assert subtask_1.subtask_spawned == 0
+        assert "final_output" in subtask_1.results
+        assert len(blackboard) == 0
+        # Verification that prompt was formatted to solve directly
+        assert "SUB_TASK:" not in captured_prompt
+        assert "Solve the problem step-by-step and provide the final answer." in captured_prompt
+
+        # 2. With allow_nested_subtasks=True: should spawn nested sub-sub-task
+        arch_nested = PureSwarmArchitecture(slm=slm, secondary_slm=slm, max_subtasks=2, allow_nested_subtasks=True)
+        monkeypatch.setattr(arch_nested, "_timed_generate", fake_timed_generate)
+        subtask_2 = SwarmTask(
+            id="sub_task_123",
+            type="sub_probe",
+            prompt="Find factorials",
+            subtask_spawned=0,
+        )
+        
+        blackboard = {}
+        # Avoid blocking on asyncio.create_task by mocking _await_dependencies_and_resume
+        async def fake_await(t, bb):
+            pass
+        monkeypatch.setattr(arch_nested, "_await_dependencies_and_resume", fake_await)
+        
+        asyncio.run(arch_nested._execute_task("worker1", slm, subtask_2, blackboard))
+        # Should spawn nested subtask because allow_nested_subtasks=True
+        assert subtask_2.subtask_spawned == 1
+        assert "final_output" not in subtask_2.results
+        assert len(blackboard) == 1
+        # Verification that prompt was formatted to allow subtasks
+        assert "SUB_TASK: <query>" in captured_prompt
+        assert "You MUST solve the problem step-by-step." in captured_prompt
+
+
