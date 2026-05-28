@@ -24,19 +24,21 @@ def make_result(n: int = 10, n_correct: int = 7, llm_calls_each: int = 0) -> Exp
 
 
 def test_eats_pure_slm():
+    # penalty = 0.5*1 + 0.3*1 + 0.2*1 = 1.0  →  eats = 0.7 / (0.7 + 1.0)
     eats = compute_eats(accuracy=0.70)
     assert 0.0 < eats < 1.0
-    assert abs(eats - ((0.70 ** 2) / ((0.70 ** 2) + 1.0))) < 1e-6
+    assert abs(eats - (0.70 / (0.70 + 1.0))) < 1e-6
 
 
 def test_eats_full_llm():
+    # Same penalty = 1.0  →  eats = 0.8 / (0.8 + 1.0)
     eats = compute_eats(
         accuracy=0.80,
         normalized_cost=1.0,
         normalized_algorithmic_latency=1.0,
         normalized_energy=1.0,
     )
-    assert abs(eats - ((0.80 ** 2) / ((0.80 ** 2) + 1.0))) < 1e-6
+    assert abs(eats - (0.80 / (0.80 + 1.0))) < 1e-6
 
 
 def test_eats_higher_for_efficient_system():
@@ -86,7 +88,8 @@ def test_compute_metrics_normalizes_all_resource_terms():
     assert abs(metrics["normalized_algorithmic_latency"] - 0.5) < 1e-6
     assert abs(metrics["normalized_energy"] - 0.5) < 1e-6
     assert abs(metrics["normalized_efficiency_penalty"] - 0.5) < 1e-6
-    assert abs(metrics["eats_score"] - ((0.8 ** 2) / ((0.8 ** 2) + 0.5))) < 1e-6
+    # penalty = 0.5*0.5 + 0.3*0.5 + 0.2*0.5 = 0.5  →  eats = 0.8 / (0.8 + 0.5)
+    assert abs(metrics["eats_score"] - (0.8 / (0.8 + 0.5))) < 1e-6
 
 
 def test_higher_latency_and_energy_reduce_eats():

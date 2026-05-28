@@ -14,7 +14,7 @@ from core.model_catalog import get_model_spec
 from core.models import get_model_runtime_status
 from core.types import ExperimentConfig
 from evaluation.metrics import compute_metrics
-from experiments.runner import ExperimentCancelledError, ExperimentRunner
+from experiments.runner import ExperimentCancelledError, ExperimentRunner, resolve_recommended_baseline
 from mlops.callbacks import RunnerCallbacks
 from web.backend.dependencies import Settings, get_settings
 from web.backend.services.model_host_service import reserve_llm_host
@@ -271,7 +271,7 @@ def _run_experiment(
             runner = ExperimentRunner(config, callbacks=callbacks)
             runner.experiment_id = experiment_id
             result = runner.run()
-            baseline_metrics = runner._resolve_recommended_baseline(config.benchmark)
+            baseline_metrics = resolve_recommended_baseline(config.benchmark)
             metrics = compute_metrics(
                 result,
                 full_llm_cost_usd=baseline_metrics.get("total_cost_usd"),

@@ -53,7 +53,11 @@ def test_benchmarks_endpoint_matches_active_benchmarks(client: TestClient):
     assert response.status_code == 200
 
     benchmark_ids = {item["id"] for item in response.json()}
-    assert benchmark_ids == {"mmlu", "arc", "hellaswag", "gsm8k", "truthfulqa", "custom_stratified"}
+    assert benchmark_ids == {
+        "mmlu", "arc", "hellaswag", "gsm8k", "truthfulqa",
+        "humaneval_plus", "livecodebench",
+        "custom_stratified",
+    }
 
 
 def test_models_endpoint_lists_selected_remote_models(client: TestClient, monkeypatch):

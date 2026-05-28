@@ -30,6 +30,24 @@ from evaluation.metrics import aggregate_runs, compute_metrics
 from evaluation.reporter import Reporter
 
 
+def resolve_recommended_baseline(benchmark: str) -> dict[str, float]:
+    """Load the recommended monolithic baseline metrics for a benchmark.
+
+    Standalone function (not tied to a runner instance) so the experiment
+    service can import and call it directly without depending on ExperimentRunner.
+    """
+    path = Path("artifacts/baselines/recommended_references.json")
+    refs = load_recommended_references(path)
+    record = refs.get(benchmark, {})
+    if not isinstance(record, dict):
+        return {}
+    return {
+        "total_cost_usd": float(record.get("total_cost_usd", 0.0) or 0.0),
+        "avg_algorithmic_latency_ms": float(record.get("avg_algorithmic_latency_ms", 0.0) or 0.0),
+        "total_energy_kwh": float(record.get("total_energy_kwh", 0.0) or 0.0),
+    }
+
+
 class ExperimentCancelledError(RuntimeError):
     """Raised when a caller requests cancellation mid-run."""
 
@@ -295,16 +313,7 @@ class ExperimentRunner:
 
     @staticmethod
     def _resolve_recommended_baseline(benchmark: str) -> dict[str, float]:
-        path = Path("artifacts/baselines/recommended_references.json")
-        refs = load_recommended_references(path)
-        record = refs.get(benchmark, {})
-        if not isinstance(record, dict):
-            return {}
-        return {
-            "total_cost_usd": float(record.get("total_cost_usd", 0.0) or 0.0),
-            "avg_algorithmic_latency_ms": float(record.get("avg_algorithmic_latency_ms", 0.0) or 0.0),
-            "total_energy_kwh": float(record.get("total_energy_kwh", 0.0) or 0.0),
-        }
+        return resolve_recommended_baseline(benchmark)
 
     def multi_run(
         self,
