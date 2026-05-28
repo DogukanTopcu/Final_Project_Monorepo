@@ -269,7 +269,13 @@ def _run_experiment(
             runner = ExperimentRunner(config, callbacks=callbacks)
             runner.experiment_id = experiment_id
             result = runner.run()
-            metrics = compute_metrics(result)
+            baseline_metrics = runner._resolve_recommended_baseline(config.benchmark)
+            metrics = compute_metrics(
+                result,
+                full_llm_cost_usd=baseline_metrics.get("total_cost_usd"),
+                full_llm_avg_algorithmic_latency_ms=baseline_metrics.get("avg_algorithmic_latency_ms"),
+                full_llm_energy_kwh=baseline_metrics.get("total_energy_kwh"),
+            )
 
         exp.status = ExperimentStatus.COMPLETED
         exp.metrics = metrics

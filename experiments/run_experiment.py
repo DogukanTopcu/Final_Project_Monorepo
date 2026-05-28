@@ -23,6 +23,7 @@ def parse_args() -> argparse.Namespace:
         "--architecture",
         # ADDED: The two new blackboard variants
         choices=[
+            "monolithic",
             "routing",
             "multi_agent",
             "active_oracle",
@@ -89,7 +90,7 @@ def build_config(args: argparse.Namespace, architecture: str) -> ExperimentConfi
         architecture=architecture,
         benchmark=args.benchmark,
         n_samples=args.n_samples,
-        slm=args.slm,
+        slm=None if architecture == "monolithic" else args.slm,
         secondary_slm=args.secondary_slm,
         llm=args.llm,
         slm_temperature=args.slm_temperature,
@@ -124,6 +125,7 @@ def main() -> None:
 
     architectures = (
         [
+            "monolithic",
             "routing",
             "multi_agent",
             "active_oracle",

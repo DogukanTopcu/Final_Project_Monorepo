@@ -1,0 +1,386 @@
+runs:
+  - run_id: monolithic_gpt-oss-120b_mmlu
+    architecture: monolithic
+    benchmark: mmlu
+    llm: gpt-oss-120b
+    model_family: GPT OSS
+    model_class: dense_llm
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_gpt-oss-120b_arc
+    architecture: monolithic
+    benchmark: arc
+    llm: gpt-oss-120b
+    model_family: GPT OSS
+    model_class: dense_llm
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_gpt-oss-120b_hellaswag
+    architecture: monolithic
+    benchmark: hellaswag
+    llm: gpt-oss-120b
+    model_family: GPT OSS
+    model_class: dense_llm
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_gpt-oss-120b_gsm8k
+    architecture: monolithic
+    benchmark: gsm8k
+    llm: gpt-oss-120b
+    model_family: GPT OSS
+    model_class: dense_llm
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_gpt-oss-120b_truthfulqa
+    architecture: monolithic
+    benchmark: truthfulqa
+    llm: gpt-oss-120b
+    model_family: GPT OSS
+    model_class: dense_llm
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_llama3.3-70b_mmlu
+    architecture: monolithic
+    benchmark: mmlu
+    llm: llama3.3-70b
+    model_family: Llama
+    model_class: dense_llm
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_llama3.3-70b_arc
+    architecture: monolithic
+    benchmark: arc
+    llm: llama3.3-70b
+    model_family: Llama
+    model_class: dense_llm
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_llama3.3-70b_hellaswag
+    architecture: monolithic
+    benchmark: hellaswag
+    llm: llama3.3-70b
+    model_family: Llama
+    model_class: dense_llm
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_llama3.3-70b_gsm8k
+    architecture: monolithic
+    benchmark: gsm8k
+    llm: llama3.3-70b
+    model_family: Llama
+    model_class: dense_llm
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_llama3.3-70b_truthfulqa
+    architecture: monolithic
+    benchmark: truthfulqa
+    llm: llama3.3-70b
+    model_family: Llama
+    model_class: dense_llm
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_qwen3.5-27b_mmlu
+    architecture: monolithic
+    benchmark: mmlu
+    llm: qwen3.5-27b
+    model_family: Qwen
+    model_class: dense_llm
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_qwen3.5-27b_arc
+    architecture: monolithic
+    benchmark: arc
+    llm: qwen3.5-27b
+    model_family: Qwen
+    model_class: dense_llm
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_qwen3.5-27b_hellaswag
+    architecture: monolithic
+    benchmark: hellaswag
+    llm: qwen3.5-27b
+    model_family: Qwen
+    model_class: dense_llm
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_qwen3.5-27b_gsm8k
+    architecture: monolithic
+    benchmark: gsm8k
+    llm: qwen3.5-27b
+    model_family: Qwen
+    model_class: dense_llm
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_qwen3.5-27b_truthfulqa
+    architecture: monolithic
+    benchmark: truthfulqa
+    llm: qwen3.5-27b
+    model_family: Qwen
+    model_class: dense_llm
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_gpt-oss-20b_mmlu
+    architecture: monolithic
+    benchmark: mmlu
+    llm: gpt-oss-20b
+    model_family: GPT OSS
+    model_class: dense_llm
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_gpt-oss-20b_arc
+    architecture: monolithic
+    benchmark: arc
+    llm: gpt-oss-20b
+    model_family: GPT OSS
+    model_class: dense_llm
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_gpt-oss-20b_hellaswag
+    architecture: monolithic
+    benchmark: hellaswag
+    llm: gpt-oss-20b
+    model_family: GPT OSS
+    model_class: dense_llm
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_gpt-oss-20b_gsm8k
+    architecture: monolithic
+    benchmark: gsm8k
+    llm: gpt-oss-20b
+    model_family: GPT OSS
+    model_class: dense_llm
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_gpt-oss-20b_truthfulqa
+    architecture: monolithic
+    benchmark: truthfulqa
+    llm: gpt-oss-20b
+    model_family: GPT OSS
+    model_class: dense_llm
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_gemma4-31b_mmlu
+    architecture: monolithic
+    benchmark: mmlu
+    llm: gemma4-31b
+    model_family: Gemma
+    model_class: dense_llm
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_gemma4-31b_arc
+    architecture: monolithic
+    benchmark: arc
+    llm: gemma4-31b
+    model_family: Gemma
+    model_class: dense_llm
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_gemma4-31b_hellaswag
+    architecture: monolithic
+    benchmark: hellaswag
+    llm: gemma4-31b
+    model_family: Gemma
+    model_class: dense_llm
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_gemma4-31b_gsm8k
+    architecture: monolithic
+    benchmark: gsm8k
+    llm: gemma4-31b
+    model_family: Gemma
+    model_class: dense_llm
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_gemma4-31b_truthfulqa
+    architecture: monolithic
+    benchmark: truthfulqa
+    llm: gemma4-31b
+    model_family: Gemma
+    model_class: dense_llm
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_gemma4-26b-a4b_mmlu
+    architecture: monolithic
+    benchmark: mmlu
+    llm: gemma4-26b-a4b
+    model_family: Gemma
+    model_class: moe
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_gemma4-26b-a4b_arc
+    architecture: monolithic
+    benchmark: arc
+    llm: gemma4-26b-a4b
+    model_family: Gemma
+    model_class: moe
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_gemma4-26b-a4b_hellaswag
+    architecture: monolithic
+    benchmark: hellaswag
+    llm: gemma4-26b-a4b
+    model_family: Gemma
+    model_class: moe
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_gemma4-26b-a4b_gsm8k
+    architecture: monolithic
+    benchmark: gsm8k
+    llm: gemma4-26b-a4b
+    model_family: Gemma
+    model_class: moe
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_gemma4-26b-a4b_truthfulqa
+    architecture: monolithic
+    benchmark: truthfulqa
+    llm: gemma4-26b-a4b
+    model_family: Gemma
+    model_class: moe
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_qwen3.5-35b-a3b_mmlu
+    architecture: monolithic
+    benchmark: mmlu
+    llm: qwen3.5-35b-a3b
+    model_family: Qwen
+    model_class: moe
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_qwen3.5-35b-a3b_arc
+    architecture: monolithic
+    benchmark: arc
+    llm: qwen3.5-35b-a3b
+    model_family: Qwen
+    model_class: moe
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_qwen3.5-35b-a3b_hellaswag
+    architecture: monolithic
+    benchmark: hellaswag
+    llm: qwen3.5-35b-a3b
+    model_family: Qwen
+    model_class: moe
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_qwen3.5-35b-a3b_gsm8k
+    architecture: monolithic
+    benchmark: gsm8k
+    llm: qwen3.5-35b-a3b
+    model_family: Qwen
+    model_class: moe
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results
+  - run_id: monolithic_qwen3.5-35b-a3b_truthfulqa
+    architecture: monolithic
+    benchmark: truthfulqa
+    llm: qwen3.5-35b-a3b
+    model_family: Qwen
+    model_class: moe
+    n_samples: 1000
+    seed: 42
+    llm_temperature: 0.0
+    llm_max_tokens: 0
+    output_dir: results

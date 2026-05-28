@@ -24,6 +24,7 @@ from benchmarks import get_benchmark
 from core.config import load_config
 from core.models import assert_model_runnable, get_model
 from core.types import ExperimentConfig, ExperimentResult, SampleResult
+from evaluation.baselines import load_recommended_references
 from evaluation.energy import annotate_response_resource_usage
 from evaluation.metrics import compute_metrics
 from evaluation.reporter import Reporter
@@ -250,9 +251,20 @@ class ExperimentRunner:
                 )
 
         # Save reports
+        baseline_metrics = self._resolve_recommended_baseline(cfg.benchmark)
         reporter = Reporter(output_dir=cfg.output_dir)
-        reporter.save(result)
-        final_metrics = compute_metrics(result)
+        reporter.save(
+            result,
+            full_llm_cost_usd=baseline_metrics.get("total_cost_usd"),
+            full_llm_avg_algorithmic_latency_ms=baseline_metrics.get("avg_algorithmic_latency_ms"),
+            full_llm_energy_kwh=baseline_metrics.get("total_energy_kwh"),
+        )
+        final_metrics = compute_metrics(
+            result,
+            full_llm_cost_usd=baseline_metrics.get("total_cost_usd"),
+            full_llm_avg_algorithmic_latency_ms=baseline_metrics.get("avg_algorithmic_latency_ms"),
+            full_llm_energy_kwh=baseline_metrics.get("total_energy_kwh"),
+        )
 
         if tracker:
             try:
@@ -279,6 +291,19 @@ class ExperimentRunner:
             f"eats={final_metrics.get('eats_score', 0):.3f}"
         )
         return result
+
+    @staticmethod
+    def _resolve_recommended_baseline(benchmark: str) -> dict[str, float]:
+        path = Path("artifacts/baselines/recommended_references.json")
+        refs = load_recommended_references(path)
+        record = refs.get(benchmark, {})
+        if not isinstance(record, dict):
+            return {}
+        return {
+            "total_cost_usd": float(record.get("total_cost_usd", 0.0) or 0.0),
+            "avg_algorithmic_latency_ms": float(record.get("avg_algorithmic_latency_ms", 0.0) or 0.0),
+            "total_energy_kwh": float(record.get("total_energy_kwh", 0.0) or 0.0),
+        }
 
     def batch_run(self, configs: list[ExperimentConfig], max_workers: int = 4) -> list[ExperimentResult]:
         """Run multiple experiments in parallel."""

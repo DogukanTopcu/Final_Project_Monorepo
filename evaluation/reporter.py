@@ -19,8 +19,15 @@ class Reporter:
         self,
         result: ExperimentResult,
         full_llm_cost_usd: float | None = None,
+        full_llm_avg_algorithmic_latency_ms: float | None = None,
+        full_llm_energy_kwh: float | None = None,
     ) -> Path:
-        metrics = compute_metrics(result, full_llm_cost_usd)
+        metrics = compute_metrics(
+            result,
+            full_llm_cost_usd=full_llm_cost_usd,
+            full_llm_avg_algorithmic_latency_ms=full_llm_avg_algorithmic_latency_ms,
+            full_llm_energy_kwh=full_llm_energy_kwh,
+        )
         now = datetime.now(timezone.utc).isoformat()
         config_payload = dataclasses.asdict(result.config)
         if result.config.architecture == "routing":

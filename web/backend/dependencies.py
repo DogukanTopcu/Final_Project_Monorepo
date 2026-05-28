@@ -52,6 +52,8 @@ class Settings(BaseSettings):
     rtx6000_lock_timeout_s: int = 21600
     rtx6000_poll_interval_s: int = 5
     results_dir: str = str(REPO_ROOT / "results")
+    baseline_index_path: str = str(REPO_ROOT / "artifacts" / "baselines" / "index.json")
+    recommended_references_path: str = str(REPO_ROOT / "artifacts" / "baselines" / "recommended_references.json")
     environment: str = "dev"
     cors_origins: list[str] = ["http://localhost:3000"]
 
