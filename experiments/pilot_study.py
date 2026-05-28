@@ -15,7 +15,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import time
 from pathlib import Path
 
 from benchmarks.custom_stratified import CustomStratifiedBenchmark

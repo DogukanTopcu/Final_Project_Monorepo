@@ -13,15 +13,15 @@ Then run vLLM itself on port 8001.
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timezone
 import os
 import time
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
+import uvicorn
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
-import uvicorn
 
 from evaluation.energy import EnergyTracker, estimate_step_usage
 
@@ -83,7 +83,7 @@ def create_app(upstream_base_url: str) -> FastAPI:
 
         data["_thesis"] = {
             "latency_ms": round(latency_ms, 2),
-            "completed_at": datetime.now(timezone.utc).isoformat(),
+            "completed_at": datetime.now(UTC).isoformat(),
             "effective_max_tokens": int(payload.get("max_tokens", 0) or 0),
             "finish_reason": finish_reason,
             "energy_kwh": float(reading.energy_kwh or infra.get("energy_kwh", 0.0)),

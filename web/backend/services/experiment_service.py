@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import json
 import os
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import nullcontext
-from datetime import datetime, timezone
-import json
+from datetime import UTC, datetime
 from pathlib import Path
 from threading import Event
 from typing import Any
@@ -14,10 +14,13 @@ from core.model_catalog import get_model_spec
 from core.models import get_model_runtime_status
 from core.types import ExperimentConfig
 from evaluation.metrics import compute_metrics
-from experiments.runner import ExperimentCancelledError, ExperimentRunner, resolve_recommended_baseline
+from experiments.runner import (
+    ExperimentCancelledError,
+    ExperimentRunner,
+    resolve_recommended_baseline,
+)
 from mlops.callbacks import RunnerCallbacks
 from web.backend.dependencies import Settings, get_settings
-from web.backend.services.model_host_service import reserve_llm_host
 from web.backend.schemas import (
     Architecture,
     Benchmark,
@@ -25,6 +28,7 @@ from web.backend.schemas import (
     ExperimentResponse,
     ExperimentStatus,
 )
+from web.backend.services.model_host_service import reserve_llm_host
 
 _executor = ThreadPoolExecutor(max_workers=4)
 
@@ -62,10 +66,10 @@ def _build_persisted_experiment_response(path: Path) -> ExperimentResponse | Non
             ensemble_slms=ensemble_slms,
             config_overrides=config,
             created_at=datetime.fromisoformat(
-                data.get("created_at", datetime.now(timezone.utc).isoformat())
+                data.get("created_at", datetime.now(UTC).isoformat())
             ),
             completed_at=datetime.fromisoformat(
-                data.get("created_at", datetime.now(timezone.utc).isoformat())
+                data.get("created_at", datetime.now(UTC).isoformat())
             ),
             metrics=data.get("metrics", {}),
             progress=int(config.get("n_samples", 0)),
@@ -281,7 +285,7 @@ def _run_experiment(
 
         exp.status = ExperimentStatus.COMPLETED
         exp.metrics = metrics
-        exp.completed_at = datetime.now(timezone.utc)
+        exp.completed_at = datetime.now(UTC)
         exp.progress = exp.total
 
         _push_event(
@@ -295,7 +299,7 @@ def _run_experiment(
         )
     except ExperimentCancelledError:
         exp.status = ExperimentStatus.CANCELLED
-        exp.completed_at = datetime.now(timezone.utc)
+        exp.completed_at = datetime.now(UTC)
         _push_event(
             experiment_id,
             {
@@ -307,7 +311,7 @@ def _run_experiment(
     except Exception as exc:
         exp.status = ExperimentStatus.FAILED
         exp.error = str(exc)
-        exp.completed_at = datetime.now(timezone.utc)
+        exp.completed_at = datetime.now(UTC)
         callbacks.error(exc)
         _push_event(
             experiment_id,
@@ -418,7 +422,7 @@ def launch_experiment(params: ExperimentCreate, settings: Settings) -> Experimen
     _validate_architecture_models(params, require_runtime=not config.dry_run)
 
     experiment_id = f"exp_{uuid.uuid4().hex[:8]}"
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     exp = ExperimentResponse(
         experiment_id=experiment_id,

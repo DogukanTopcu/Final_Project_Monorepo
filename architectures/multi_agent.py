@@ -23,7 +23,6 @@ from core.prompt import build_prompt, parse_answer
 from core.token_budget import compute_completion_budget
 from core.types import Query, Response
 
-
 _PROPONENT_TEMPLATE = """{question}
 
 You are the Proponent. Generate an answer and a concise rationale (2-3 sentences).

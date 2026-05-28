@@ -1,6 +1,6 @@
 """Tests for evaluation metrics, especially EATS."""
+from core.types import ExperimentConfig, ExperimentResult, Query, Response, SampleResult
 from evaluation.metrics import compute_eats, compute_metrics
-from core.types import ExperimentConfig, ExperimentResult, SampleResult, Query, Response
 
 
 def make_result(n: int = 10, n_correct: int = 7, llm_calls_each: int = 0) -> ExperimentResult:

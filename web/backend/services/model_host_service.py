@@ -7,14 +7,14 @@ match the model the host is currently serving.
 """
 from __future__ import annotations
 
-from contextlib import nullcontext
 import shlex
 import shutil
 import subprocess
+import time
+from collections.abc import Callable
+from contextlib import nullcontext
 from dataclasses import dataclass, field
 from threading import Lock
-import time
-from typing import Callable
 
 import requests
 
@@ -22,7 +22,6 @@ from core.hosts import HOSTS, HostSpec, base_url_for_host, get_host_for_model
 from core.model_catalog import get_expected_runtime_model_ids, get_served_model_id
 from core.models import get_model_runtime_status
 from web.backend.dependencies import Settings
-
 
 StatusCallback = Callable[[str, str], None]
 

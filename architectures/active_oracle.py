@@ -6,9 +6,7 @@ from typing import Any
 from architectures.base import BaseArchitecture
 from core.models import ModelProvider
 from core.prompt import build_prompt, parse_answer
-from core.token_budget import compute_completion_budget
 from core.types import Query, Response
-
 
 _ORACLE_SYSTEM_PROMPT = """You are an absolute truth Oracle. 
 You will be asked a very specific, narrow question by a smaller AI agent that is stuck.

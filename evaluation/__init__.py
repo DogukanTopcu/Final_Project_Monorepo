@@ -1,5 +1,3 @@
-from evaluation.metrics import compute_eats, compute_metrics
-from evaluation.reporter import Reporter
 from evaluation.baselines import (
     LATENCY_SOURCE_ALGORITHMIC,
     list_baselines,
@@ -7,6 +5,8 @@ from evaluation.baselines import (
     make_baseline_key,
     save_baseline,
 )
+from evaluation.metrics import compute_eats, compute_metrics
+from evaluation.reporter import Reporter
 
 __all__ = [
     "compute_eats",

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -81,8 +81,8 @@ def baseline_age_days(index_path: str | Path, key: str) -> float | None:
     try:
         saved = datetime.fromisoformat(created_at)
         if saved.tzinfo is None:
-            saved = saved.replace(tzinfo=timezone.utc)
-        return (datetime.now(timezone.utc) - saved).total_seconds() / 86400
+            saved = saved.replace(tzinfo=UTC)
+        return (datetime.now(UTC) - saved).total_seconds() / 86400
     except ValueError:
         return None
 
@@ -110,7 +110,7 @@ def save_baseline(index_path: str | Path, payload: dict[str, Any]) -> dict[str, 
         raise ValueError(f"Missing baseline payload fields: {', '.join(missing)}")
 
     if "created_at" not in payload:
-        payload = {**payload, "created_at": datetime.now(timezone.utc).isoformat()}
+        payload = {**payload, "created_at": datetime.now(UTC).isoformat()}
 
     index_file = _index_path(index_path)
     runs_dir = _runs_dir(index_path)

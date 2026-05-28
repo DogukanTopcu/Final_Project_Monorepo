@@ -12,17 +12,14 @@ no API calls, no language model. They cover:
 """
 from __future__ import annotations
 
-import pytest
-
+from benchmarks.humaneval_plus import HumanEvalPlusBenchmark
 from benchmarks.livecodebench import (
     LiveCodeBenchBenchmark,
     _normalize_difficulty,
     _parse_test_cases,
 )
-from benchmarks.humaneval_plus import HumanEvalPlusBenchmark
-from core.types import Query
 from core.prompt import build_prompt, parse_answer
-
+from core.types import Query
 
 # ================================================================
 # LiveCodeBench — _normalize_difficulty

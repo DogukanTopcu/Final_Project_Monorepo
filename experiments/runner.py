@@ -215,8 +215,9 @@ class ExperimentRunner:
         tracker = None
         final_metrics = result.to_metrics()
         try:
-            from mlops.tracking import MLflowTracker
             import dataclasses
+
+            from mlops.tracking import MLflowTracker
             tracker = MLflowTracker(
                 experiment_name=f"thesis-{cfg.architecture}",
                 tracking_uri=cfg.mlflow_tracking_uri,
@@ -226,7 +227,7 @@ class ExperimentRunner:
                 run_name=f"{primary_id}-{cfg.benchmark}-{cfg.n_samples}",
                 config=dataclasses.asdict(cfg),
             )
-        except Exception as e:
+        except Exception:
             pass # Suppressed MLFlow warnings to keep terminal clean
 
         for i, query in enumerate(queries, start=1):

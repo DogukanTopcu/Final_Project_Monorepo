@@ -16,9 +16,15 @@ def _require_training_dependencies() -> dict[str, Any]:
         from datasets import load_dataset
         from peft import LoraConfig as PeftLoraConfig
         from peft import get_peft_model, prepare_model_for_kbit_training
-        from transformers import AutoModelForCausalLM, AutoTokenizer
-        from transformers import BitsAndBytesConfig, DataCollatorForLanguageModeling
-        from transformers import Trainer, TrainingArguments, set_seed
+        from transformers import (
+            AutoModelForCausalLM,
+            AutoTokenizer,
+            BitsAndBytesConfig,
+            DataCollatorForLanguageModeling,
+            Trainer,
+            TrainingArguments,
+            set_seed,
+        )
     except ImportError as exc:
         raise SystemExit(
             "Training dependencies are not installed. Install them with:\n"

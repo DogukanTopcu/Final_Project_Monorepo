@@ -25,7 +25,6 @@ from benchmarks._code_execution import run_function_tests, strip_code_fences
 from benchmarks.base import BaseBenchmark
 from core.types import Query
 
-
 _INSTRUCTION = (
     "Complete the following Python function. "
     "Return ONLY the function body — the indented code that goes inside the function. "

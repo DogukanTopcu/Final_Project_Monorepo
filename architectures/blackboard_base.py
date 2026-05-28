@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import time
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from architectures.base import BaseArchitecture
@@ -13,7 +13,7 @@ from core.token_budget import compute_completion_budget
 from core.types import Query, Response
 
 
-class TaskStatus(str, Enum):
+class TaskStatus(StrEnum):
     OPEN = "OPEN"
     IN_PROGRESS = "IN_PROGRESS"
     BLOCKED = "BLOCKED"

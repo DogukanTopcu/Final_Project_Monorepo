@@ -20,7 +20,6 @@ def main() -> None:
 
     try:
         import matplotlib.pyplot as plt  # type: ignore
-        import matplotlib.patches as mpatches  # type: ignore
     except ImportError:
         print("matplotlib not installed — skipping plot. Run: pip install matplotlib")
         return

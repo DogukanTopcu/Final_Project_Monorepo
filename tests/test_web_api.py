@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from contextlib import nullcontext
 import os
+from contextlib import nullcontext
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
 from core.model_catalog import SELECTED_MODELS
-from evaluation.reporter import Reporter
 from core.types import ExperimentResult, Query, Response, SampleResult
+from evaluation.reporter import Reporter
 from web.backend.dependencies import get_settings
 from web.backend.main import create_app
 from web.backend.services import experiment_service

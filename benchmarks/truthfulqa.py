@@ -27,7 +27,7 @@ class TruthfulQABenchmark(BaseBenchmark):
             choices = mc1["choices"]
             labels = mc1["labels"]  # 1 = correct
 
-            correct_idx = next((j for j, l in enumerate(labels) if l == 1), 0)
+            correct_idx = next((j for j, lbl in enumerate(labels) if lbl == 1), 0)
             # Keep original shuffled order — rotating to always place the
             # correct answer at A introduces position bias (models favour A).
             # The dataset was pre-shuffled at creation time, so correct_idx

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from core.types import ExperimentConfig, ExperimentResult
@@ -28,7 +28,7 @@ class Reporter:
             full_llm_avg_algorithmic_latency_ms=full_llm_avg_algorithmic_latency_ms,
             full_llm_energy_kwh=full_llm_energy_kwh,
         )
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         config_payload = dataclasses.asdict(result.config)
         if result.config.architecture == "routing":
             config_payload["routing_policy"] = {
@@ -71,7 +71,7 @@ class Reporter:
         """Save a mean ± std summary report for N repeated runs of the same config."""
         import dataclasses
 
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         run_id = f"multi_{config.architecture}_{config.benchmark}_{len(runs)}runs"
 
         report = {
@@ -107,7 +107,7 @@ class Reporter:
             "",
             "## Configuration",
             f"| Architecture | {config.architecture} |",
-            f"|---|---|",
+            "|---|---|",
             f"| Benchmark | {config.benchmark} |",
             f"| SLM | {config.slm or '—'} |",
             f"| LLM | {config.llm or '—'} |",
@@ -276,7 +276,7 @@ class Reporter:
                     "",
                     f"## Accuracy by {label}",
                     f"| {label} | Accuracy | N |",
-                    f"|---|---|---|",
+                    "|---|---|---|",
                 ]
                 for group, acc in acc_map.items():
                     n = sum(

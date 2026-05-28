@@ -9,8 +9,8 @@ The classification mirrors README's "Current Runtime Topology" section.
 from __future__ import annotations
 
 import os
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Iterable
 
 from core.model_catalog import SELECTED_MODELS, ModelSpec, get_model_spec
 

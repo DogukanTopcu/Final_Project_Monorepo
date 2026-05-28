@@ -1,16 +1,15 @@
 """Unit tests for architectures — uses a stub ModelProvider (no API calls)."""
 from __future__ import annotations
 
-import pytest
 from unittest.mock import MagicMock
 
-from core.types import Query, Response
-from core.models import ModelProvider
-from architectures.routing import RoutingArchitecture, should_escalate
-from architectures.multi_agent import MultiAgentArchitecture
-from architectures.ensemble import EnsembleArchitecture
 from architectures.active_oracle import ActiveOracleArchitecture
+from architectures.ensemble import EnsembleArchitecture
+from architectures.multi_agent import MultiAgentArchitecture
+from architectures.routing import RoutingArchitecture, should_escalate
 from architectures.rtos_watchdog import RTOSWatchdogArchitecture
+from core.models import ModelProvider
+from core.types import Query
 
 
 class StubModel(ModelProvider):
@@ -405,7 +404,7 @@ class TestRTOSWatchdogArchitecture:
                         }
                     ]
                 }
-                yield f"data: {__import__('json').dumps(payload)}".encode("utf-8")
+                yield f"data: {__import__('json').dumps(payload)}".encode()
                 yield b"data: [DONE]"
 
         class StreamSLM(StubModel):
@@ -585,8 +584,9 @@ class TestSwarmAndBlackboardPromptWrapping:
         assert "Solve the problem step-by-step and provide the final answer." in captured_prompt
 
     def test_pure_swarm_nested_subtasks_blocking(self, monkeypatch):
-        from architectures.pure_swarm import PureSwarmArchitecture, SwarmTask
         import asyncio
+
+        from architectures.pure_swarm import PureSwarmArchitecture, SwarmTask
 
         captured_prompt = ""
         def fake_timed_generate(provider, prompt, **kwargs):

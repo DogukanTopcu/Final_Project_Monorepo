@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from functools import lru_cache
 import math
+from functools import lru_cache
 from typing import Any
 from urllib.parse import urlparse
 
 import requests
-from core.model_catalog import get_model_spec
 
+from core.model_catalog import get_model_spec
 
 _DEFAULT_COMPLETION_BUDGET = 512
 _SAFETY_MARGIN_TOKENS = 512

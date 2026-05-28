@@ -30,13 +30,13 @@ for thesis results.
 from __future__ import annotations
 
 import random
-from enum import Enum
+from enum import StrEnum
 
-from core.types import Query
 from benchmarks.base import BaseBenchmark
+from core.types import Query
 
 
-class Difficulty(str, Enum):
+class Difficulty(StrEnum):
     EASY = "easy"
     MEDIUM = "medium"
     HARD = "hard"

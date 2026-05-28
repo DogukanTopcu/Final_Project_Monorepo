@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from evaluation.energy import _MODEL_PARAMS, active_parameters_per_token
+from evaluation.energy import active_parameters_per_token
 
 
 @dataclass

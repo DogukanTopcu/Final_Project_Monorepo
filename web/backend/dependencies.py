@@ -7,7 +7,6 @@ from pathlib import Path
 import boto3
 from pydantic_settings import BaseSettings
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 

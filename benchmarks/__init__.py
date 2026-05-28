@@ -1,14 +1,14 @@
 import warnings
 
-from benchmarks.base import BaseBenchmark
-from benchmarks.mmlu import MMLUBenchmark
 from benchmarks.arc import ARCBenchmark
-from benchmarks.hellaswag import HellaSwagBenchmark
+from benchmarks.base import BaseBenchmark
+from benchmarks.custom_stratified import CustomStratifiedBenchmark
 from benchmarks.gsm8k import GSM8KBenchmark
-from benchmarks.truthfulqa import TruthfulQABenchmark
+from benchmarks.hellaswag import HellaSwagBenchmark
 from benchmarks.humaneval_plus import HumanEvalPlusBenchmark
 from benchmarks.livecodebench import LiveCodeBenchBenchmark
-from benchmarks.custom_stratified import CustomStratifiedBenchmark
+from benchmarks.mmlu import MMLUBenchmark
+from benchmarks.truthfulqa import TruthfulQABenchmark
 
 
 def get_benchmark(name: str, n_samples: int = 100, seed: int = 42) -> BaseBenchmark:

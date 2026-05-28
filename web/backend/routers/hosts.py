@@ -13,7 +13,6 @@ from web.backend.dependencies import Settings, get_settings
 from web.backend.schemas import HostsResponse, HostStatus
 from web.backend.services.model_host_service import probe_host
 
-
 router = APIRouter(prefix="/hosts", tags=["hosts"])
 
 

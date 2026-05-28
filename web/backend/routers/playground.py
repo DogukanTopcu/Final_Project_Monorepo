@@ -9,7 +9,7 @@ respond with a vague 404.
 from __future__ import annotations
 
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -23,7 +23,6 @@ from web.backend.services.model_host_service import (
     fetch_served_model_ids,
     reserve_llm_host,
 )
-
 
 router = APIRouter(prefix="/playground", tags=["playground"])
 
@@ -116,7 +115,7 @@ def playground_chat(
         text=text,
         latency_ms=round(total_latency_ms, 2),
         model_latency_ms=round(model_latency_ms, 2) if model_latency_ms is not None else None,
-        completed_at=datetime.fromisoformat(str(metadata.get("completed_at"))) if metadata.get("completed_at") else datetime.now(timezone.utc),
+        completed_at=datetime.fromisoformat(str(metadata.get("completed_at"))) if metadata.get("completed_at") else datetime.now(UTC),
         input_tokens=in_tokens,
         output_tokens=out_tokens,
         effective_max_tokens=int(metadata.get("effective_max_tokens") or budget),

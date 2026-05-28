@@ -7,11 +7,11 @@ All providers implement a common interface:
 """
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
-from datetime import datetime, timezone
-from ipaddress import ip_address
 import math
 import os
+from abc import ABC, abstractmethod
+from datetime import UTC, datetime
+from ipaddress import ip_address
 from urllib.parse import urlparse
 
 import requests
@@ -85,7 +85,7 @@ def _extract_message_text(message: object) -> str:
     return ""
 
 
-def _resolve_max_tokens(provider: "ModelProvider", prompt: str, kwargs: dict) -> int:
+def _resolve_max_tokens(provider: ModelProvider, prompt: str, kwargs: dict) -> int:
     requested = kwargs.get("max_tokens", 0)
     if not isinstance(requested, int):
         requested = _DEFAULT_MAX_TOKENS
@@ -476,9 +476,9 @@ def _extract_openai_compatible_metadata(
     created = data.get("created")
     completed_at = None
     if isinstance(created, (int, float)):
-        completed_at = datetime.fromtimestamp(created, tz=timezone.utc).isoformat()
+        completed_at = datetime.fromtimestamp(created, tz=UTC).isoformat()
     else:
-        completed_at = datetime.now(timezone.utc).isoformat()
+        completed_at = datetime.now(UTC).isoformat()
 
     thesis_meta = data.get("_thesis")
     if not isinstance(thesis_meta, dict):

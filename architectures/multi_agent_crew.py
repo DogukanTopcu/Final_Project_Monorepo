@@ -16,8 +16,7 @@ from __future__ import annotations
 import os
 import re
 import time
-from enum import Enum
-from typing import Any
+from enum import StrEnum
 
 import requests
 
@@ -26,7 +25,7 @@ from core.token_budget import compute_completion_budget
 from core.types import Query, Response
 
 
-class Domain(str, Enum):
+class Domain(StrEnum):
     REASONING = "reasoning"
     CODE = "code"
     FACTUAL = "factual"

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from web.backend.dependencies import get_ce_client, get_ec2_client, get_s3_client
@@ -45,7 +45,7 @@ def stop_instance(instance_id: str) -> dict[str, Any]:
 
 def get_cost_estimate() -> CostEstimate:
     ce = get_ce_client()
-    end = datetime.now(timezone.utc).date()
+    end = datetime.now(UTC).date()
     start = end - timedelta(days=30)
 
     try:

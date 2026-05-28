@@ -10,8 +10,8 @@ Implements:
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
-from typing import Sequence
+from collections.abc import Sequence
+from dataclasses import dataclass
 
 
 @dataclass
@@ -76,12 +76,12 @@ def shapiro_wilk(data: Sequence[float]) -> tuple[float, float]:
 def tukey_hsd(groups: dict[str, Sequence[float]]) -> list[TukeyResult]:
     """Pairwise Tukey HSD. Returns all pairwise comparisons."""
     from itertools import combinations
-    from scipy.stats import studentized_range  # type: ignore
+
     import numpy as np
+    from scipy.stats import studentized_range  # type: ignore
 
     names = list(groups.keys())
     arrays = [np.array(groups[n]) for n in names]
-    grand_mean = np.concatenate(arrays).mean()
     k = len(arrays)
     n_total = sum(len(a) for a in arrays)
     ms_within = sum(((a - a.mean()) ** 2).sum() for a in arrays) / (n_total - k)

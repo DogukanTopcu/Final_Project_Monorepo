@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class Architecture(str, Enum):
+class Architecture(StrEnum):
     MONOLITHIC = "monolithic"
     ROUTING = "routing"
     MULTI_AGENT = "multi_agent"
@@ -21,14 +21,14 @@ class Architecture(str, Enum):
     PURE_SWARM = "pure_swarm"
 
 
-class ArchitectureMode(str, Enum):
+class ArchitectureMode(StrEnum):
     MONOLITHIC = "monolithic"
     HYBRID = "hybrid"
     ENSEMBLE = "ensemble"
     SWARM = "swarm"
 
 
-class Benchmark(str, Enum):
+class Benchmark(StrEnum):
     MMLU = "mmlu"
     ARC = "arc"
     HELLASWAG = "hellaswag"
@@ -37,7 +37,7 @@ class Benchmark(str, Enum):
     CUSTOM_STRATIFIED = "custom_stratified"
 
 
-class ExperimentStatus(str, Enum):
+class ExperimentStatus(StrEnum):
     QUEUED = "queued"
     RUNNING = "running"
     COMPLETED = "completed"

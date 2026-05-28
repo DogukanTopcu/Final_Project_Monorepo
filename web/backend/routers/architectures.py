@@ -14,7 +14,6 @@ from web.backend.schemas import (
     ArchitectureSpec,
 )
 
-
 router = APIRouter(prefix="/architectures", tags=["architectures"])
 
 

@@ -119,7 +119,6 @@ async def ping_model(model_id: str, settings: Settings = Depends(get_settings)):
     if not bool(status.get("available")):
         return ModelPingResponse(model_id=model_id, reachable=False, latency_ms=None)
 
-    provider = str(status.get("provider", "unknown"))
     base_url = str(status.get("base_url", "")).rstrip("/")
     if not base_url:
         return ModelPingResponse(model_id=model_id, reachable=False, latency_ms=None)

@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import json
 import math
-import os
 import time
 from typing import Any
 
 import requests
 
 from architectures.base import BaseArchitecture
-from core.models import ModelProvider, OpenAICompatibleModel
+from core.models import ModelProvider
 from core.prompt import build_prompt, parse_answer
 from core.types import Query, Response
 
@@ -145,8 +144,6 @@ class RTOSWatchdogArchitecture(BaseArchitecture):
         # ---------------------------------------------------------
         if interrupted:
             llm_calls += 1
-            t1 = time.perf_counter()
-            
             # Ağır modele "Kaldığı yerden devam et" promptu veriyoruz.
             # Not: Tam bir 'completion' modeli değilse, Instruct modellerine 
             # bunu prompt engineering ile yaptırıyoruz.

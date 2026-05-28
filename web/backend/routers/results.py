@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -69,7 +69,7 @@ def _load_local_result_summaries(settings: Settings) -> dict[str, ResultSummary]
             total_energy_kwh=metrics.get("total_energy_kwh"),
             total_infra_cost_usd=metrics.get("total_infra_cost_usd"),
             created_at=datetime.fromisoformat(
-                data.get("created_at", datetime.now(timezone.utc).isoformat())
+                data.get("created_at", datetime.now(UTC).isoformat())
             ),
         )
     return result_map
@@ -104,7 +104,7 @@ def _load_s3_result_summaries(settings: Settings) -> dict[str, ResultSummary]:
             total_energy_kwh=metrics.get("total_energy_kwh"),
             total_infra_cost_usd=metrics.get("total_infra_cost_usd"),
             created_at=datetime.fromisoformat(
-                data.get("created_at", datetime.now(timezone.utc).isoformat())
+                data.get("created_at", datetime.now(UTC).isoformat())
             ),
         )
     return result_map
@@ -179,7 +179,7 @@ async def get_result(result_id: str, settings: Settings = Depends(get_settings))
                 samples=data.get("samples", []),
                 config=data.get("config", {}),
                 created_at=datetime.fromisoformat(
-                    data.get("created_at", datetime.now(timezone.utc).isoformat())
+                    data.get("created_at", datetime.now(UTC).isoformat())
                 ),
             )
         except Exception:
@@ -211,7 +211,7 @@ async def get_result(result_id: str, settings: Settings = Depends(get_settings))
             samples=data.get("samples", []),
             config=data.get("config", {}),
             created_at=datetime.fromisoformat(
-                data.get("created_at", datetime.now(timezone.utc).isoformat())
+                data.get("created_at", datetime.now(UTC).isoformat())
             ),
         )
     except Exception as exc:

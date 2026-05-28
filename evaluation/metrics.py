@@ -74,7 +74,7 @@ def aggregate_runs(runs: list[dict[str, float]]) -> dict[str, float]:
     return out
 
 
-def compute_subject_accuracy(result: "ExperimentResult") -> dict[str, dict[str, float]]:
+def compute_subject_accuracy(result: ExperimentResult) -> dict[str, dict[str, float]]:
     """Disaggregate accuracy by query metadata group.
 
     Returns a dict keyed by group field name, each containing a

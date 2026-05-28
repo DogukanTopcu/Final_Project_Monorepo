@@ -12,11 +12,10 @@ from __future__ import annotations
 
 import pytest
 
-from benchmarks._code_execution import strip_code_fences, run_function_tests, run_io_tests
-from core.prompt import build_prompt, parse_answer, mcq_prompt, open_prompt
-from core.types import Query, ExperimentConfig, ExperimentResult, SampleResult, Response
-from evaluation.metrics import compute_ece, aggregate_runs, compute_subject_accuracy
-
+from benchmarks._code_execution import run_function_tests, run_io_tests, strip_code_fences
+from core.prompt import build_prompt, mcq_prompt, open_prompt, parse_answer
+from core.types import ExperimentConfig, ExperimentResult, Query, Response, SampleResult
+from evaluation.metrics import aggregate_runs, compute_ece, compute_subject_accuracy
 
 # ------------------------------------------------------------------
 # strip_code_fences

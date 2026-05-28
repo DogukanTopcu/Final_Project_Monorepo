@@ -21,19 +21,16 @@ preference pipeline described above.
 """
 from __future__ import annotations
 
-import ast
+import os
 import subprocess
 import sys
-import textwrap
 import tempfile
-import os
-from pathlib import Path
+import textwrap
 
 from datasets import load_dataset
 
-from core.types import Query
 from benchmarks.base import BaseBenchmark
-
+from core.types import Query
 
 _INSTRUCTION = (
     "Complete the following Python function. "

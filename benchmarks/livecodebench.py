@@ -29,7 +29,6 @@ from benchmarks._code_execution import run_io_tests, strip_code_fences
 from benchmarks.base import BaseBenchmark
 from core.types import Query
 
-
 _DEFAULT_VERSION = "release_v5"
 
 _PROMPT_TEMPLATE = """\

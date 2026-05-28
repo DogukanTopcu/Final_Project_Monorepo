@@ -232,7 +232,7 @@ def estimate_step_usage(model_id: str, latency_ms: float) -> dict[str, float | s
     }
 
 
-def annotate_response_resource_usage(response: "Response") -> "Response":
+def annotate_response_resource_usage(response: Response) -> Response:
     steps = response.metadata.get("inference_steps")
     if not isinstance(steps, list) or not steps:
         steps = [
