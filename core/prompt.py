@@ -6,6 +6,49 @@ import re
 from core.types import Query
 
 
+def _trim_blank_lines(lines: list[str]) -> list[str]:
+    while lines and not lines[0].strip():
+        lines.pop(0)
+    while lines and not lines[-1].strip():
+        lines.pop()
+    return lines
+
+
+def normalize_code_answer(text: str) -> str | None:
+    """Normalize code-task outputs while preserving code indentation.
+
+    Models sometimes wrap otherwise-correct code inside Markdown fences or add
+    extra blank lines around the snippet. For code-generation benchmarks we
+    treat those wrappers as presentation noise and keep only the code itself.
+    """
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    lines = normalized.splitlines()
+
+    fence_start: int | None = None
+    fence_end: int | None = None
+    for idx, line in enumerate(lines):
+        if line.strip().startswith("```"):
+            if fence_start is None:
+                fence_start = idx
+            else:
+                fence_end = idx
+                break
+
+    if fence_start is not None and fence_end is not None:
+        candidate_lines = lines[fence_start + 1:fence_end]
+    else:
+        candidate_lines = [
+            line for line in lines if not line.strip().startswith("```")
+        ]
+
+    candidate_lines = _trim_blank_lines(candidate_lines)
+    if not candidate_lines:
+        return None
+
+    normalized_code = "\n".join(candidate_lines)
+    return normalized_code if normalized_code.strip() else None
+
+
 def _choice_labels(query: Query) -> list[str]:
     count = len(query.choices or [])
     return [chr(65 + i) for i in range(count)]
@@ -86,7 +129,7 @@ def parse_answer(text: str | None, task_type: str) -> str | None:
     if task_type == "mcq":
         return parse_mcq_answer(text)
     if task_type == "code":
-        return text  # raw code is the answer; correctness is via execution
+        return normalize_code_answer(text)
     return parse_open_answer(text)
 
 

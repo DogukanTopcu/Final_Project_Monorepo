@@ -14,23 +14,16 @@ import sys
 import tempfile
 import textwrap
 
+from core.prompt import normalize_code_answer
+
 
 def strip_code_fences(text: str) -> str:
-    """Extract code from inside markdown code fences.
+    """Normalize code output by removing Markdown-only wrapper lines.
 
-    If the model wraps its answer in triple-backtick fences, return only the
-    content between the first opening fence and the last closing fence.
-    If there are no fences, return the text stripped of any stray backtick
-    lines but otherwise unchanged.
+    The returned string preserves code indentation so function bodies remain
+    executable after normalization.
     """
-    lines = text.splitlines()
-    fence_idx = [i for i, line in enumerate(lines) if line.strip().startswith("```")]
-    if len(fence_idx) >= 2:
-        start = fence_idx[0] + 1
-        end = fence_idx[-1]
-        return "\n".join(lines[start:end])
-    # No complete fence pair — drop any stray ``` lines and return the rest
-    return "\n".join(line for line in lines if not line.strip().startswith("```"))
+    return normalize_code_answer(text) or ""
 
 
 def run_function_tests(

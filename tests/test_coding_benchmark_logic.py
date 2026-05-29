@@ -8,7 +8,7 @@ no API calls, no language model. They cover:
   - HumanEval+: is_correct with a real Query object, task_type attribute,
     code fence stripping in the full pipeline
   - Both benchmarks: correct task_type="code" flows through build_prompt
-    and parse_answer without modification
+    and parse_answer with benchmark-safe normalization
 """
 from __future__ import annotations
 
@@ -333,9 +333,17 @@ class TestCodeTaskTypeIntegration:
         result = build_prompt(q, "code")
         assert result == q.text
 
-    def test_parse_answer_returns_code_verbatim(self):
+    def test_parse_answer_returns_code_verbatim_when_already_clean(self):
         code = "n = int(input())\nprint(n * 2)"
         assert parse_answer(code, "code") == code
+
+    def test_parse_answer_strips_humaneval_style_markdown_fences(self):
+        code = "```python\n    return a + b\n```"
+        assert parse_answer(code, "code") == "    return a + b"
+
+    def test_parse_answer_strips_incomplete_fence_wrappers(self):
+        code = "```python\n    if not paren_string:"
+        assert parse_answer(code, "code") == "    if not paren_string:"
 
     def test_parse_answer_none_returns_none(self):
         assert parse_answer(None, "code") is None
