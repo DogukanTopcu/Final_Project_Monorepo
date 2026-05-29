@@ -19,6 +19,8 @@ export type Benchmark =
   | "hellaswag"
   | "gsm8k"
   | "truthfulqa"
+  | "humaneval_plus"
+  | "livecodebench"
   | "custom_stratified";
 
 export type ExperimentStatus =

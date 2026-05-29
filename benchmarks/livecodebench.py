@@ -24,12 +24,14 @@ Reference:
 from __future__ import annotations
 
 import json
+from typing import Any
 
 from benchmarks._code_execution import run_io_tests, strip_code_fences
 from benchmarks.base import BaseBenchmark
 from core.types import Query
 
 _DEFAULT_VERSION = "release_v5"
+_DATASET_REPO = "livecodebench/code_generation_lite"
 
 _PROMPT_TEMPLATE = """\
 {problem}
@@ -47,6 +49,69 @@ Reference starter code (adapt as needed — write a complete standalone solution
 
 Write a complete Python solution. Read input from standard input (stdin) and \
 write output to standard output (stdout). Do not include any explanation."""
+
+
+def _build_allowed_files() -> dict[str, list[str]]:
+    allowed = {
+        "release_v1": ["test.jsonl"],
+        "release_v2": ["test.jsonl", "test2.jsonl"],
+        "release_v3": ["test.jsonl", "test2.jsonl", "test3.jsonl"],
+        "release_v4": ["test.jsonl", "test2.jsonl", "test3.jsonl", "test4.jsonl"],
+        "release_v5": ["test.jsonl", "test2.jsonl", "test3.jsonl", "test4.jsonl", "test5.jsonl"],
+        "release_v6": [
+            "test.jsonl",
+            "test2.jsonl",
+            "test3.jsonl",
+            "test4.jsonl",
+            "test5.jsonl",
+            "test6.jsonl",
+        ],
+    }
+    allowed["release_latest"] = list(allowed["release_v6"])
+
+    versions = [f"v{i}" for i in range(1, 7)]
+    for idx, version in enumerate(versions, start=1):
+        allowed[version] = [f"test{idx}.jsonl" if idx > 1 else "test.jsonl"]
+    for start in range(1, len(versions) + 1):
+        for end in range(start + 1, len(versions) + 1):
+            allowed[f"v{start}_v{end}"] = [
+                f"test{idx}.jsonl" if idx > 1 else "test.jsonl"
+                for idx in range(start, end + 1)
+            ]
+    return allowed
+
+
+_ALLOWED_FILES = _build_allowed_files()
+
+
+def _files_for_version(version: str) -> list[str]:
+    files = _ALLOWED_FILES.get(version)
+    if files is None:
+        supported = ", ".join(sorted(_ALLOWED_FILES))
+        raise ValueError(
+            f"Unsupported LiveCodeBench version_tag: {version!r}. "
+            f"Expected one of: {supported}"
+        )
+    return list(files)
+
+
+def _load_rows(version: str) -> list[dict[str, Any]]:
+    from datasets import load_dataset  # type: ignore
+    from huggingface_hub import hf_hub_download  # type: ignore
+
+    # `datasets` 4.x removed support for Hub-hosted dataset scripts.
+    # LiveCodeBench still stores its split-selection logic in that script,
+    # so we reproduce the file mapping here and load the raw JSONL files.
+    local_files = [
+        hf_hub_download(
+            repo_id=_DATASET_REPO,
+            repo_type="dataset",
+            filename=filename,
+        )
+        for filename in _files_for_version(version)
+    ]
+    dataset = load_dataset("json", data_files={"test": local_files}, split="test")
+    return [dict(row) for row in dataset]
 
 
 def _normalize_difficulty(raw: str | int | None) -> str:
@@ -99,15 +164,8 @@ class LiveCodeBenchBenchmark(BaseBenchmark):
         self.version = version
 
     def _load_all(self) -> list[Query]:
-        from datasets import load_dataset  # type: ignore
-
-        ds = load_dataset(
-            "livecodebench/code_generation_lite",
-            version_tag=self.version,
-            split="test",
-        )
         queries: list[Query] = []
-        for row in ds:
+        for row in _load_rows(self.version):
             test_cases = _parse_test_cases(row.get("public_test_cases"))
             if not test_cases:
                 # Skip problems with no evaluable public test cases
