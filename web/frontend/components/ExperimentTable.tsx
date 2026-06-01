@@ -46,6 +46,7 @@ export function ExperimentTable() {
             <thead>
               <tr className="border-b border-zinc-200 text-zinc-500">
                 <th className="pb-3 pr-4 font-medium">ID</th>
+                <th className="pb-3 pr-4 font-medium">Sample Size</th>
                 <th className="pb-3 pr-4 font-medium">Architecture</th>
                 <th className="pb-3 pr-4 font-medium">Benchmark</th>
                 <th className="pb-3 pr-4 font-medium">Models</th>
@@ -65,6 +66,7 @@ export function ExperimentTable() {
                       {exp.experiment_id}
                     </Link>
                   </td>
+                  <td className="py-3 pr-4">{exp.n_samples ?? "—"}</td>
                   <td className="py-3 pr-4 capitalize">{exp.architecture.replace(/_/g, " ")}</td>
                   <td className="py-3 pr-4 uppercase">{exp.benchmark}</td>
                   <td className="py-3 pr-4">
