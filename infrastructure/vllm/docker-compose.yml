@@ -19,6 +19,32 @@ services:
       --served-model-name meta-llama/Llama-3.3-70B-Instruct
       --port 8000
       --tensor-parallel-size ${LLAMA33_TP_SIZE:-1}
+      --max-model-len 8192
+      --gpu-memory-utilization 0.98
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    profiles: ["heavy"]
+
+  gpt-oss-120b:
+    image: vllm/vllm-openai:v0.19.1
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=${GPT_OSS_120B_VISIBLE_DEVICES:-all}
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    ports:
+      - "8000:8000"
+    command: >
+      --model openai/gpt-oss-120b
+      --served-model-name openai/gpt-oss-120b
+      --port 8000
+      --tensor-parallel-size ${GPT_OSS_120B_TP_SIZE:-1}
       --max-model-len 32768
       --gpu-memory-utilization 0.90
     deploy:

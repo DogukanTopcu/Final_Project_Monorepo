@@ -156,26 +156,29 @@ For VM-side latency and energy metrics on the shared RTX6000 host:
 - run `infrastructure/vllm/metrics_proxy.py` on host port `8000`
 - install the persistent service in [RTX6000_METRICS_PROXY.md](./RTX6000_METRICS_PROXY.md)
 
-## 6. Optional Nebius Heavy Host
+## 6. Nebius Heavy Host (H200)
 
-Use only if heavy-tier experiments are needed.
-
-Recommended target:
-- H200 spot if capacity exists
-- H100 spot fallback otherwise
+Serves `llama3.3-70b` and `gpt-oss-120b`. Only one model runs at a time on port 8000.
+Switching model: `~/run-heavy-llm.sh <model>` (analogous to `~/run-mid-llm.sh` on RTX6000).
 
 Known operational caveats:
 - H200 spot can fail with `NotEnoughResources`
-- if the instance is created through Nebius CLI, make sure SSH user data is injected at creation time
+- SSH user (`dogukan`) must be injected via cloud-init at creation time
 
-Minimal first checks after SSH:
+### 6.1 SSH
 
 ```bash
-whoami
-nvidia-smi
+ssh dogukan@<NEBIUS_HEAVY_IP>
 ```
 
-Then:
+### 6.2 First checks
+
+```bash
+whoami          # should print: dogukan
+nvidia-smi      # should show H200 SXM (141 GB)
+```
+
+### 6.3 Install Docker + NVIDIA Container Toolkit
 
 ```bash
 sudo apt-get update
@@ -185,8 +188,6 @@ sudo systemctl start docker
 sudo usermod -aG docker $USER
 newgrp docker
 ```
-
-And NVIDIA container runtime:
 
 ```bash
 distribution=$(. /etc/os-release; echo ${ID}${VERSION_ID})
@@ -204,10 +205,125 @@ sudo nvidia-ctk runtime configure --runtime=docker
 sudo systemctl restart docker
 ```
 
-Verification:
+Verify:
 
 ```bash
-sudo docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi
+docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi
+```
+
+### 6.4 HF cache directory
+
+```bash
+sudo mkdir -p /opt/hf-cache
+sudo chown $USER:$USER /opt/hf-cache
+```
+
+### 6.5 Install run script
+
+```bash
+cp infrastructure/vllm/run-heavy-llm.sh ~/run-heavy-llm.sh
+chmod +x ~/run-heavy-llm.sh
+```
+
+Or copy manually (if not syncing the repo):
+
+```bash
+# scp from local:
+scp infrastructure/vllm/run-heavy-llm.sh dogukan@<NEBIUS_HEAVY_IP>:~/run-heavy-llm.sh
+ssh dogukan@<NEBIUS_HEAVY_IP> chmod +x ~/run-heavy-llm.sh
+```
+
+### 6.6 Set HF_TOKEN
+
+```bash
+export HF_TOKEN=hf_...
+# Persist across reboots:
+echo 'export HF_TOKEN=hf_...' >> ~/.bashrc
+```
+
+### 6.7 Serve a model
+
+vLLM runs on port **8001** (internal). The metrics proxy (step 6.8) sits on port **8000** (public).
+
+```bash
+~/run-heavy-llm.sh llama3.3-70b
+# or
+~/run-heavy-llm.sh gpt-oss-120b
+```
+
+Follow startup logs (model load takes ~2-4 min):
+
+```bash
+docker logs -f heavy-llm
+```
+
+Verify vLLM directly (before proxy is up):
+
+```bash
+curl -fsS http://localhost:8001/v1/models | jq .
+```
+
+### 6.8 Metrics proxy setup
+
+Same as RTX6000 — proxy intercepts port 8000, measures latency/energy/CO2 via NVML+CodeCarbon, appends `_thesis` block.
+
+**Copy proxy source:**
+
+```bash
+# from local machine:
+rsync -av --exclude='.venv' --exclude='__pycache__' \
+  "infrastructure/" \
+  "evaluation/" \
+  "core/" \
+  dogukan@<NEBIUS_HEAVY_IP>:~/thesis-proxy-src/
+```
+
+Or minimal copy:
+
+```bash
+scp infrastructure/vllm/metrics_proxy.py dogukan@<NEBIUS_HEAVY_IP>:~/thesis-proxy-src/infrastructure/vllm/
+scp evaluation/energy.py dogukan@<NEBIUS_HEAVY_IP>:~/thesis-proxy-src/evaluation/
+scp evaluation/__init__.py dogukan@<NEBIUS_HEAVY_IP>:~/thesis-proxy-src/evaluation/
+scp core/types.py dogukan@<NEBIUS_HEAVY_IP>:~/thesis-proxy-src/core/
+scp core/__init__.py dogukan@<NEBIUS_HEAVY_IP>:~/thesis-proxy-src/core/
+```
+
+**Create venv and install deps (on VM):**
+
+```bash
+python3 -m venv ~/thesis-proxy-venv
+~/thesis-proxy-venv/bin/pip install -U pip
+~/thesis-proxy-venv/bin/pip install fastapi uvicorn[standard] httpx codecarbon pynvml
+```
+
+**Install systemd service:**
+
+```bash
+# from local machine:
+scp infrastructure/systemd/thesis-vllm-metrics-proxy-heavy.service \
+  dogukan@<NEBIUS_HEAVY_IP>:/tmp/
+
+# on VM:
+sudo cp /tmp/thesis-vllm-metrics-proxy-heavy.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now thesis-vllm-metrics-proxy-heavy
+```
+
+**Verify proxy:**
+
+```bash
+systemctl status thesis-vllm-metrics-proxy-heavy --no-pager
+journalctl -u thesis-vllm-metrics-proxy-heavy -n 30 --no-pager
+curl -fsS http://localhost:8000/health | jq .
+curl -fsS http://localhost:8000/v1/models | jq .
+```
+
+### 6.9 Model switching
+
+```bash
+~/run-heavy-llm.sh gpt-oss-120b   # stops current, starts new on port 8001
+docker logs -f heavy-llm           # wait for "Application startup complete"
+curl -fsS http://localhost:8000/v1/models | jq .   # via proxy on port 8000
 ```
 
 ## 7. Register Endpoints in `.env`
