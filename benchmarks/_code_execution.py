@@ -38,6 +38,16 @@ def run_function_tests(
     Assembles: prompt (signature + docstring) + code (body) + test_code +
     check(entry_point). Returns True if the subprocess exits 0.
     """
+    # Some models return the body without the expected 4-space indent.
+    # Auto-indent so the body sits correctly inside the function definition.
+    if code and not code[0].isspace():
+        first_stripped = code.lstrip()
+        if not first_stripped.startswith(("def ", "async def ")):
+            code = "\n".join(
+                "    " + line if line.strip() else line
+                for line in code.splitlines()
+            )
+
     full_program = textwrap.dedent(f"""\
 {prompt}
 {code}
