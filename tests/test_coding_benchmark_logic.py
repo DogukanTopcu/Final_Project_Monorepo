@@ -8,13 +8,17 @@ no API calls, no language model. They cover:
   - HumanEval+: is_correct with a real Query object, task_type attribute,
     code fence stripping in the full pipeline
   - Both benchmarks: correct task_type="code" flows through build_prompt
-    and parse_answer without modification
+    and parse_answer with benchmark-safe normalization
 """
 from __future__ import annotations
 
+import pytest
+
+import benchmarks.livecodebench as livecodebench_module
 from benchmarks.humaneval_plus import HumanEvalPlusBenchmark
 from benchmarks.livecodebench import (
     LiveCodeBenchBenchmark,
+    _files_for_version,
     _normalize_difficulty,
     _parse_test_cases,
 )
@@ -117,6 +121,81 @@ class TestParseTestCases:
 
     def test_non_list_json_returns_empty(self):
         assert _parse_test_cases('{"input": "1", "output": "2"}') == []
+
+
+# ================================================================
+# LiveCodeBench — version/file mapping and row loading contract
+# ================================================================
+
+class TestLiveCodeBenchVersionMapping:
+    def test_release_v5_includes_first_five_files(self):
+        assert _files_for_version("release_v5") == [
+            "test.jsonl",
+            "test2.jsonl",
+            "test3.jsonl",
+            "test4.jsonl",
+            "test5.jsonl",
+        ]
+
+    def test_release_latest_maps_to_release_v6(self):
+        assert _files_for_version("release_latest") == [
+            "test.jsonl",
+            "test2.jsonl",
+            "test3.jsonl",
+            "test4.jsonl",
+            "test5.jsonl",
+            "test6.jsonl",
+        ]
+
+    def test_alias_range_maps_to_expected_files(self):
+        assert _files_for_version("v3_v5") == [
+            "test3.jsonl",
+            "test4.jsonl",
+            "test5.jsonl",
+        ]
+
+    def test_invalid_version_raises_clear_error(self):
+        with pytest.raises(ValueError, match="Unsupported LiveCodeBench version_tag"):
+            _files_for_version("release_v7")
+
+
+class TestLiveCodeBenchLoadAll:
+    def test_load_all_builds_queries_from_raw_rows(self, monkeypatch: pytest.MonkeyPatch):
+        rows = [
+            {
+                "question_id": "123",
+                "question_content": "Double the input integer.",
+                "starter_code": "def solve():\n    pass",
+                "difficulty": "easy",
+                "platform": "codeforces",
+                "question_title": "Double It",
+                "contest_date": "2024-01-01",
+                "public_test_cases": '[{"input": "3\\n", "output": "6", "testtype": "stdin"}]',
+            },
+            {
+                "question_id": "124",
+                "question_content": "This row should be skipped.",
+                "starter_code": "",
+                "difficulty": "hard",
+                "platform": "atcoder",
+                "question_title": "Skip Me",
+                "contest_date": "2024-01-02",
+                "public_test_cases": "[]",
+            },
+        ]
+        monkeypatch.setattr(livecodebench_module, "_load_rows", lambda version: rows)
+
+        bench = LiveCodeBenchBenchmark(n_samples=10, seed=42, version="release_v5")
+        queries = bench._load_all()
+
+        assert len(queries) == 1
+        query = queries[0]
+        assert query.id == "lcb_123"
+        assert "Double the input integer." in query.text
+        assert "Reference starter code" in query.text
+        assert query.metadata["difficulty"] == "easy"
+        assert query.metadata["title"] == "Double It"
+        assert query.metadata["test_cases"] == [{"input": "3\n", "output": "6"}]
 
 
 # ================================================================
@@ -254,9 +333,17 @@ class TestCodeTaskTypeIntegration:
         result = build_prompt(q, "code")
         assert result == q.text
 
-    def test_parse_answer_returns_code_verbatim(self):
+    def test_parse_answer_returns_code_verbatim_when_already_clean(self):
         code = "n = int(input())\nprint(n * 2)"
         assert parse_answer(code, "code") == code
+
+    def test_parse_answer_strips_humaneval_style_markdown_fences(self):
+        code = "```python\n    return a + b\n```"
+        assert parse_answer(code, "code") == "    return a + b"
+
+    def test_parse_answer_strips_incomplete_fence_wrappers(self):
+        code = "```python\n    if not paren_string:"
+        assert parse_answer(code, "code") == "    if not paren_string:"
 
     def test_parse_answer_none_returns_none(self):
         assert parse_answer(None, "code") is None

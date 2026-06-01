@@ -121,6 +121,16 @@ def test_parse_answer_code_returns_raw_text():
     assert parse_answer(code, "code") == code
 
 
+def test_parse_answer_code_strips_markdown_fences_and_blank_wrappers():
+    code = "```python\n\n    return 42\n\n```"
+    assert parse_answer(code, "code") == "    return 42"
+
+
+def test_parse_answer_code_drops_stray_fence_lines():
+    code = "```python\nn = int(input())\nprint(n * 2)"
+    assert parse_answer(code, "code") == "n = int(input())\nprint(n * 2)"
+
+
 def test_parse_answer_code_none_input():
     assert parse_answer(None, "code") is None
 

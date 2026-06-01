@@ -121,6 +121,23 @@ def test_launch_accepts_ensemble_architecture(client: TestClient):
     assert response.status_code == 200
 
 
+@pytest.mark.parametrize("benchmark", ["humaneval_plus", "livecodebench"])
+def test_launch_accepts_coding_benchmarks(client: TestClient, benchmark: str):
+    response = client.post(
+        "/api/experiments",
+        json={
+            "architecture": "routing",
+            "benchmark": benchmark,
+            "n_samples": 5,
+            "slm": "qwen3.5-4b",
+            "llm": "gpt-oss-20b",
+            "config_overrides": {"dry_run": True},
+        },
+    )
+
+    assert response.status_code == 200
+
+
 def test_launch_accepts_active_oracle_architecture(client: TestClient):
     response = client.post(
         "/api/experiments",
