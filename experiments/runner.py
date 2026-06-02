@@ -10,13 +10,19 @@ Orchestrates the full experiment loop:
   6. Save JSON + Markdown reports
   7. Invoke RunnerCallbacks for SSE streaming (Web UI integration)
 
-Designed to run in a ThreadPoolExecutor — all state is local, no global mutation.
+Queries run one at a time (the GPU serves a single request, so the recorded
+wall-clock latency — and the energy derived from it — reflects isolated
+execution). A single background thread handles the non-GPU post-processing
+(scoring, energy annotation, MLflow, callbacks) so that bookkeeping overlaps
+the next request instead of blocking the run.
 """
 from __future__ import annotations
 
+import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from queue import Queue
 from typing import Any
 
 from architectures import get_architecture
@@ -70,84 +76,83 @@ class ExperimentRunner:
                 setattr(config, k, v)
         return cls(config)
 
-    def run(self) -> ExperimentResult:
-        cfg = self.config
+    # ------------------------------------------------------------------
+    # Architecture factory helpers
+    # ------------------------------------------------------------------
 
-        # Dry run — validate config, skip inference
-        if cfg.dry_run:
-            print(f"[DRY RUN] {self.experiment_id} config validated. No inference.")
-            return ExperimentResult(
-                experiment_id=self.experiment_id,
-                config=cfg,
-                samples=[],
-            )
-
-        # Build models
-        slm = None
-        secondary_slm = None  # ADDED: For Swarm architectures
-        llm = None
-        ensemble_slms: list[Any] = []
-
-        # Determine which models this architecture needs.
+    def _validate_models(self, cfg: ExperimentConfig) -> None:
+        """Call assert_model_runnable once for every model this run needs."""
         if cfg.architecture == "monolithic":
             assert_model_runnable(cfg.llm)
-            llm = get_model(cfg.llm)
         elif cfg.architecture == "ensemble":
-            if cfg.ensemble_slms:
-                ensemble_ids = cfg.ensemble_slms
-            else:
-                ensemble_ids = [cfg.slm] * max(int(cfg.n_models), 1) if cfg.slm else []
-            if not ensemble_ids:
-                raise ValueError("ensemble requires at least one SLM (set ensemble_slms or slm).")
+            ensemble_ids = cfg.ensemble_slms or (
+                [cfg.slm] * max(int(cfg.n_models), 1) if cfg.slm else []
+            )
             for sid in ensemble_ids:
                 assert_model_runnable(sid)
-                ensemble_slms.append(get_model(sid))
             if cfg.llm_tiebreak and cfg.llm:
                 assert_model_runnable(cfg.llm)
-                llm = get_model(cfg.llm)
-        elif cfg.architecture in ["blackboard", "entropy_blackboard"]:
-            # ADDED: Custom loading for 3-node swarms
+        elif cfg.architecture in {"blackboard", "entropy_blackboard"}:
             assert_model_runnable(cfg.slm)
             assert_model_runnable(cfg.llm)
-            
-
             if not cfg.secondary_slm:
-                raise ValueError("blackboard architectures require secondary_slm")
-
+                raise ValueError(f"{cfg.architecture} requires secondary_slm")
             assert_model_runnable(cfg.secondary_slm)
-
-            slm = get_model(cfg.slm)
-            secondary_slm = get_model(cfg.secondary_slm)
-            llm = get_model(cfg.llm)
         elif cfg.architecture == "pure_swarm":
             assert_model_runnable(cfg.slm)
             if not cfg.secondary_slm:
                 raise ValueError("pure_swarm requires secondary_slm")
             assert_model_runnable(cfg.secondary_slm)
+        else:
+            assert_model_runnable(cfg.slm)
+            assert_model_runnable(cfg.llm)
+
+    def _build_arch(self, cfg: ExperimentConfig, task_type: str) -> Any:
+        """Create one independent architecture instance with its own model clients.
+
+        Called once per worker so threads never share mutable model state.
+        get_model() is cheap (creates an HTTP client wrapper, no GPU weights).
+        """
+        slm = None
+        secondary_slm = None
+        llm = None
+        ensemble_slms: list[Any] = []
+
+        if cfg.architecture == "monolithic":
+            llm = get_model(cfg.llm)
+        elif cfg.architecture == "ensemble":
+            ensemble_ids = cfg.ensemble_slms or (
+                [cfg.slm] * max(int(cfg.n_models), 1) if cfg.slm else []
+            )
+            if not ensemble_ids:
+                raise ValueError("ensemble requires at least one SLM.")
+            ensemble_slms = [get_model(sid) for sid in ensemble_ids]
+            if cfg.llm_tiebreak and cfg.llm:
+                llm = get_model(cfg.llm)
+        elif cfg.architecture in {"blackboard", "entropy_blackboard"}:
+            slm = get_model(cfg.slm)
+            secondary_slm = get_model(cfg.secondary_slm)
+            llm = get_model(cfg.llm)
+        elif cfg.architecture == "pure_swarm":
             slm = get_model(cfg.slm)
             secondary_slm = get_model(cfg.secondary_slm)
         else:
-            # routing, multi_agent, active_oracle, multi_agent_crew, speculative
-            assert_model_runnable(cfg.slm)
-            assert_model_runnable(cfg.llm)
             slm = get_model(cfg.slm)
             llm = get_model(cfg.llm)
 
-        # Build architecture kwargs
-        arch_kwargs: dict[str, Any] = {}
+        arch_kwargs: dict[str, Any] = {"task_type": task_type}
         if slm is not None:
             arch_kwargs["slm"] = slm
         if llm is not None:
             arch_kwargs["llm"] = llm
         if ensemble_slms:
             arch_kwargs["slms"] = ensemble_slms
-        if cfg.architecture in ["blackboard", "entropy_blackboard"]:
+        if cfg.architecture in {"blackboard", "entropy_blackboard"}:
             arch_kwargs["secondary_slm"] = secondary_slm
             arch_kwargs["cost_weight"] = getattr(cfg, "cost_weight", 0.15)
             arch_kwargs["bid_threshold"] = getattr(cfg, "bid_threshold", 0.65)
             arch_kwargs["ttl_ms"] = getattr(cfg, "ttl_ms", 1500)
             arch_kwargs["max_subtasks"] = getattr(cfg, "max_subtasks", 2)
-
         if cfg.architecture == "pure_swarm":
             arch_kwargs["secondary_slm"] = secondary_slm
             arch_kwargs["cost_weight"] = getattr(cfg, "cost_weight", 0.15)
@@ -184,28 +189,51 @@ class ExperimentRunner:
         elif cfg.architecture == "speculative":
             arch_kwargs["acceptance_threshold"] = getattr(cfg, "speculative_acceptance_threshold", 0.8)
 
-        benchmark = get_benchmark(cfg.benchmark, n_samples=cfg.n_samples, seed=cfg.seed)
-        arch_kwargs["task_type"] = benchmark.task_type
-        
-        architecture = get_architecture(cfg.architecture, **arch_kwargs)
+        return get_architecture(cfg.architecture, **arch_kwargs)
 
+    # ------------------------------------------------------------------
+    # Main run loop
+    # ------------------------------------------------------------------
+
+    def run(self) -> ExperimentResult:
+        cfg = self.config
+
+        # Dry run — validate config, skip inference
+        if cfg.dry_run:
+            print(f"[DRY RUN] {self.experiment_id} config validated. No inference.")
+            return ExperimentResult(
+                experiment_id=self.experiment_id,
+                config=cfg,
+                samples=[],
+            )
+
+        # Validate model availability once before running any query.
+        self._validate_models(cfg)
+
+        benchmark = get_benchmark(cfg.benchmark, n_samples=cfg.n_samples, seed=cfg.seed)
         queries = benchmark.load()
         result = ExperimentResult(experiment_id=self.experiment_id, config=cfg)
 
+        # One architecture instance. Queries run one at a time so the GPU only
+        # ever serves a single request and the wall-clock latency we record
+        # (and the energy derived from it in evaluation/energy.py) reflects
+        # isolated execution — latency is measured inside architectures/base.py.
+        architecture = self._build_arch(cfg, benchmark.task_type)
+
+        # Console label
         if cfg.architecture == "monolithic":
             pair_label = f"(LLM only) {cfg.llm}"
         elif cfg.architecture == "ensemble" and (getattr(cfg, "ensemble_slms", None) or not cfg.slm):
             members = getattr(cfg, "ensemble_slms", None) or [cfg.slm or "?"]
             tiebreak = f" → tiebreak {cfg.llm}" if (cfg.llm_tiebreak and cfg.llm) else ""
             pair_label = f"ensemble[{', '.join(members)}]{tiebreak}"
-        elif cfg.architecture in ["blackboard", "entropy_blackboard"]:
-            # ADDED: Proper console logging for the Swarm
+        elif cfg.architecture in {"blackboard", "entropy_blackboard"}:
             pair_label = f"Swarm[{cfg.slm}, {cfg.secondary_slm}] → {cfg.llm}"
         elif cfg.architecture == "pure_swarm":
             pair_label = f"PureSwarm[{cfg.slm}, {cfg.secondary_slm}]"
         else:
             pair_label = f"{cfg.slm or '?'} → {cfg.llm or '?'}"
-            
+
         print(
             f"[{self.experiment_id}] {cfg.architecture} | {cfg.benchmark} | "
             f"{pair_label} | {len(queries)} samples"
@@ -228,47 +256,98 @@ class ExperimentRunner:
                 config=dataclasses.asdict(cfg),
             )
         except Exception:
-            pass # Suppressed MLFlow warnings to keep terminal clean
+            pass  # Suppressed MLFlow warnings to keep terminal clean
 
-        for i, query in enumerate(queries, start=1):
-            if self.callbacks and self.callbacks.is_cancelled():
-                if tracker:
-                    tracker.end_run("KILLED")
-                raise ExperimentCancelledError("Experiment cancelled by user.")
+        # ------------------------------------------------------------------
+        # Serial generate + off-critical-path post-processing.
+        #
+        # The main thread runs architecture.run(query) one query at a time —
+        # this is the measured section, and latency_ms is sealed inside the
+        # Response before it is handed off. A single background thread does
+        # the rest: energy annotation, scoring (code benchmarks shell out to a
+        # subprocess that can take seconds), MLflow logging and callbacks. That
+        # bookkeeping now overlaps the next request instead of blocking it. The
+        # GPU still only serves one request at a time, so the recorded metrics
+        # are identical to the old fully-serial loop; only the wall-clock wait
+        # between requests shrinks. The consumer is the sole writer of
+        # result.samples, and it processes items in submit order (single
+        # producer, single FIFO consumer), so ordering needs no extra work.
+        # ------------------------------------------------------------------
 
-            try:
-                response = architecture.run(query)
-            except Exception as exc:
-                if self.callbacks:
-                    self.callbacks.error(exc)
-                if tracker:
-                    tracker.end_run("FAILED")
-                raise
+        work_q: Queue = Queue()
+        consumer_error: list[BaseException] = []
+        sentinel = object()
 
-            response = annotate_response_resource_usage(response)
-            correct = benchmark.is_correct(response.predicted_answer, query)
-            sample = SampleResult(query=query, response=response, correct=correct)
-            result.samples.append(sample)
-
-            if tracker:
+        def consume() -> None:
+            while True:
+                item = work_q.get()
+                if item is sentinel:
+                    return
+                query, response = item
                 try:
-                    tracker.log_sample(query.id, response.text, correct, response)
-                except Exception:
-                    pass
+                    response = annotate_response_resource_usage(response)
+                    correct = benchmark.is_correct(response.predicted_answer, query)
+                    result.samples.append(
+                        SampleResult(query=query, response=response, correct=correct)
+                    )
+                    done = len(result.samples)
 
+                    if tracker:
+                        try:
+                            tracker.log_sample(query.id, response.text, correct, response)
+                        except Exception:
+                            pass
+
+                    if self.callbacks:
+                        self.callbacks.sample_complete(done, len(queries), response)
+                        self.callbacks.metric_update("accuracy", result.n_correct / done)
+                        self.callbacks.metric_update("llm_call_ratio", result.llm_call_ratio)
+
+                    if done % 10 == 0 or done == len(queries):
+                        print(
+                            f"  [{done}/{len(queries)}] acc={result.accuracy:.3f} "
+                            f"llm_ratio={result.llm_call_ratio:.3f} "
+                            f"cost=${result.total_cost_usd:.4f} "
+                            f"energy={result.total_energy_kwh:.4f}kWh"
+                        )
+                except BaseException as exc:  # noqa: BLE001 — surfaced to main thread
+                    consumer_error.append(exc)
+                    return
+
+        consumer = threading.Thread(
+            target=consume, name=f"{self.experiment_id}-consumer", daemon=True
+        )
+        consumer.start()
+
+        cancelled = False
+        gen_error: BaseException | None = None
+        try:
+            for query in queries:
+                if self.callbacks and self.callbacks.is_cancelled():
+                    cancelled = True
+                    break
+                if consumer_error:  # consumer died — stop feeding it
+                    break
+                response = architecture.run(query)
+                work_q.put((query, response))
+        except BaseException as exc:  # generate() failed
+            gen_error = exc
+        finally:
+            work_q.put(sentinel)
+            consumer.join()
+
+        if cancelled:
+            if tracker:
+                tracker.end_run("KILLED")
+            raise ExperimentCancelledError("Experiment cancelled by user.")
+
+        failure = gen_error or (consumer_error[0] if consumer_error else None)
+        if failure is not None:
             if self.callbacks:
-                self.callbacks.sample_complete(i, len(queries), response)
-                running_acc = result.n_correct / i
-                self.callbacks.metric_update("accuracy", running_acc)
-                self.callbacks.metric_update("llm_call_ratio", result.llm_call_ratio)
-
-            if i % 10 == 0 or i == len(queries):
-                print(
-                    f"  [{i}/{len(queries)}] acc={result.accuracy:.3f} "
-                    f"llm_ratio={result.llm_call_ratio:.3f} "
-                    f"cost=${result.total_cost_usd:.4f} "
-                    f"energy={result.total_energy_kwh:.4f}kWh"
-                )
+                self.callbacks.error(failure)
+            if tracker:
+                tracker.end_run("FAILED")
+            raise failure
 
         # Save reports
         baseline_metrics = self._resolve_recommended_baseline(cfg.benchmark)
