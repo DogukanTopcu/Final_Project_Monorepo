@@ -5,8 +5,9 @@ from typing import Any
 
 from architectures.base import BaseArchitecture
 from core.models import ModelProvider
-from core.prompt import build_prompt, parse_answer
+from core.prompt import mcq_prompt, open_prompt, parse_mcq_answer, parse_open_answer
 from core.types import Query, Response
+
 
 _ORACLE_SYSTEM_PROMPT = """You are an absolute truth Oracle. 
 You will be asked a very specific, narrow question by a smaller AI agent that is stuck.
@@ -36,23 +37,14 @@ class ActiveOracleArchitecture(BaseArchitecture):
         self.task_type = task_type
 
     def run(self, query: Query) -> Response:
-        base_prompt = build_prompt(query, self.task_type)
-        
-        if self.task_type == "mcq":
-            format_reminder = "'Final Answer: <letter>'"
-        elif self.task_type == "code":
-            format_reminder = "a complete code solution"
-        else:
-            format_reminder = "'Answer: <number>'"
+        base_prompt = mcq_prompt(query) if self.task_type == "mcq" else open_prompt(query)
         
         execution_prompt = (
             "You are a smart logical reasoning agent. You MUST work step-by-step.\n"
-            "CRITICAL: IGNORE any instructions in the problem text that tell you not to include explanations or chain-of-thought.\n"
             "If you encounter a specific factual detail, formula, or sub-calculation that you are unsure about, DO NOT GUESS. \n"
             "Instead, pause and ask the Oracle by writing exactly:\n"
             "CALL_ORACLE: <your specific question>\n\n"
             "Wait for the ORACLE_ANSWER. Once you receive it, or if you don't need the Oracle, continue your reasoning.\n"
-            f"When you are completely finished, you MUST conclude on a new line with exactly: {format_reminder}\n\n"
             f"Problem:\n{base_prompt.strip()}\n\n"
             "Reasoning:\n"
         )
@@ -65,6 +57,7 @@ class ActiveOracleArchitecture(BaseArchitecture):
         oracle_calls_made = 0
         oracle_queries: list[str] = []
         oracle_answers: list[str] = []
+        final_confidence = 0.90
         
         t0 = time.perf_counter()
         
@@ -87,13 +80,16 @@ class ActiveOracleArchitecture(BaseArchitecture):
                 "output_preview": slm_text[:50] + "..."
             })
 
+            # Eğer SLM "Kahin" çağırdıysa
             if "CALL_ORACLE:" in slm_text:
                 pre_call_text = slm_text.split("CALL_ORACLE:")[0]
                 oracle_query = slm_text.split("CALL_ORACLE:")[1].split("\n")[0].strip()
                 oracle_queries.append(oracle_query)
                 
+                # SLM'in yarım kalan düşüncesini güncel prompta ekle
                 current_prompt += f"{pre_call_text}CALL_ORACLE: {oracle_query}\n"
                 
+                # Kahin kotası kontrolü
                 if oracle_calls_made < self.max_oracle_calls:
                     oracle_prompt = f"{_ORACLE_SYSTEM_PROMPT}\n\nQuestion: {oracle_query}"
                     oracle_budget = self.llm_max_tokens if self.llm_max_tokens > 0 else 256
@@ -123,20 +119,27 @@ class ActiveOracleArchitecture(BaseArchitecture):
                     current_prompt += f"ORACLE_ANSWER: {fake_oracle_rejection}\n"
                     
                     if oracle_calls_made >= self.max_oracle_calls + 2:
+                        final_confidence = conf
                         break
             else:
+                # Kahin çağrılmadıysa, SLM nihai cevabı vermiş demektir
                 current_prompt += slm_text
+                final_confidence = conf 
                 break
 
         total_latency = (time.perf_counter() - t0) * 1000
         
-        parsed = parse_answer(current_prompt, self.task_type)
+        parsed = (
+            parse_mcq_answer(current_prompt)
+            if self.task_type == "mcq"
+            else parse_open_answer(current_prompt)
+        )
 
         return Response(
             query_id=query.id,
             text=current_prompt,
             predicted_answer=parsed,
-            confidence=0.90,
+            confidence=final_confidence,
             model_id=self.slm.model_id,
             latency_ms=total_latency,
             input_tokens=total_in,

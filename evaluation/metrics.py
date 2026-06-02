@@ -382,4 +382,7 @@ def compute_metrics(
         "accuracy_majority_vote": accuracy_slm_handled, # ensemble alias (same split)
         "llm_tiebreak_rate": escalation_rate,           # ensemble: tiebreak fraction
         "oracle_query_rate": oracle_query_rate,         # active_oracle only
+        "baseline_cost_usd": full_llm_cost_usd if full_llm_cost_usd is not None else 0.0,
+        "baseline_algorithmic_latency_ms": full_llm_avg_algorithmic_latency_ms if full_llm_avg_algorithmic_latency_ms is not None else 0.0,
+        "baseline_energy_kwh": full_llm_energy_kwh if full_llm_energy_kwh is not None else 0.0,
     }

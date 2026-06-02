@@ -36,21 +36,50 @@ from evaluation.metrics import aggregate_runs, compute_metrics
 from evaluation.reporter import Reporter
 
 
-def resolve_recommended_baseline(benchmark: str) -> dict[str, float]:
-    """Load the recommended monolithic baseline metrics for a benchmark.
+def resolve_recommended_baseline(benchmark: str, llm: str | None = None, n_samples: int | None = None) -> dict[str, float]:
+    """Load the monolithic baseline metrics for a benchmark and optionally a specific LLM.
 
     Standalone function (not tied to a runner instance) so the experiment
     service can import and call it directly without depending on ExperimentRunner.
     """
+    from evaluation.baselines import list_baselines, load_baseline
+    
+    scale_factor = (n_samples / 500.0) if n_samples else 1.0
+
+    if llm:
+        index_path = Path("artifacts/baselines/index.json")
+        index = list_baselines(index_path)
+        for k, v in index.items():
+            if v.get("benchmark") == benchmark and v.get("llm") == llm:
+                run_data = load_baseline(index_path, k)
+                if run_data:
+                    acc = run_data.get("accuracy")
+                    eats = (acc / (acc + 1.0)) if acc is not None else None
+                    return {
+                        "total_cost_usd": float(run_data.get("total_cost_usd", 0.0) or 0.0) * scale_factor,
+                        "avg_algorithmic_latency_ms": float(run_data.get("avg_algorithmic_latency_ms") or run_data.get("avg_latency_ms") or 0.0),
+                        "total_energy_kwh": float(run_data.get("total_energy_kwh", 0.0) or 0.0) * scale_factor,
+                        "accuracy": acc,
+                        "eats_score": eats,
+                        "ece": run_data.get("ece"),
+                    }
+
     path = Path("artifacts/baselines/recommended_references.json")
+    if not path.exists():
+        path = Path("monolithic_constants.json")
     refs = load_recommended_references(path)
     record = refs.get(benchmark, {})
     if not isinstance(record, dict):
         return {}
+    acc = record.get("accuracy")
+    eats = (acc / (acc + 1.0)) if acc is not None else None
     return {
-        "total_cost_usd": float(record.get("total_cost_usd", 0.0) or 0.0),
-        "avg_algorithmic_latency_ms": float(record.get("avg_algorithmic_latency_ms", 0.0) or 0.0),
-        "total_energy_kwh": float(record.get("total_energy_kwh", 0.0) or 0.0),
+        "total_cost_usd": float(record.get("total_cost_usd", 0.0) or 0.0) * scale_factor,
+        "avg_algorithmic_latency_ms": float(record.get("avg_algorithmic_latency_ms") or record.get("avg_latency_ms") or 0.0),
+        "total_energy_kwh": float(record.get("total_energy_kwh", 0.0) or 0.0) * scale_factor,
+        "accuracy": acc,
+        "eats_score": eats,
+        "ece": record.get("ece"),
     }
 
 
@@ -350,7 +379,7 @@ class ExperimentRunner:
             raise failure
 
         # Save reports
-        baseline_metrics = self._resolve_recommended_baseline(cfg.benchmark)
+        baseline_metrics = self._resolve_recommended_baseline(cfg.benchmark, cfg.llm, n_samples=cfg.n_samples)
         reporter = Reporter(output_dir=cfg.output_dir)
         reporter.save(
             result,
@@ -392,8 +421,8 @@ class ExperimentRunner:
         return result
 
     @staticmethod
-    def _resolve_recommended_baseline(benchmark: str) -> dict[str, float]:
-        return resolve_recommended_baseline(benchmark)
+    def _resolve_recommended_baseline(benchmark: str, llm: str | None = None, n_samples: int | None = None) -> dict[str, float]:
+        return resolve_recommended_baseline(benchmark, llm, n_samples=n_samples)
 
     def multi_run(
         self,
@@ -416,7 +445,7 @@ class ExperimentRunner:
 
         import dataclasses
 
-        baseline_metrics = self._resolve_recommended_baseline(self.config.benchmark)
+        baseline_metrics = self._resolve_recommended_baseline(self.config.benchmark, self.config.llm, n_samples=self.config.n_samples)
         all_results: list[ExperimentResult] = []
         all_metrics: list[dict] = []
 

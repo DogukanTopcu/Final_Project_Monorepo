@@ -170,14 +170,49 @@ async def get_result(result_id: str, settings: Settings = Depends(get_settings))
     if local_path.exists():
         try:
             data = json.loads(local_path.read_text())
+            metrics = data.get("metrics", {})
+            config = data.get("config", {})
+            llm = config.get("llm")
+            if llm and "baseline_accuracy" not in metrics:
+                from experiments.runner import resolve_recommended_baseline
+                n_samples = int(config.get("n_samples", 500))
+                baseline = resolve_recommended_baseline(config.get("benchmark", "mmlu"), llm, n_samples=n_samples)
+                if baseline:
+                    metrics["baseline_cost_usd"] = baseline.get("total_cost_usd", 0.0) or 0.0
+                    metrics["baseline_algorithmic_latency_ms"] = baseline.get("avg_algorithmic_latency_ms", 0.0) or 0.0
+                    metrics["baseline_energy_kwh"] = baseline.get("total_energy_kwh", 0.0) or 0.0
+                    if baseline.get("accuracy") is not None:
+                        metrics["baseline_accuracy"] = baseline.get("accuracy")
+                    if baseline.get("eats_score") is not None:
+                        metrics["baseline_eats_score"] = baseline.get("eats_score")
+                    if baseline.get("ece") is not None:
+                        metrics["baseline_ece"] = baseline.get("ece")
+                    
+                    # Recompute normalized metrics and EATS score
+                    from evaluation.metrics import compute_eats, _normalize_metric
+                    metrics["normalized_cost"] = _normalize_metric(metrics.get("total_cost_usd", 0.0), metrics["baseline_cost_usd"])
+                    metrics["normalized_algorithmic_latency"] = _normalize_metric(metrics.get("avg_algorithmic_latency_ms", 0.0), metrics["baseline_algorithmic_latency_ms"])
+                    metrics["normalized_energy"] = _normalize_metric(metrics.get("total_energy_kwh", 0.0), metrics["baseline_energy_kwh"])
+                    metrics["normalized_efficiency_penalty"] = (
+                        0.5 * metrics["normalized_cost"] +
+                        0.3 * metrics["normalized_algorithmic_latency"] +
+                        0.2 * metrics["normalized_energy"]
+                    )
+                    metrics["eats_score"] = compute_eats(
+                        accuracy=metrics.get("accuracy", 0.0),
+                        normalized_cost=metrics["normalized_cost"],
+                        normalized_algorithmic_latency=metrics["normalized_algorithmic_latency"],
+                        normalized_energy=metrics["normalized_energy"],
+                    )
+            
             return ResultDetail(
                 id=result_id,
                 experiment_id=data.get("experiment_id", result_id),
-                architecture=data.get("config", {}).get("architecture", "unknown"),
-                benchmark=data.get("config", {}).get("benchmark", "unknown"),
-                metrics=data.get("metrics", {}),
+                architecture=config.get("architecture", "unknown"),
+                benchmark=config.get("benchmark", "unknown"),
+                metrics=metrics,
                 samples=data.get("samples", []),
-                config=data.get("config", {}),
+                config=config,
                 created_at=datetime.fromisoformat(
                     data.get("created_at", datetime.now(UTC).isoformat())
                 ),

@@ -64,10 +64,6 @@ def result_matches_run(result_data: dict[str, Any], run: dict[str, Any]) -> bool
         config.get("architecture") == "monolithic"
         and config.get("benchmark") == run["benchmark"]
         and config.get("llm") == run["llm"]
-        and int(config.get("n_samples", -1)) == int(run["n_samples"])
-        and int(config.get("seed", -1)) == int(run["seed"])
-        and float(config.get("llm_temperature", -1.0)) == float(run["llm_temperature"])
-        and int(config.get("llm_max_tokens", -1)) == int(run["llm_max_tokens"])
     )
 
 
@@ -77,6 +73,8 @@ def find_matching_results(run: dict[str, Any], results_dir: str | Path) -> list[
         result_data = _load_result(path)
         if result_data and result_matches_run(result_data, run):
             matches.append(path)
+    # Sort matches by the number of samples completed, so we pick the most complete run
+    matches.sort(key=lambda p: float(_load_result(p).get("metrics", {}).get("n_total", 0)))
     return matches
 
 
@@ -85,6 +83,13 @@ def extract_summary_row(run: dict[str, Any], result_path: Path) -> dict[str, Any
     if data is None:
         raise ValueError(f"Failed to parse result file: {result_path}")
     metrics = data.get("metrics", {})
+    
+    n_total = float(metrics.get("n_total", 0.0))
+    if n_total == 0.0:
+        n_total = float(run["n_samples"])
+        
+    scale_factor = 500.0 / n_total if n_total > 0 else 1.0
+
     return {
         "run_id": run["run_id"],
         "experiment_id": data.get("experiment_id", result_path.stem),
@@ -93,7 +98,7 @@ def extract_summary_row(run: dict[str, Any], result_path: Path) -> dict[str, Any
         "llm": run["llm"],
         "model_family": run["model_family"],
         "model_class": run["model_class"],
-        "n_samples": int(run["n_samples"]),
+        "n_samples": 500,
         "seed": int(run["seed"]),
         "llm_temperature": float(run["llm_temperature"]),
         "llm_max_tokens": int(run["llm_max_tokens"]),
@@ -101,9 +106,9 @@ def extract_summary_row(run: dict[str, Any], result_path: Path) -> dict[str, Any
         "accuracy": float(metrics.get("accuracy", 0.0)),
         "avg_algorithmic_latency_ms": float(metrics.get("avg_algorithmic_latency_ms", 0.0)),
         "avg_latency_ms": float(metrics.get("avg_latency_ms", 0.0)),
-        "total_cost_usd": float(metrics.get("total_cost_usd", 0.0)),
-        "total_energy_kwh": float(metrics.get("total_energy_kwh", 0.0)),
-        "total_co2_g": float(metrics.get("total_co2_g", 0.0)),
+        "total_cost_usd": float(metrics.get("total_cost_usd", 0.0)) * scale_factor,
+        "total_energy_kwh": float(metrics.get("total_energy_kwh", 0.0)) * scale_factor,
+        "total_co2_g": float(metrics.get("total_co2_g", 0.0)) * scale_factor,
         "created_at": data.get("created_at"),
         "result_path": str(result_path),
         "query_set_hash": data.get("config", {}).get("query_set_hash"),

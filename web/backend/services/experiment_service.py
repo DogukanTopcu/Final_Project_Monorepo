@@ -54,6 +54,40 @@ def _build_persisted_experiment_response(path: Path) -> ExperimentResponse | Non
             ensemble_slms = [str(x) for x in ensemble_slms_raw]
         else:
             ensemble_slms = []
+            
+        metrics = data.get("metrics", {})
+        llm = config.get("llm")
+        if llm and "baseline_accuracy" not in metrics:
+            n_samples = int(config.get("n_samples", 500))
+            baseline = resolve_recommended_baseline(benchmark, llm, n_samples=n_samples)
+            if baseline:
+                metrics["baseline_cost_usd"] = baseline.get("total_cost_usd", 0.0) or 0.0
+                metrics["baseline_algorithmic_latency_ms"] = baseline.get("avg_algorithmic_latency_ms", 0.0) or 0.0
+                metrics["baseline_energy_kwh"] = baseline.get("total_energy_kwh", 0.0) or 0.0
+                if baseline.get("accuracy") is not None:
+                    metrics["baseline_accuracy"] = baseline.get("accuracy")
+                if baseline.get("eats_score") is not None:
+                    metrics["baseline_eats_score"] = baseline.get("eats_score")
+                if baseline.get("ece") is not None:
+                    metrics["baseline_ece"] = baseline.get("ece")
+                
+                # Recompute normalized metrics and EATS score
+                from evaluation.metrics import compute_eats, _normalize_metric
+                metrics["normalized_cost"] = _normalize_metric(metrics.get("total_cost_usd", 0.0), metrics["baseline_cost_usd"])
+                metrics["normalized_algorithmic_latency"] = _normalize_metric(metrics.get("avg_algorithmic_latency_ms", 0.0), metrics["baseline_algorithmic_latency_ms"])
+                metrics["normalized_energy"] = _normalize_metric(metrics.get("total_energy_kwh", 0.0), metrics["baseline_energy_kwh"])
+                metrics["normalized_efficiency_penalty"] = (
+                    0.5 * metrics["normalized_cost"] +
+                    0.3 * metrics["normalized_algorithmic_latency"] +
+                    0.2 * metrics["normalized_energy"]
+                )
+                metrics["eats_score"] = compute_eats(
+                    accuracy=metrics.get("accuracy", 0.0),
+                    normalized_cost=metrics["normalized_cost"],
+                    normalized_algorithmic_latency=metrics["normalized_algorithmic_latency"],
+                    normalized_energy=metrics["normalized_energy"],
+                )
+
         return ExperimentResponse(
             experiment_id=experiment_id,
             status=ExperimentStatus.COMPLETED,
@@ -71,7 +105,7 @@ def _build_persisted_experiment_response(path: Path) -> ExperimentResponse | Non
             completed_at=datetime.fromisoformat(
                 data.get("created_at", datetime.now(UTC).isoformat())
             ),
-            metrics=data.get("metrics", {}),
+            metrics=metrics,
             progress=int(config.get("n_samples", 0)),
             total=int(config.get("n_samples", 0)),
         )
@@ -275,13 +309,25 @@ def _run_experiment(
             runner = ExperimentRunner(config, callbacks=callbacks)
             runner.experiment_id = experiment_id
             result = runner.run()
-            baseline_metrics = resolve_recommended_baseline(config.benchmark)
+            baseline_metrics = {}
+            if config.llm:
+                baseline_metrics = resolve_recommended_baseline(config.benchmark, config.llm, n_samples=config.n_samples)
             metrics = compute_metrics(
                 result,
                 full_llm_cost_usd=baseline_metrics.get("total_cost_usd"),
-                full_llm_avg_algorithmic_latency_ms=baseline_metrics.get("avg_algorithmic_latency_ms"),
+                full_llm_avg_algorithmic_latency_ms=baseline_metrics.get(
+                    "avg_algorithmic_latency_ms"
+                ),
                 full_llm_energy_kwh=baseline_metrics.get("total_energy_kwh"),
             )
+            
+            if config.llm:
+                if baseline_metrics.get("accuracy") is not None:
+                    metrics["baseline_accuracy"] = baseline_metrics.get("accuracy")
+                if baseline_metrics.get("eats_score") is not None:
+                    metrics["baseline_eats_score"] = baseline_metrics.get("eats_score")
+                if baseline_metrics.get("ece") is not None:
+                    metrics["baseline_ece"] = baseline_metrics.get("ece")
 
         exp.status = ExperimentStatus.COMPLETED
         exp.metrics = metrics
@@ -424,6 +470,22 @@ def launch_experiment(params: ExperimentCreate, settings: Settings) -> Experimen
     experiment_id = f"exp_{uuid.uuid4().hex[:8]}"
     now = datetime.now(UTC)
 
+    initial_metrics = {}
+    if config.llm:
+        baseline = resolve_recommended_baseline(config.benchmark, config.llm, n_samples=params.n_samples)
+        if baseline:
+            initial_metrics = {
+                "baseline_cost_usd": baseline.get("total_cost_usd", 0.0) or 0.0,
+                "baseline_algorithmic_latency_ms": baseline.get("avg_algorithmic_latency_ms", 0.0) or 0.0,
+                "baseline_energy_kwh": baseline.get("total_energy_kwh", 0.0) or 0.0,
+            }
+            if baseline.get("accuracy") is not None:
+                initial_metrics["baseline_accuracy"] = baseline.get("accuracy")
+            if baseline.get("eats_score") is not None:
+                initial_metrics["baseline_eats_score"] = baseline.get("eats_score")
+            if baseline.get("ece") is not None:
+                initial_metrics["baseline_ece"] = baseline.get("ece")
+
     exp = ExperimentResponse(
         experiment_id=experiment_id,
         status=ExperimentStatus.QUEUED,
@@ -436,6 +498,7 @@ def launch_experiment(params: ExperimentCreate, settings: Settings) -> Experimen
         ensemble_slms=list(params.ensemble_slms or []),
         config_overrides=params.config_overrides,
         created_at=now,
+        metrics=initial_metrics,
         total=params.n_samples,
     )
     _experiments[experiment_id] = exp

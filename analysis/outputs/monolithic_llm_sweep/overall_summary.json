@@ -1,0 +1,44 @@
+[
+  {
+    "llm": "qwen3.5-35b-a3b",
+    "model_class": "moe",
+    "mean_rank": 1.2,
+    "mean_llm_benchmark_score": 0.888435
+  },
+  {
+    "llm": "gemma4-31b",
+    "model_class": "dense_llm",
+    "mean_rank": 2.4,
+    "mean_llm_benchmark_score": 0.759169
+  },
+  {
+    "llm": "gemma4-26b-a4b",
+    "model_class": "moe",
+    "mean_rank": 3.6,
+    "mean_llm_benchmark_score": 0.653555
+  },
+  {
+    "llm": "gpt-oss-20b",
+    "model_class": "dense_llm",
+    "mean_rank": 3.8,
+    "mean_llm_benchmark_score": 0.641013
+  },
+  {
+    "llm": "gpt-oss-120b",
+    "model_class": "dense_llm",
+    "mean_rank": 4.8,
+    "mean_llm_benchmark_score": 0.575462
+  },
+  {
+    "llm": "qwen3.5-27b",
+    "model_class": "dense_llm",
+    "mean_rank": 5.25,
+    "mean_llm_benchmark_score": 0.455987
+  },
+  {
+    "llm": "llama3.3-70b",
+    "model_class": "dense_llm",
+    "mean_rank": 6.6,
+    "mean_llm_benchmark_score": 0.341322
+  }
+]

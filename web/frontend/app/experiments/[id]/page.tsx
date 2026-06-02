@@ -1115,6 +1115,11 @@ export default function ExperimentDetailPage({
                     "total_cost_usd",
                     "total_energy_kwh",
                     "eats_score",
+                    "baseline_accuracy",
+                    "baseline_algorithmic_latency_ms",
+                    "baseline_cost_usd",
+                    "baseline_energy_kwh",
+                    "baseline_eats_score",
                   ]
                     .filter((key) => metrics[key] != null)
                     .map((key) => (
@@ -1181,15 +1186,85 @@ export default function ExperimentDetailPage({
             {!metrics ? (
               <p className="text-sm text-zinc-500">Metrics not yet available.</p>
             ) : (
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-                {allMetricKeys.map((key) => (
-                  <div key={key} className="rounded-md border border-zinc-100 bg-white p-3">
-                    <div className="text-xs text-zinc-500">{formatMetricLabel(key)}</div>
-                    <div className="text-lg font-semibold text-zinc-900">
-                      {formatMetricValue(key, metrics[key])}
+              <div className="space-y-8">
+                {[
+                  {
+                    title: "Core Performance & EATS",
+                    keys: ["accuracy", "eats_score", "ece", "accuracy_ci_low_95", "accuracy_ci_high_95", "n_total", "n_correct", "accuracy_slm_handled", "accuracy_llm_handled", "accuracy_majority_vote"]
+                  },
+                  {
+                    title: "Cost Analysis",
+                    keys: ["total_cost_usd", "total_api_cost_usd", "total_infra_cost_usd", "cost_per_query_usd", "cost_slm_path_usd", "cost_escalated_path_usd", "cost_slm_path_fraction", "total_slm_api_cost_usd", "total_llm_api_cost_usd"]
+                  },
+                  {
+                    title: "Latency & Throughput",
+                    keys: ["avg_latency_ms", "latency_p50_ms", "latency_p95_ms", "avg_algorithmic_latency_ms", "throughput_tokens_per_sec"]
+                  },
+                  {
+                    title: "Energy & CO2",
+                    keys: ["total_energy_kwh", "total_co2_g", "avg_energy_per_sample_kwh", "avg_co2_per_sample_g", "joules_per_output_token", "total_tokens"]
+                  },
+                  {
+                    title: "Architecture & Routing",
+                    keys: ["llm_call_ratio", "escalation_rate", "n_escalated", "n_slm_only", "n_llm_final", "avg_slm_confidence", "avg_confidence_escalated", "avg_confidence_non_escalated", "llm_tiebreak_rate", "oracle_query_rate"]
+                  },
+                  {
+                    title: "Normalized (vs Baseline)",
+                    keys: ["normalized_cost", "normalized_algorithmic_latency", "normalized_energy", "normalized_efficiency_penalty"]
+                  },
+                  {
+                    title: "Monolithic LLM Baseline",
+                    keys: ["baseline_accuracy", "baseline_eats_score", "baseline_ece", "baseline_cost_usd", "baseline_algorithmic_latency_ms", "baseline_energy_kwh"]
+                  }
+                ].map(group => {
+                  const groupKeys = group.keys.filter(k => metrics[k] != null);
+                  if (groupKeys.length === 0) return null;
+                  return (
+                    <div key={group.title} className="space-y-3">
+                      <h3 className="text-sm font-semibold text-zinc-900 border-b border-zinc-200 pb-1">{group.title}</h3>
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                        {groupKeys.map(key => (
+                          <div key={key} className="rounded-md border border-zinc-100 bg-white p-3">
+                            <div className="text-xs text-zinc-500">{formatMetricLabel(key)}</div>
+                            <div className="text-lg font-semibold text-zinc-900">
+                              {formatMetricValue(key, metrics[key])}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
+                
+                {/* Other remaining metrics not explicitly grouped */}
+                {(() => {
+                  const usedKeys = new Set([
+                    "accuracy", "eats_score", "ece", "accuracy_ci_low_95", "accuracy_ci_high_95", "n_total", "n_correct", "accuracy_slm_handled", "accuracy_llm_handled", "accuracy_majority_vote",
+                    "total_cost_usd", "total_api_cost_usd", "total_infra_cost_usd", "cost_per_query_usd", "cost_slm_path_usd", "cost_escalated_path_usd", "cost_slm_path_fraction", "total_slm_api_cost_usd", "total_llm_api_cost_usd",
+                    "avg_latency_ms", "latency_p50_ms", "latency_p95_ms", "avg_algorithmic_latency_ms", "throughput_tokens_per_sec",
+                    "total_energy_kwh", "total_co2_g", "avg_energy_per_sample_kwh", "avg_co2_per_sample_g", "joules_per_output_token", "total_tokens",
+                    "llm_call_ratio", "escalation_rate", "n_escalated", "n_slm_only", "n_llm_final", "avg_slm_confidence", "avg_confidence_escalated", "avg_confidence_non_escalated", "llm_tiebreak_rate", "oracle_query_rate",
+                    "normalized_cost", "normalized_algorithmic_latency", "normalized_energy", "normalized_efficiency_penalty",
+                    "baseline_accuracy", "baseline_eats_score", "baseline_ece", "baseline_cost_usd", "baseline_algorithmic_latency_ms", "baseline_energy_kwh"
+                  ]);
+                  const otherKeys = allMetricKeys.filter(k => !usedKeys.has(k) && metrics[k] != null);
+                  if (otherKeys.length === 0) return null;
+                  return (
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold text-zinc-900 border-b border-zinc-200 pb-1">Other Metrics</h3>
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                        {otherKeys.map(key => (
+                          <div key={key} className="rounded-md border border-zinc-100 bg-white p-3">
+                            <div className="text-xs text-zinc-500">{formatMetricLabel(key)}</div>
+                            <div className="text-lg font-semibold text-zinc-900">
+                              {formatMetricValue(key, metrics[key])}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </CardContent>
