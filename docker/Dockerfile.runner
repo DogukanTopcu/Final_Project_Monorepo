@@ -15,6 +15,7 @@ COPY benchmarks/ /app/benchmarks/
 COPY evaluation/ /app/evaluation/
 COPY experiments/ /app/experiments/
 COPY mlops/ /app/mlops/
+COPY monolithic_constants.json /app/monolithic_constants.json
 
 ENV PYTHONUNBUFFERED=1
 CMD ["python", "-m", "experiments.run_experiment"]

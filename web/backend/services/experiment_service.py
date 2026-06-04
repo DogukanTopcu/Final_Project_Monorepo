@@ -100,7 +100,7 @@ def _build_persisted_experiment_response(path: Path) -> ExperimentResponse | Non
             
         metrics = data.get("metrics", {})
         llm = config.get("llm")
-        if llm and "baseline_accuracy" not in metrics:
+        if metrics.get("baseline_cost_usd", 0.0) == 0.0:
             n_samples = int(config.get("n_samples", 500))
             baseline = resolve_recommended_baseline(benchmark, llm, n_samples=n_samples)
             if baseline:
@@ -373,9 +373,7 @@ def _run_experiment(
             runner = ExperimentRunner(config, callbacks=callbacks)
             runner.experiment_id = experiment_id
             result = runner.run()
-            baseline_metrics = {}
-            if config.llm:
-                baseline_metrics = resolve_recommended_baseline(config.benchmark, config.llm, n_samples=config.n_samples)
+            baseline_metrics = resolve_recommended_baseline(config.benchmark, config.llm, n_samples=config.n_samples)
             metrics = compute_metrics(
                 result,
                 full_llm_cost_usd=baseline_metrics.get("total_cost_usd"),
@@ -385,13 +383,15 @@ def _run_experiment(
                 full_llm_energy_kwh=baseline_metrics.get("total_energy_kwh"),
             )
             
-            if config.llm:
-                if baseline_metrics.get("accuracy") is not None:
-                    metrics["baseline_accuracy"] = baseline_metrics.get("accuracy")
-                if baseline_metrics.get("eats_score") is not None:
-                    metrics["baseline_eats_score"] = baseline_metrics.get("eats_score")
-                if baseline_metrics.get("ece") is not None:
-                    metrics["baseline_ece"] = baseline_metrics.get("ece")
+            if baseline_metrics.get("accuracy") is not None:
+                metrics["baseline_accuracy"] = baseline_metrics.get("accuracy")
+            if baseline_metrics.get("eats_score") is not None:
+                metrics["baseline_eats_score"] = baseline_metrics.get("eats_score")
+            if baseline_metrics.get("ece") is not None:
+                metrics["baseline_ece"] = baseline_metrics.get("ece")
+            metrics["baseline_cost_usd"] = baseline_metrics.get("total_cost_usd", 0.0) or 0.0
+            metrics["baseline_algorithmic_latency_ms"] = baseline_metrics.get("avg_algorithmic_latency_ms", 0.0) or 0.0
+            metrics["baseline_energy_kwh"] = baseline_metrics.get("total_energy_kwh", 0.0) or 0.0
 
         exp.status = ExperimentStatus.COMPLETED
         exp.metrics = metrics
@@ -544,20 +544,19 @@ def launch_experiment(params: ExperimentCreate, settings: Settings) -> Experimen
     now = datetime.now(UTC)
 
     initial_metrics = {}
-    if config.llm:
-        baseline = resolve_recommended_baseline(config.benchmark, config.llm, n_samples=params.n_samples)
-        if baseline:
-            initial_metrics = {
-                "baseline_cost_usd": baseline.get("total_cost_usd", 0.0) or 0.0,
-                "baseline_algorithmic_latency_ms": baseline.get("avg_algorithmic_latency_ms", 0.0) or 0.0,
-                "baseline_energy_kwh": baseline.get("total_energy_kwh", 0.0) or 0.0,
-            }
-            if baseline.get("accuracy") is not None:
-                initial_metrics["baseline_accuracy"] = baseline.get("accuracy")
-            if baseline.get("eats_score") is not None:
-                initial_metrics["baseline_eats_score"] = baseline.get("eats_score")
-            if baseline.get("ece") is not None:
-                initial_metrics["baseline_ece"] = baseline.get("ece")
+    baseline = resolve_recommended_baseline(config.benchmark, config.llm, n_samples=params.n_samples)
+    if baseline:
+        initial_metrics = {
+            "baseline_cost_usd": baseline.get("total_cost_usd", 0.0) or 0.0,
+            "baseline_algorithmic_latency_ms": baseline.get("avg_algorithmic_latency_ms", 0.0) or 0.0,
+            "baseline_energy_kwh": baseline.get("total_energy_kwh", 0.0) or 0.0,
+        }
+        if baseline.get("accuracy") is not None:
+            initial_metrics["baseline_accuracy"] = baseline.get("accuracy")
+        if baseline.get("eats_score") is not None:
+            initial_metrics["baseline_eats_score"] = baseline.get("eats_score")
+        if baseline.get("ece") is not None:
+            initial_metrics["baseline_ece"] = baseline.get("ece")
 
     exp = ExperimentResponse(
         experiment_id=experiment_id,

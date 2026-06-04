@@ -64,22 +64,44 @@ def resolve_recommended_baseline(benchmark: str, llm: str | None = None, n_sampl
                         "ece": run_data.get("ece"),
                     }
 
-    path = Path("artifacts/baselines/recommended_references.json")
+    # Fallback to average of all LLMs for this benchmark
+    path = Path(__file__).parent.parent / "monolithic_constants.json"
     if not path.exists():
-        path = Path("monolithic_constants.json")
-    refs = load_recommended_references(path)
-    record = refs.get(benchmark, {})
-    if not isinstance(record, dict):
         return {}
-    acc = record.get("accuracy")
-    eats = (acc / (acc + 1.0)) if acc is not None else None
+        
+    import json
+    with open(path, "r") as f:
+        constants = json.load(f)
+    
+    benchmark_data = constants.get(benchmark, {})
+    if not benchmark_data:
+        return {}
+        
+    models = list(benchmark_data.values())
+    n_models = len(models)
+    
+    avg_cost = sum(m.get("total_cost_usd", 0.0) or 0.0 for m in models) / n_models
+    
+    avg_latency = 0.0
+    for m in models:
+        lat = m.get("avg_algorithmic_latency_ms")
+        if lat is None:
+            lat = m.get("avg_latency_ms", 0.0)
+        avg_latency += (lat or 0.0)
+    avg_latency /= n_models
+    
+    avg_energy = sum(m.get("total_energy_kwh", 0.0) or 0.0 for m in models) / n_models
+    avg_acc = sum(m.get("accuracy", 0.0) or 0.0 for m in models) / n_models
+    avg_ece = sum(m.get("ece", 0.0) or 0.0 for m in models) / n_models
+    eats = avg_acc / (avg_acc + 1.0)
+    
     return {
-        "total_cost_usd": float(record.get("total_cost_usd", 0.0) or 0.0) * scale_factor,
-        "avg_algorithmic_latency_ms": float(record.get("avg_algorithmic_latency_ms") or record.get("avg_latency_ms") or 0.0),
-        "total_energy_kwh": float(record.get("total_energy_kwh", 0.0) or 0.0) * scale_factor,
-        "accuracy": acc,
+        "total_cost_usd": avg_cost * scale_factor,
+        "avg_algorithmic_latency_ms": avg_latency,
+        "total_energy_kwh": avg_energy * scale_factor,
+        "accuracy": avg_acc,
         "eats_score": eats,
-        "ece": record.get("ece"),
+        "ece": avg_ece,
     }
 
 
