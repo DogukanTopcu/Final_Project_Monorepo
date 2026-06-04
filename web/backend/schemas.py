@@ -17,7 +17,7 @@ class Architecture(StrEnum):
     BLACKBOARD = "blackboard"
     ENTROPY_BLACKBOARD = "entropy_blackboard"
     PURE_SWARM = "pure_swarm"
-
+    DYNAMIC_BIDDING = "dynamic_bidding"
 
 class ArchitectureMode(StrEnum):
     MONOLITHIC = "monolithic"

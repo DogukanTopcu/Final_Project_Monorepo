@@ -7,7 +7,8 @@ export type Architecture =
   | "speculative"
   | "blackboard"
   | "entropy_blackboard"
-  | "pure_swarm";
+  | "pure_swarm"
+  | "dynamic_bidding";
 
 export type ArchitectureMode = "monolithic" | "hybrid" | "ensemble" | "swarm";
 

@@ -44,9 +44,12 @@ def create_app(upstream_base_url: str) -> FastAPI:
 
     @app.get("/v1/models")
     async def models() -> Response:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            r = await client.get(f"{upstream}/models")
-        return Response(content=r.content, status_code=r.status_code, media_type=r.headers.get("content-type"))
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                r = await client.get(f"{upstream}/models")
+            return Response(content=r.content, status_code=r.status_code, media_type=r.headers.get("content-type"))
+        except httpx.RequestError as exc:
+            return JSONResponse({"error": f"Upstream vLLM is unreachable: {exc}"}, status_code=502)
 
     @app.post("/v1/chat/completions")
     async def chat_completions(request: Request) -> Response:
@@ -55,10 +58,14 @@ def create_app(upstream_base_url: str) -> FastAPI:
         tracker.start()
         tracker.sample_gpu_power()
         t0 = time.perf_counter()
-        async with httpx.AsyncClient(timeout=None) as client:
-            upstream_response = await client.post(f"{upstream}/chat/completions", json=payload)
-        latency_ms = (time.perf_counter() - t0) * 1000.0
-        tracker.sample_gpu_power()
+        try:
+            async with httpx.AsyncClient(timeout=None) as client:
+                upstream_response = await client.post(f"{upstream}/chat/completions", json=payload)
+            latency_ms = (time.perf_counter() - t0) * 1000.0
+            tracker.sample_gpu_power()
+        except httpx.RequestError as exc:
+            tracker.stop(total_tokens=0)
+            return JSONResponse({"error": f"Upstream vLLM is unreachable: {exc}"}, status_code=502)
 
         if upstream_response.status_code >= 400:
             return Response(

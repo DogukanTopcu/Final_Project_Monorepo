@@ -64,22 +64,44 @@ def resolve_recommended_baseline(benchmark: str, llm: str | None = None, n_sampl
                         "ece": run_data.get("ece"),
                     }
 
-    path = Path("artifacts/baselines/recommended_references.json")
+    # Fallback to average of all LLMs for this benchmark
+    path = Path(__file__).parent.parent / "monolithic_constants.json"
     if not path.exists():
-        path = Path("monolithic_constants.json")
-    refs = load_recommended_references(path)
-    record = refs.get(benchmark, {})
-    if not isinstance(record, dict):
         return {}
-    acc = record.get("accuracy")
-    eats = (acc / (acc + 1.0)) if acc is not None else None
+        
+    import json
+    with open(path, "r") as f:
+        constants = json.load(f)
+    
+    benchmark_data = constants.get(benchmark, {})
+    if not benchmark_data:
+        return {}
+        
+    models = list(benchmark_data.values())
+    n_models = len(models)
+    
+    avg_cost = sum(m.get("total_cost_usd", 0.0) or 0.0 for m in models) / n_models
+    
+    avg_latency = 0.0
+    for m in models:
+        lat = m.get("avg_algorithmic_latency_ms")
+        if lat is None:
+            lat = m.get("avg_latency_ms", 0.0)
+        avg_latency += (lat or 0.0)
+    avg_latency /= n_models
+    
+    avg_energy = sum(m.get("total_energy_kwh", 0.0) or 0.0 for m in models) / n_models
+    avg_acc = sum(m.get("accuracy", 0.0) or 0.0 for m in models) / n_models
+    avg_ece = sum(m.get("ece", 0.0) or 0.0 for m in models) / n_models
+    eats = avg_acc / (avg_acc + 1.0)
+    
     return {
-        "total_cost_usd": float(record.get("total_cost_usd", 0.0) or 0.0) * scale_factor,
-        "avg_algorithmic_latency_ms": float(record.get("avg_algorithmic_latency_ms") or record.get("avg_latency_ms") or 0.0),
-        "total_energy_kwh": float(record.get("total_energy_kwh", 0.0) or 0.0) * scale_factor,
-        "accuracy": acc,
+        "total_cost_usd": avg_cost * scale_factor,
+        "avg_algorithmic_latency_ms": avg_latency,
+        "total_energy_kwh": avg_energy * scale_factor,
+        "accuracy": avg_acc,
         "eats_score": eats,
-        "ece": record.get("ece"),
+        "ece": avg_ece,
     }
 
 
@@ -113,13 +135,13 @@ class ExperimentRunner:
         """Call assert_model_runnable once for every model this run needs."""
         if cfg.architecture == "monolithic":
             assert_model_runnable(cfg.llm)
-        elif cfg.architecture == "ensemble":
+        elif cfg.architecture in {"ensemble", "dynamic_bidding"}:
             ensemble_ids = cfg.ensemble_slms or (
                 [cfg.slm] * max(int(cfg.n_models), 1) if cfg.slm else []
             )
             for sid in ensemble_ids:
                 assert_model_runnable(sid)
-            if cfg.llm_tiebreak and cfg.llm:
+            if cfg.architecture == "ensemble" and cfg.llm_tiebreak and cfg.llm:
                 assert_model_runnable(cfg.llm)
         elif cfg.architecture in {"blackboard", "entropy_blackboard"}:
             assert_model_runnable(cfg.slm)
@@ -149,14 +171,14 @@ class ExperimentRunner:
 
         if cfg.architecture == "monolithic":
             llm = get_model(cfg.llm)
-        elif cfg.architecture == "ensemble":
+        elif cfg.architecture in {"ensemble", "dynamic_bidding"}:
             ensemble_ids = cfg.ensemble_slms or (
                 [cfg.slm] * max(int(cfg.n_models), 1) if cfg.slm else []
             )
             if not ensemble_ids:
-                raise ValueError("ensemble requires at least one SLM.")
+                raise ValueError(f"{cfg.architecture} requires at least one SLM.")
             ensemble_slms = [get_model(sid) for sid in ensemble_ids]
-            if cfg.llm_tiebreak and cfg.llm:
+            if cfg.architecture == "ensemble" and cfg.llm_tiebreak and cfg.llm:
                 llm = get_model(cfg.llm)
         elif cfg.architecture in {"blackboard", "entropy_blackboard"}:
             slm = get_model(cfg.slm)
@@ -210,6 +232,11 @@ class ExperimentRunner:
             arch_kwargs["n_models"] = cfg.n_models
             arch_kwargs["voting"] = cfg.voting
             arch_kwargs["llm_tiebreak"] = cfg.llm_tiebreak
+        elif cfg.architecture == "dynamic_bidding":
+            arch_kwargs["cost_weight"] = getattr(cfg, "cost_weight", 0.15)
+            arch_kwargs["initial_bid_threshold"] = getattr(cfg, "initial_bid_threshold", 0.90)
+            arch_kwargs["min_bid_threshold"] = getattr(cfg, "min_bid_threshold", 0.10)
+            arch_kwargs["ttl_ms"] = getattr(cfg, "ttl_ms", 1500)
         elif cfg.architecture == "active_oracle":
             arch_kwargs["max_oracle_calls"] = cfg.max_oracle_calls
         elif cfg.architecture == "speculative":
@@ -249,10 +276,11 @@ class ExperimentRunner:
         # Console label
         if cfg.architecture == "monolithic":
             pair_label = f"(LLM only) {cfg.llm}"
-        elif cfg.architecture == "ensemble" and (getattr(cfg, "ensemble_slms", None) or not cfg.slm):
+        elif cfg.architecture in {"ensemble", "dynamic_bidding"} and (getattr(cfg, "ensemble_slms", None) or not cfg.slm):
             members = getattr(cfg, "ensemble_slms", None) or [cfg.slm or "?"]
-            tiebreak = f" → tiebreak {cfg.llm}" if (cfg.llm_tiebreak and cfg.llm) else ""
-            pair_label = f"ensemble[{', '.join(members)}]{tiebreak}"
+            tiebreak = f" → tiebreak {cfg.llm}" if (cfg.architecture == "ensemble" and cfg.llm_tiebreak and cfg.llm) else ""
+            prefix = "ensemble" if cfg.architecture == "ensemble" else "dynamic_bidding"
+            pair_label = f"{prefix}[{', '.join(members)}]{tiebreak}"
         elif cfg.architecture in {"blackboard", "entropy_blackboard"}:
             pair_label = f"Swarm[{cfg.slm}, {cfg.secondary_slm}] → {cfg.llm}"
         elif cfg.architecture == "pure_swarm":

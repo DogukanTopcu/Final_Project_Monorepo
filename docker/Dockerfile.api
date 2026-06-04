@@ -11,6 +11,8 @@ COPY --from=deps /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.
 COPY --from=deps /usr/local/bin /usr/local/bin
 COPY web/backend/ /app/web/backend/
 COPY mlops/ /app/mlops/
+COPY experiments/ /app/experiments/
+COPY monolithic_constants.json /app/monolithic_constants.json
 
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8000

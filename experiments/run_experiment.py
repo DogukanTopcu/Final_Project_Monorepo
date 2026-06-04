@@ -30,6 +30,7 @@ def parse_args() -> argparse.Namespace:
             "entropy_blackboard",
             "pure_swarm",
             "speculative",
+            "dynamic_bidding",
             "all",
         ],
         default="routing",
@@ -74,6 +75,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--n_models", type=int, default=3)
     p.add_argument("--voting", choices=["majority", "weighted"], default="majority")
     p.add_argument("--bid_threshold", type=float, default=0.65)
+    p.add_argument("--initial_bid_threshold", type=float, default=0.95)
+    p.add_argument("--min_bid_threshold", type=float, default=0.0)
     p.add_argument("--ttl_ms", type=int, default=1500)
     p.add_argument("--max_subtasks", type=int, default=2)
     p.add_argument("--allow_nested_subtasks", action="store_true")
@@ -122,6 +125,8 @@ def build_config(args: argparse.Namespace, architecture: str) -> ExperimentConfi
         n_models=args.n_models,
         voting=args.voting,
         bid_threshold=args.bid_threshold,
+        initial_bid_threshold=args.initial_bid_threshold,
+        min_bid_threshold=args.min_bid_threshold,
         ttl_ms=args.ttl_ms,
         max_subtasks=args.max_subtasks,
         allow_nested_subtasks=args.allow_nested_subtasks,
@@ -151,6 +156,7 @@ def main() -> None:
             "entropy_blackboard",
             "pure_swarm",
             "speculative",
+            "dynamic_bidding",
         ]
         if args.architecture == "all"
         else [args.architecture]

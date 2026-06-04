@@ -373,6 +373,51 @@ _SPECS: list[ArchitectureSpec] = [
             *_slm_params(),
         ],
     ),
+    ArchitectureSpec(
+        id=Architecture.DYNAMIC_BIDDING,
+        name="Dynamic Bidding",
+        mode=ArchitectureMode.SWARM,
+        description="Zero-shot bidding swarm across a dynamic list of SLMs.",
+        requires_slm=True,
+        requires_llm=False,
+        supports_multi_slm=True,
+        params=[
+            ArchitectureParamSpec(
+                key="cost_weight",
+                label="Cost weight",
+                type="float",
+                default=0.15,
+                min=0.0,
+                max=1.0,
+                description="Higher → penalizes bids from more expensive models.",
+            ),
+            ArchitectureParamSpec(
+                key="initial_bid_threshold",
+                label="Initial bid threshold",
+                type="float",
+                default=0.95,
+                min=0.0,
+                max=1.0,
+            ),
+            ArchitectureParamSpec(
+                key="min_bid_threshold",
+                label="Min bid threshold",
+                type="float",
+                default=0.0,
+                min=0.0,
+                max=1.0,
+            ),
+            ArchitectureParamSpec(
+                key="ttl_ms",
+                label="Task TTL (ms)",
+                type="int",
+                default=1500,
+                min=100,
+                max=10000,
+            ),
+            *_slm_params(),
+        ],
+    ),
 ]
 
 

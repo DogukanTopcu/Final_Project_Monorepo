@@ -173,7 +173,7 @@ async def get_result(result_id: str, settings: Settings = Depends(get_settings))
             metrics = data.get("metrics", {})
             config = data.get("config", {})
             llm = config.get("llm")
-            if llm and "baseline_accuracy" not in metrics:
+            if metrics.get("baseline_cost_usd", 0.0) == 0.0:
                 from experiments.runner import resolve_recommended_baseline
                 n_samples = int(config.get("n_samples", 500))
                 baseline = resolve_recommended_baseline(config.get("benchmark", "mmlu"), llm, n_samples=n_samples)
