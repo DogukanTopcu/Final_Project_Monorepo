@@ -1,6 +1,7 @@
 from architectures.active_oracle import ActiveOracleArchitecture
 from architectures.base import BaseArchitecture
 from architectures.blackboard import DecentralizedBlackboardArchitecture
+from architectures.dynamic_bidding_architecture import DynamicBiddingArchitecture
 from architectures.ensemble import EnsembleArchitecture
 from architectures.entropy_based_blackboard import (
     DecentralizedBlackboardArchitecture as EntropyBlackboardArchitecture,
@@ -27,6 +28,7 @@ def get_architecture(name: str, **kwargs) -> BaseArchitecture:
         "blackboard":         DecentralizedBlackboardArchitecture,
         "entropy_blackboard": EntropyBlackboardArchitecture,
         "pure_swarm":         PureSwarmArchitecture,
+        "dynamic_bidding":    DynamicBiddingArchitecture,
     }
     cls = arch_map.get(name)
     if cls is None:
@@ -47,5 +49,6 @@ __all__ = [
     "DecentralizedBlackboardArchitecture",
     "EntropyBlackboardArchitecture",
     "PureSwarmArchitecture",
+    "DynamicBiddingArchitecture",
     "get_architecture",
 ]

@@ -36,7 +36,7 @@ class Response:
 
 @dataclass
 class ExperimentConfig:
-    architecture: str              # "monolithic" | "routing" | "multi_agent" | "ensemble" | "active_oracle" | "rtos_watchdog" | "multi_agent_crew" | "speculative"
+    architecture: str              # "monolithic" | "routing" | "multi_agent" | "ensemble" | "active_oracle" | "rtos_watchdog" | "multi_agent_crew" | "speculative" | "dynamic_bidding"
     benchmark: str                 # "mmlu" | "arc" | "hellaswag" | "gsm8k" | "truthfulqa"
     n_samples: int = 100
     slm: str | None = "qwen3.5-4b"  # may be None for monolithic
@@ -69,6 +69,8 @@ class ExperimentConfig:
     speculative_acceptance_threshold: float = 0.7
     cost_weight: float = 0.15
     bid_threshold: float = 0.65
+    initial_bid_threshold: float = 0.95
+    min_bid_threshold: float = 0.0
     ttl_ms: int = 1500
     max_subtasks: int = 2
     allow_nested_subtasks: bool = False

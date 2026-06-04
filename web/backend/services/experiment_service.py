@@ -201,6 +201,8 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         "speculative_acceptance_threshold",
         "cost_weight",
         "bid_threshold",
+        "initial_bid_threshold",
+        "min_bid_threshold",
         "ttl_ms",
         "slm_url",
         "max_subtasks",
@@ -255,6 +257,8 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         ),
         cost_weight=float(overrides.get("cost_weight", 0.15)),
         bid_threshold=float(overrides.get("bid_threshold", 0.65)),
+        initial_bid_threshold=float(overrides.get("initial_bid_threshold", 0.95)),
+        min_bid_threshold=float(overrides.get("min_bid_threshold", 0.0)),
         ttl_ms=int(overrides.get("ttl_ms", 1500)),
         max_subtasks=int(overrides.get("max_subtasks", 2)),
         allow_nested_subtasks=bool(overrides.get("allow_nested_subtasks", False)),
@@ -327,6 +331,10 @@ def _run_experiment(
             if params.architecture.value == "ensemble":
                 if params.llm and (params.config_overrides or {}).get("llm_tiebreak"):
                     candidates.append(params.llm)
+                candidates.extend(params.ensemble_slms or [])
+                if params.slm and not params.ensemble_slms:
+                    candidates.append(params.slm)
+            elif params.architecture.value == "dynamic_bidding":
                 candidates.extend(params.ensemble_slms or [])
                 if params.slm and not params.ensemble_slms:
                     candidates.append(params.slm)
@@ -477,14 +485,14 @@ def _validate_architecture_models(params: ExperimentCreate, *, require_runtime: 
         _validate_model_selection(params.llm, "llm", require_runtime=require_runtime)
         return
 
-    if arch == "ensemble":
+    if arch in {"ensemble", "dynamic_bidding"}:
         ids = params.ensemble_slms or ([params.slm] if params.slm else [])
         if not ids:
-            raise ValueError("Ensemble requires at least one SLM.")
+            raise ValueError(f"{arch.replace('_', ' ').capitalize()} requires at least one SLM.")
         for sid in ids:
             _validate_model_selection(sid, "slm", require_runtime=require_runtime)
-        # Tiebreak LLM is optional
-        if params.llm and (params.config_overrides or {}).get("llm_tiebreak"):
+        # Tiebreak LLM is optional for ensemble
+        if arch == "ensemble" and params.llm and (params.config_overrides or {}).get("llm_tiebreak"):
             _validate_model_selection(params.llm, "llm", require_runtime=require_runtime)
         return
 

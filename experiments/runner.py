@@ -113,13 +113,13 @@ class ExperimentRunner:
         """Call assert_model_runnable once for every model this run needs."""
         if cfg.architecture == "monolithic":
             assert_model_runnable(cfg.llm)
-        elif cfg.architecture == "ensemble":
+        elif cfg.architecture in {"ensemble", "dynamic_bidding"}:
             ensemble_ids = cfg.ensemble_slms or (
                 [cfg.slm] * max(int(cfg.n_models), 1) if cfg.slm else []
             )
             for sid in ensemble_ids:
                 assert_model_runnable(sid)
-            if cfg.llm_tiebreak and cfg.llm:
+            if cfg.architecture == "ensemble" and cfg.llm_tiebreak and cfg.llm:
                 assert_model_runnable(cfg.llm)
         elif cfg.architecture in {"blackboard", "entropy_blackboard"}:
             assert_model_runnable(cfg.slm)
@@ -149,14 +149,14 @@ class ExperimentRunner:
 
         if cfg.architecture == "monolithic":
             llm = get_model(cfg.llm)
-        elif cfg.architecture == "ensemble":
+        elif cfg.architecture in {"ensemble", "dynamic_bidding"}:
             ensemble_ids = cfg.ensemble_slms or (
                 [cfg.slm] * max(int(cfg.n_models), 1) if cfg.slm else []
             )
             if not ensemble_ids:
-                raise ValueError("ensemble requires at least one SLM.")
+                raise ValueError(f"{cfg.architecture} requires at least one SLM.")
             ensemble_slms = [get_model(sid) for sid in ensemble_ids]
-            if cfg.llm_tiebreak and cfg.llm:
+            if cfg.architecture == "ensemble" and cfg.llm_tiebreak and cfg.llm:
                 llm = get_model(cfg.llm)
         elif cfg.architecture in {"blackboard", "entropy_blackboard"}:
             slm = get_model(cfg.slm)
@@ -213,6 +213,11 @@ class ExperimentRunner:
             arch_kwargs["n_models"] = cfg.n_models
             arch_kwargs["voting"] = cfg.voting
             arch_kwargs["llm_tiebreak"] = cfg.llm_tiebreak
+        elif cfg.architecture == "dynamic_bidding":
+            arch_kwargs["cost_weight"] = getattr(cfg, "cost_weight", 0.15)
+            arch_kwargs["initial_bid_threshold"] = getattr(cfg, "initial_bid_threshold", 0.90)
+            arch_kwargs["min_bid_threshold"] = getattr(cfg, "min_bid_threshold", 0.10)
+            arch_kwargs["ttl_ms"] = getattr(cfg, "ttl_ms", 1500)
         elif cfg.architecture == "active_oracle":
             arch_kwargs["max_oracle_calls"] = cfg.max_oracle_calls
         elif cfg.architecture == "speculative":
@@ -252,10 +257,11 @@ class ExperimentRunner:
         # Console label
         if cfg.architecture == "monolithic":
             pair_label = f"(LLM only) {cfg.llm}"
-        elif cfg.architecture == "ensemble" and (getattr(cfg, "ensemble_slms", None) or not cfg.slm):
+        elif cfg.architecture in {"ensemble", "dynamic_bidding"} and (getattr(cfg, "ensemble_slms", None) or not cfg.slm):
             members = getattr(cfg, "ensemble_slms", None) or [cfg.slm or "?"]
-            tiebreak = f" → tiebreak {cfg.llm}" if (cfg.llm_tiebreak and cfg.llm) else ""
-            pair_label = f"ensemble[{', '.join(members)}]{tiebreak}"
+            tiebreak = f" → tiebreak {cfg.llm}" if (cfg.architecture == "ensemble" and cfg.llm_tiebreak and cfg.llm) else ""
+            prefix = "ensemble" if cfg.architecture == "ensemble" else "dynamic_bidding"
+            pair_label = f"{prefix}[{', '.join(members)}]{tiebreak}"
         elif cfg.architecture in {"blackboard", "entropy_blackboard"}:
             pair_label = f"Swarm[{cfg.slm}, {cfg.secondary_slm}] → {cfg.llm}"
         elif cfg.architecture == "pure_swarm":
