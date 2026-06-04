@@ -15,9 +15,11 @@ The codebase is built around:
 - The experiment surface is organised into three **modes** the UI surfaces directly:
   - **Monolithic** — a single LLM answers every query. Architecture id: `monolithic`.
   - **Hybrid** — SLM + LLM cooperation. Architecture ids: `routing`, `multi_agent`,
-    `active_oracle`, `rtos_watchdog`, and (experimental) `speculative`.
-  - **Ensemble** — multiple SLMs vote, optional LLM tiebreak. Architecture ids:
-    `ensemble`, and (experimental) `multi_agent_crew`.
+    `active_oracle`, and (experimental) `speculative`.
+  - **Ensemble** — multiple SLMs vote, optional LLM tiebreak. Architecture id:
+    `ensemble`.
+  - **Swarm** — decentralized multi-SLM coordination. Architecture ids:
+    `blackboard`, `entropy_blackboard`, `pure_swarm`.
 
 ## Current Runtime Topology
 
@@ -58,17 +60,15 @@ These aliases are the source of truth used by the backend, CLI runner, and front
 | Hybrid | `routing` | SLM drafts first, low-confidence cases escalate to the selected LLM. |
 | Hybrid | `multi_agent` | Proponent-opponent-arbitrator flow over the same query. |
 | Hybrid | `active_oracle` | SLM reasons step-by-step and queries a truth oracle (LLM) when stuck. |
-| Hybrid | `rtos_watchdog` | Stream SLM tokens and interrupt to an LLM when confidence drops. |
 | Hybrid (experimental) | `speculative` | Drafter SLM proposes tokens; verifier LLM accepts or rewrites. |
 | Ensemble | `ensemble` | Multiple SLMs vote on the answer; optional LLM tiebreak. |
-| Ensemble (experimental) | `multi_agent_crew` | Domain-routed crew of three specialist SLMs (reasoning / code / factual). |
+| Swarm | `blackboard` | Two SLMs bid on a shared board; the LLM wakes only when a task stalls past TTL. |
+| Swarm | `entropy_blackboard` | Blackboard variant that uses entropy-based bidding before the heavy fallback. |
+| Swarm | `pure_swarm` | Two peer SLMs coordinate without any LLM fallback. |
 
-The frontend surfaces all eight. The original "active surface" of `routing`,
-`multi_agent`, and `ensemble` remains the recommended set for thesis-grade
-runs; `monolithic` is required as a baseline; `active_oracle` and
-`rtos_watchdog` are hybrid variants for oracle-driven reasoning and watchdog
-handoff; `speculative` and `multi_agent_crew` are exposed under an
-*experimental* tag.
+The frontend surfaces only the current thesis set: `monolithic`, `routing`,
+`multi_agent`, `active_oracle`, `speculative`, `ensemble`, `blackboard`,
+`entropy_blackboard`, and `pure_swarm`.
 
 ## Supported Benchmarks
 

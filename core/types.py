@@ -36,7 +36,7 @@ class Response:
 
 @dataclass
 class ExperimentConfig:
-    architecture: str              # "monolithic" | "routing" | "multi_agent" | "ensemble" | "active_oracle" | "rtos_watchdog" | "multi_agent_crew" | "speculative"
+    architecture: str              # "monolithic" | "routing" | "multi_agent" | "ensemble" | "active_oracle" | "speculative" | "blackboard" | "entropy_blackboard" | "pure_swarm"
     benchmark: str                 # "mmlu" | "arc" | "hellaswag" | "gsm8k" | "truthfulqa"
     n_samples: int = 100
     slm: str | None = "qwen3.5-4b"  # may be None for monolithic
@@ -48,8 +48,6 @@ class ExperimentConfig:
     slm_max_tokens: int = 0
     llm_max_tokens: int = 0
     slm_only: bool = False
-    # RTOS Watchdog params
-    slm_url: str = "auto"
     # Arch A params
     confidence_threshold: float = 0.7
     margin_threshold: float | None = None

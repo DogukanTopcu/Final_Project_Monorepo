@@ -16,10 +16,11 @@ const ARCH_OPTIONS = [
   "routing",
   "multi_agent",
   "active_oracle",
-  "rtos_watchdog",
   "ensemble",
-  "multi_agent_crew",
   "speculative",
+  "blackboard",
+  "entropy_blackboard",
+  "pure_swarm",
 ];
 const BENCHMARK_OPTIONS = [
   "all",

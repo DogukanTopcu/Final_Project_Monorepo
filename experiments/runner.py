@@ -203,9 +203,6 @@ class ExperimentRunner:
             arch_kwargs["long_input_token_threshold"] = cfg.long_input_token_threshold
             arch_kwargs["force_escalate"] = cfg.force_escalate
             arch_kwargs["confidence_method"] = cfg.confidence_method
-        elif cfg.architecture == "rtos_watchdog":
-            arch_kwargs["confidence_threshold"] = cfg.confidence_threshold
-            arch_kwargs["slm_url"] = getattr(cfg, "slm_url", "auto")
         elif cfg.architecture == "multi_agent":
             arch_kwargs["arbitrator"] = cfg.arbitrator
             arch_kwargs["n_rounds"] = getattr(cfg, "n_debate_rounds", 3)

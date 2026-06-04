@@ -44,7 +44,8 @@ Blocked or deferred:
 Deliverables:
 - backend reads `.env` correctly
 - frontend exposes every supported architecture (monolithic / routing /
-  multi_agent / active_oracle / rtos_watchdog / ensemble plus experimental: multi_agent_crew, speculative)
+  multi_agent / active_oracle / speculative / ensemble / blackboard /
+  entropy_blackboard / pure_swarm)
 - experiment service validates alias and runtime availability per
   architecture (monolithic skips SLM validation; ensemble validates the
   list of SLMs)
@@ -78,10 +79,11 @@ Target architecture matrix:
 | `routing` | one SLM + one LLM endpoint |
 | `multi_agent` | one SLM alias plus optional LLM arbitrator |
 | `active_oracle` | one SLM + one LLM endpoint |
-| `rtos_watchdog` | one SLM + one LLM endpoint |
-| `ensemble` | two or more SLM aliases (one vote each), optional LLM tiebreak |
-| `multi_agent_crew` (experimental) | three L4 SLM endpoints (reasoning / code / factual) |
 | `speculative` (experimental) | drafter SLM + verifier LLM, both reachable |
+| `ensemble` | two or more SLM aliases (one vote each), optional LLM tiebreak |
+| `blackboard` | two SLM aliases + one LLM sweeper |
+| `entropy_blackboard` | two SLM aliases + one LLM sweeper |
+| `pure_swarm` | two SLM aliases, no LLM |
 
 Minimum benchmark validation:
 - 5-sample smoke test for every architecture

@@ -8,7 +8,6 @@ from architectures.active_oracle import ActiveOracleArchitecture
 from architectures.ensemble import EnsembleArchitecture
 from architectures.multi_agent import MultiAgentArchitecture
 from architectures.routing import RoutingArchitecture, should_escalate
-from architectures.rtos_watchdog import RTOSWatchdogArchitecture
 from core.models import ModelProvider
 from core.types import Query
 
@@ -421,59 +420,6 @@ class TestActiveOracleArchitecture:
         assert resp.metadata["oracle_calls_made"] == 1
         assert resp.metadata["oracle_queries"][0] == "What is 2+2?"
 
-
-class TestRTOSWatchdogArchitecture:
-    def test_interrupt_triggers_llm_handoff(self, monkeypatch):
-        class StreamResponse:
-            def __enter__(self):
-                return self
-
-            def __exit__(self, exc_type, exc, tb):
-                return False
-
-            def raise_for_status(self):
-                return None
-
-            def iter_lines(self):
-                payload = {
-                    "choices": [
-                        {
-                            "delta": {"content": "A"},
-                            "logprobs": {"content": [{"logprob": -2.0}]},
-                        }
-                    ]
-                }
-                yield f"data: {__import__('json').dumps(payload)}".encode()
-                yield b"data: [DONE]"
-
-        class StreamSLM(StubModel):
-            def __init__(self, model_id: str):
-                super().__init__(model_id=model_id, answer="A", confidence=0.9)
-                self.base_url = "http://localhost:8001/v1"
-
-        def fake_post(*args, **kwargs):
-            return StreamResponse()
-
-        monkeypatch.setattr(
-            "architectures.rtos_watchdog.requests.post",
-            fake_post,
-        )
-
-        slm = StreamSLM("slm")
-        llm = RecordingStubModel("llm", answer="B", confidence=0.9)
-        arch = RTOSWatchdogArchitecture(
-            slm=slm,
-            llm=llm,
-            confidence_threshold=0.6,
-            slm_max_tokens=32,
-            llm_max_tokens=32,
-        )
-        resp = arch.run(QUERY)
-
-        assert resp.llm_calls == 1
-        assert resp.metadata["interrupted"] is True
-
-
 class TestEATSMetric:
     def test_lower_resource_penalty_gives_higher_eats(self):
         from evaluation.metrics import compute_eats
@@ -679,4 +625,3 @@ class TestSwarmAndBlackboardPromptWrapping:
         # Verification that prompt was formatted to allow subtasks
         assert "SUB_TASK: <query>" in captured_prompt
         assert "You MUST solve the problem step-by-step." in captured_prompt
-

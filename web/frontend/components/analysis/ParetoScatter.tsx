@@ -18,9 +18,12 @@ const ARCH_COLORS: Record<string, string> = {
   monolithic: "#8b5cf6",
   routing: "#3b82f6",
   multi_agent: "#10b981",
+  active_oracle: "#14b8a6",
   ensemble: "#f59e0b",
-  multi_agent_crew: "#ec4899",
   speculative: "#06b6d4",
+  blackboard: "#ef4444",
+  entropy_blackboard: "#f97316",
+  pure_swarm: "#84cc16",
 };
 
 interface ParetoScatterProps {

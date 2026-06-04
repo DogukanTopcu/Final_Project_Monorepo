@@ -55,9 +55,7 @@ const KNOWN_ARCHITECTURES: Architecture[] = [
   "routing",
   "multi_agent",
   "active_oracle",
-  "rtos_watchdog",
   "ensemble",
-  "multi_agent_crew",
   "speculative",
   "blackboard",
   "entropy_blackboard",
@@ -155,7 +153,6 @@ function isArchitectureWithDirectLlm(architecture: DetailArchitecture): boolean 
     architecture === "routing" ||
     architecture === "multi_agent" ||
     architecture === "active_oracle" ||
-    architecture === "rtos_watchdog" ||
     architecture === "speculative"
   );
 }
@@ -343,7 +340,6 @@ function getCoreTextFields(
       "ground_truth",
     ],
     active_oracle: ["prompt_text", "investigation_trace", "slm_raw_text", "predicted", "ground_truth"],
-    rtos_watchdog: ["prompt_text", "slm_text", "final_text", "predicted", "ground_truth"],
     speculative: [
       "prompt_text",
       "slm_text",
@@ -352,7 +348,6 @@ function getCoreTextFields(
       "predicted",
       "ground_truth",
     ],
-    multi_agent_crew: ["prompt_text", "slm_text", "final_text", "predicted", "ground_truth"],
     blackboard: ["prompt_text", "final_text", "predicted", "ground_truth"],
     entropy_blackboard: ["prompt_text", "final_text", "predicted", "ground_truth"],
     pure_swarm: ["prompt_text", "final_text", "predicted", "ground_truth"],
@@ -438,23 +433,6 @@ function getSampleSummaryCards(
       cards.push({
         label: "Oracle calls",
         value: formatNumber(sample.oracle_calls_made),
-      });
-    }
-    if (typeof sample.confidence === "number") {
-      cards.push({
-        label: "Confidence",
-        value: formatPercent(sample.confidence),
-      });
-    }
-  } else if (architecture === "rtos_watchdog") {
-    if (typeof sample.interrupted === "boolean") {
-      cards.push({
-        label: "Interrupted",
-        value: (
-          <Badge variant={sample.interrupted ? "warning" : "secondary"}>
-            {sample.interrupted ? "yes" : "no"}
-          </Badge>
-        ),
       });
     }
     if (typeof sample.confidence === "number") {
@@ -585,12 +563,6 @@ function getArchitectureDetailEntries(
     return entries;
   }
 
-  if (architecture === "rtos_watchdog") {
-    const entries = [...hybridEntries];
-    entries.push(...collectScalarEntries(sample, ["interrupted", "slm_tokens_before_interrupt"]));
-    return entries;
-  }
-
   if (architecture === "blackboard" || architecture === "entropy_blackboard") {
     return collectScalarEntries(sample, [
       "final_model_id",
@@ -618,24 +590,6 @@ function getArchitectureDetailEntries(
       "co2_g",
       "gpu_power_w",
     ]);
-  }
-
-  if (architecture === "multi_agent_crew") {
-    const entries = collectScalarEntries(sample, [
-      "final_model_id",
-      "confidence",
-      "latency_ms",
-      "cost_usd",
-      "api_cost_usd",
-      "infra_cost_usd",
-      "energy_kwh",
-      "co2_g",
-      "gpu_power_w",
-    ]);
-    if (sampleUsesLlm(sample)) {
-      entries.push(...collectScalarEntries(sample, ["used_llm", "llm_calls", "llm_latency_ms"]));
-    }
-    return entries;
   }
 
   return collectScalarEntries(sample, [
@@ -733,11 +687,6 @@ function getOverviewRows({
       label: "LLM",
       value: llm ?? "—",
     });
-  } else if (architecture === "multi_agent_crew") {
-    rows.push({
-      label: "Crew",
-      value: "reasoning / code / factual specialists",
-    });
   } else if (architecture === "blackboard" || architecture === "entropy_blackboard") {
     rows.push({
       label: "Primary SLM",
@@ -778,14 +727,14 @@ function getOverviewRows({
     value: experiment?.n_samples ?? valueOrDash(metrics?.n_total),
   });
 
-  if (architecture === "routing" || architecture === "rtos_watchdog") {
+  if (architecture === "routing") {
     rows.push({
       label: "Threshold",
       value: formatPercent(Number(config.confidence_threshold ?? 0.7)),
     });
   }
 
-  if (architecture !== "monolithic" && architecture !== "multi_agent_crew") {
+  if (architecture !== "monolithic") {
     rows.push({
       label: "SLM temp / max tokens",
       value: `${formatDecimal(Number(config.slm_temperature ?? 0))} / ${formatTokenBudget(
@@ -960,14 +909,6 @@ export default function ExperimentDetailPage({
         </p>
       );
     }
-    if (architecture === "rtos_watchdog") {
-      return (
-        <p>
-          The SLM <strong>{slm}</strong> streams tokens under a watchdog; when confidence
-          drops below the threshold it hands off to <strong>{llm}</strong>.
-        </p>
-      );
-    }
     if (architecture === "ensemble") {
       return (
         <p>
@@ -990,14 +931,6 @@ export default function ExperimentDetailPage({
         <p>
           Drafter <strong>{slm}</strong> proposed tokens; verifier <strong>{llm}</strong>{" "}
           accepted or rewrote them based on the acceptance threshold.
-        </p>
-      );
-    }
-    if (architecture === "multi_agent_crew") {
-      return (
-        <p>
-          Domain-routed crew of specialist SLMs (reasoning / code / factual). The crew
-          self-classifies each query and routes it to the best-fit agent without an LLM fallback.
         </p>
       );
     }

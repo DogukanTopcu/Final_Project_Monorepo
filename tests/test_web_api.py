@@ -154,22 +154,6 @@ def test_launch_accepts_active_oracle_architecture(client: TestClient):
     assert response.status_code == 200
 
 
-def test_launch_accepts_rtos_watchdog_architecture(client: TestClient):
-    response = client.post(
-        "/api/experiments",
-        json={
-            "architecture": "rtos_watchdog",
-            "benchmark": "mmlu",
-            "n_samples": 5,
-            "slm": "qwen3.5-4b",
-            "llm": "gpt-oss-20b",
-            "config_overrides": {"dry_run": True, "confidence_threshold": 0.55},
-        },
-    )
-
-    assert response.status_code == 200
-
-
 def test_launch_dry_run_transitions_to_completed_and_surfaces_metrics(
     client: TestClient,
     monkeypatch,

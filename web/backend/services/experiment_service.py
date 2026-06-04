@@ -202,7 +202,6 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         "cost_weight",
         "bid_threshold",
         "ttl_ms",
-        "slm_url",
         "max_subtasks",
         "allow_nested_subtasks",
     }
@@ -249,7 +248,6 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         n_models=n_models,
         voting=str(overrides.get("voting", "majority")),
         llm_tiebreak=bool(overrides.get("llm_tiebreak", False)),
-        slm_url=str(overrides.get("slm_url", "auto")),
         speculative_acceptance_threshold=float(
             overrides.get("speculative_acceptance_threshold", 0.7)
         ),
@@ -521,7 +519,7 @@ def _validate_architecture_models(params: ExperimentCreate, *, require_runtime: 
         _validate_model_selection(params.secondary_slm, "slm", require_runtime=require_runtime)
         return
 
-    # routing / multi_agent / multi_agent_crew / speculative — need both
+    # routing / multi_agent / active_oracle / speculative — need both
     if not params.slm or not params.llm:
         raise ValueError(f"{arch} requires both an SLM and an LLM selection.")
     _validate_model_selection(params.slm, "slm", require_runtime=require_runtime)

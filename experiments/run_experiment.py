@@ -25,11 +25,11 @@ def parse_args() -> argparse.Namespace:
             "routing",
             "multi_agent",
             "active_oracle",
-            "rtos_watchdog",
             "ensemble",
             "blackboard",
             "entropy_blackboard",
             "pure_swarm",
+            "speculative",
             "all",
         ],
         default="routing",
@@ -146,11 +146,11 @@ def main() -> None:
             "routing",
             "multi_agent",
             "active_oracle",
-            "rtos_watchdog",
             "ensemble",
             "blackboard",
             "entropy_blackboard",
             "pure_swarm",
+            "speculative",
         ]
         if args.architecture == "all"
         else [args.architecture]

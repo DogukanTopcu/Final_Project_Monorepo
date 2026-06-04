@@ -11,11 +11,13 @@ These rules are non-negotiable:
 - `eats` is a metric.
 - The experiment product surface is organised into three **modes**:
   - **Monolithic** — `monolithic`. Required as a baseline.
-  - **Hybrid** — `routing`, `multi_agent`, `active_oracle`, `rtos_watchdog`, and experimental `speculative`.
-  - **Ensemble** — `ensemble` and experimental `multi_agent_crew`.
-- The frontend renders all eight architectures. The original "active surface"
-  recommendation for thesis runs remains `routing`, `multi_agent`,
-  `ensemble`, plus `monolithic` as a ceiling baseline.
+  - **Hybrid** — `routing`, `multi_agent`, `active_oracle`, and experimental `speculative`.
+  - **Ensemble** — `ensemble`.
+  - **Swarm** — `blackboard`, `entropy_blackboard`, `pure_swarm`.
+- The frontend renders only the current thesis set. The recommended baseline
+  story remains `routing`, `multi_agent`, `ensemble`, plus `monolithic` as a
+  ceiling baseline, with swarm variants available for decentralized
+  coordination comparisons.
 - Ensemble accepts **multiple distinct SLMs**. Each SLM contributes exactly
   one vote; `n_models` is derived from the number of selected SLMs. The
   legacy "one SLM repeated N times" form is still supported but the UI
@@ -119,16 +121,34 @@ Flow:
 Why it is kept:
 - it isolates oracle-style interventions without full escalation to the LLM
 
-## Architecture E — `rtos_watchdog`
+## Architecture E — `blackboard`
 
 Flow:
-- Stream SLM tokens with logprob-based watchdog.
-- Interrupt to the LLM when token confidence drops below a threshold.
+- Two SLMs bid on a shared board.
+- An LLM sweeper wakes only when a task exceeds its TTL.
 
 Why it is kept:
-- it simulates real-time interrupt handoff without full rerouting
+- it measures decentralized coordination against hybrid routing baselines
 
-## 5. Status of Monolithic, Speculative, and Multi-Agent Crew
+## Architecture F — `entropy_blackboard`
+
+Flow:
+- Same shared-board mechanism as Blackboard.
+- Bid selection is driven by entropy-aware confidence signals.
+
+Why it is kept:
+- it isolates whether a stronger bid metric improves decentralized routing
+
+## Architecture G — `pure_swarm`
+
+Flow:
+- Two SLMs coordinate peer-to-peer.
+- No LLM fallback exists.
+
+Why it is kept:
+- it tests the fully SLM-only limit of decentralized coordination
+
+## 5. Status of Monolithic and Speculative
 
 These architectures are no longer "legacy" — they are first-class entries in
 the architecture catalog (`GET /api/architectures`) and selectable from the
@@ -137,8 +157,8 @@ launch form. Each plays a distinct role:
 - `monolithic` is the **required ceiling baseline**: a single LLM with no
   orchestration. Every thesis comparison should include at least one
   monolithic run against the same benchmark.
-- `speculative` and `multi_agent_crew` are flagged **experimental** in the
-  UI. They are runnable but the thesis narrative should not depend on them.
+- `speculative` is flagged **experimental** in the UI. It is runnable but the
+  thesis narrative should not depend on it.
 
 Routing / multi_agent / ensemble remain the recommended thesis story; the
 others provide the ceiling baseline and exploratory comparisons.

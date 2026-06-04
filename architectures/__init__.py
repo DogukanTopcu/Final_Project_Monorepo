@@ -7,10 +7,8 @@ from architectures.entropy_based_blackboard import (
 )
 from architectures.monolithic import MonolithicArchitecture
 from architectures.multi_agent import MultiAgentArchitecture
-from architectures.multi_agent_crew import MultiAgentCrewArchitecture
 from architectures.pure_swarm import PureSwarmArchitecture
 from architectures.routing import RoutingArchitecture
-from architectures.rtos_watchdog import RTOSWatchdogArchitecture
 from architectures.speculative_decoding import SpeculativeDecodingArchitecture
 
 
@@ -20,9 +18,7 @@ def get_architecture(name: str, **kwargs) -> BaseArchitecture:
         "multi_agent":        MultiAgentArchitecture,
         "ensemble":           EnsembleArchitecture,
         "active_oracle":      ActiveOracleArchitecture,
-        "rtos_watchdog":      RTOSWatchdogArchitecture,
         "monolithic":         MonolithicArchitecture,
-        "multi_agent_crew":   MultiAgentCrewArchitecture,
         "speculative":        SpeculativeDecodingArchitecture,
         "blackboard":         DecentralizedBlackboardArchitecture,
         "entropy_blackboard": EntropyBlackboardArchitecture,
@@ -40,9 +36,7 @@ __all__ = [
     "MultiAgentArchitecture",
     "EnsembleArchitecture",
     "ActiveOracleArchitecture",
-    "RTOSWatchdogArchitecture",
     "MonolithicArchitecture",
-    "MultiAgentCrewArchitecture",
     "SpeculativeDecodingArchitecture",
     "DecentralizedBlackboardArchitecture",
     "EntropyBlackboardArchitecture",
