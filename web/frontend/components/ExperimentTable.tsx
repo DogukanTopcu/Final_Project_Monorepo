@@ -45,6 +45,13 @@ function getExperimentModelsText(exp: ExperimentResponse) {
   return `${exp.slm ?? "—"} / ${exp.llm ?? "—"}`;
 }
 
+function formatStatusLabel(exp: ExperimentResponse) {
+  if (exp.status === "queued" && exp.queue_position != null) {
+    return `queued · #${exp.queue_position}`;
+  }
+  return exp.status;
+}
+
 export function ExperimentTable() {
   const { data: experiments, isLoading } = useExperiments();
   const [query, setQuery] = useState("");
@@ -266,7 +273,7 @@ export function ExperimentTable() {
                     <td className="py-3 pr-4 uppercase">{exp.benchmark}</td>
                     <td className="py-3 pr-4">{getExperimentModelsText(exp)}</td>
                     <td className="py-3 pr-4">
-                      <Badge variant={statusVariant[exp.status]}>{exp.status}</Badge>
+                      <Badge variant={statusVariant[exp.status]}>{formatStatusLabel(exp)}</Badge>
                     </td>
                     <td className="py-3 pr-4">
                       {exp.metrics?.accuracy != null ? formatPercent(exp.metrics.accuracy) : "—"}

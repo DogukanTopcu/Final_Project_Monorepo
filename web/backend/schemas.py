@@ -75,11 +75,13 @@ class ExperimentResponse(BaseModel):
     progress: int = 0
     total: int = 0
     error: str | None = None
+    queue_position: int | None = None
 
 
 class ExperimentLaunchResponse(BaseModel):
     experiment_id: str
     status: ExperimentStatus = ExperimentStatus.QUEUED
+    queue_position: int | None = None
 
 
 class ModelInfo(BaseModel):

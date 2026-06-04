@@ -53,6 +53,7 @@ class Settings(BaseSettings):
     results_dir: str = str(REPO_ROOT / "results")
     baseline_index_path: str = str(REPO_ROOT / "artifacts" / "baselines" / "index.json")
     recommended_references_path: str = str(REPO_ROOT / "artifacts" / "baselines" / "recommended_references.json")
+    experiment_max_concurrent_runs: int = 1
     environment: str = "dev"
     cors_origins: list[str] = ["http://localhost:3000"]
 

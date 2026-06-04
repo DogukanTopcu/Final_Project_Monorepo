@@ -19,6 +19,10 @@ Design:
 from __future__ import annotations
 
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import nullcontext
+from threading import Lock
+from time import perf_counter
 
 from architectures.base import BaseArchitecture
 from core.models import ModelProvider
@@ -69,15 +73,26 @@ class EnsembleArchitecture(BaseArchitecture):
         votes: list[str] = []
         confidences: list[float] = []
         total_in = total_out = 0
-        total_cost = total_latency = 0.0
+        total_cost = 0.0
         inference_steps: list[dict[str, object]] = []
         member_models: list[str] = []
         member_responses: list[dict[str, object]] = []
         llm_tiebreak_text: str | None = None
         llm_tiebreak_parsed: str | None = None
         llm_generation_metadata: dict[str, object] = {}
+        total_latency = 0.0
 
-        for idx, member in enumerate(self.slms):
+        provider_counts: dict[int, int] = {}
+        for member in self.slms:
+            provider_counts[id(member)] = provider_counts.get(id(member), 0) + 1
+        provider_locks = {
+            provider_id: Lock()
+            for provider_id, count in provider_counts.items()
+            if count > 1
+        }
+
+        def run_member(item: tuple[int, ModelProvider]) -> dict[str, object]:
+            idx, member = item
             slm_budget = compute_completion_budget(
                 member,
                 prompt,
@@ -85,49 +100,64 @@ class EnsembleArchitecture(BaseArchitecture):
                 role="ensemble_member",
                 requested_max_tokens=self.slm_max_tokens,
             )
-            text, conf, in_t, out_t, cost, lat = self._timed_generate(
-                member,
-                prompt,
-                temperature=self.slm_temperature,
-                max_tokens=slm_budget,
-            )
-            member_generation_metadata = dict(getattr(member, "last_generation_metadata", {}) or {})
+            provider_lock = provider_locks.get(id(member))
+            with provider_lock or nullcontext():
+                text, conf, in_t, out_t, cost, lat = self._timed_generate(
+                    member,
+                    prompt,
+                    temperature=self.slm_temperature,
+                    max_tokens=slm_budget,
+                )
+                member_generation_metadata = dict(getattr(member, "last_generation_metadata", {}) or {})
+
+            parsed = parse_answer(text, self.task_type)
+            return {
+                "member_index": idx + 1,
+                "role": f"ensemble_member_{idx + 1}",
+                "model_id": member.model_id,
+                "raw_text": text,
+                "parsed_answer": parsed,
+                "parse_status": "parsed" if parsed is not None else "unparseable",
+                "confidence": conf,
+                "input_tokens": in_t,
+                "output_tokens": out_t,
+                "latency_ms": lat,
+                "cost_usd": cost,
+                "effective_max_tokens": member_generation_metadata.get("effective_max_tokens"),
+                "finish_reason": member_generation_metadata.get("finish_reason"),
+            }
+
+        member_phase_started = perf_counter()
+        with ThreadPoolExecutor(max_workers=len(self.slms)) as executor:
+            member_results = list(executor.map(run_member, enumerate(self.slms)))
+        total_latency = (perf_counter() - member_phase_started) * 1000.0
+
+        for member_result in member_results:
+            conf = float(member_result["confidence"] or 0.0)
+            in_t = int(member_result["input_tokens"])
+            out_t = int(member_result["output_tokens"])
+            cost = float(member_result["cost_usd"])
+            lat = float(member_result["latency_ms"])
+
             total_in += in_t
             total_out += out_t
             total_cost += cost
-            total_latency += lat
-            member_models.append(member.model_id)
-            parsed = parse_answer(text, self.task_type)
-            member_responses.append(
-                {
-                    "member_index": idx + 1,
-                    "role": f"ensemble_member_{idx + 1}",
-                    "model_id": member.model_id,
-                    "raw_text": text,
-                    "parsed_answer": parsed,
-                    "parse_status": "parsed" if parsed is not None else "unparseable",
-                    "confidence": conf,
-                    "input_tokens": in_t,
-                    "output_tokens": out_t,
-                    "latency_ms": lat,
-                    "cost_usd": cost,
-                    "effective_max_tokens": member_generation_metadata.get("effective_max_tokens"),
-                    "finish_reason": member_generation_metadata.get("finish_reason"),
-                }
-            )
+            member_models.append(str(member_result["model_id"]))
+            member_responses.append(member_result)
             inference_steps.append(
                 {
-                    "role": f"ensemble_member_{idx + 1}",
-                    "model_id": member.model_id,
+                    "role": member_result["role"],
+                    "model_id": member_result["model_id"],
                     "latency_ms": lat,
                     "input_tokens": in_t,
                     "output_tokens": out_t,
                     "api_cost_usd": cost,
-                    "effective_max_tokens": member_generation_metadata.get("effective_max_tokens"),
-                    "finish_reason": member_generation_metadata.get("finish_reason"),
+                    "effective_max_tokens": member_result["effective_max_tokens"],
+                    "finish_reason": member_result["finish_reason"],
                 }
             )
-            if parsed:
+            parsed = member_result["parsed_answer"]
+            if isinstance(parsed, str):
                 votes.append(parsed)
                 confidences.append(conf)
 

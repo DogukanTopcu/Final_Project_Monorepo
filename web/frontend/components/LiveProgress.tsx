@@ -18,12 +18,16 @@ interface LiveProgressProps {
   experimentId: string;
   enabled: boolean;
   showRoutingLlmRatio?: boolean;
+  status?: "queued" | "running" | "completed" | "failed" | "cancelled";
+  queuePosition?: number | null;
 }
 
 export function LiveProgress({
   experimentId,
   enabled,
   showRoutingLlmRatio = false,
+  status,
+  queuePosition = null,
 }: LiveProgressProps) {
   const { events, lastEvent, isConnected, isReconnecting, error } = useSSE({
     experimentId,
@@ -37,6 +41,7 @@ export function LiveProgress({
   const total = latest?.total ?? 1;
   const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
   const isDone = lastEvent?.type === "complete" || lastEvent?.type === "error";
+  const isQueued = status === "queued";
   let seenProgress = 0;
   const accuracyBySample = new Map<number, number>();
   const llmRatioBySample = new Map<number, number>();
@@ -72,18 +77,35 @@ export function LiveProgress({
       <CardContent className="space-y-4">
         <div>
           <div className="mb-1 flex justify-between text-sm text-zinc-600">
-            <span>
-              {completed} / {total} samples
-            </span>
-            <span>{percent}%</span>
+            {isQueued ? (
+              <>
+                <span>
+                  Waiting in queue{queuePosition != null ? ` · position #${queuePosition}` : ""}
+                </span>
+                <span>queued</span>
+              </>
+            ) : (
+              <>
+                <span>
+                  {completed} / {total} samples
+                </span>
+                <span>{percent}%</span>
+              </>
+            )}
           </div>
           <div className="h-3 w-full overflow-hidden rounded-full bg-zinc-200">
             <div
               className="h-full rounded-full bg-zinc-900 transition-all duration-300"
-              style={{ width: `${percent}%` }}
+              style={{ width: `${isQueued ? 100 : percent}%`, opacity: isQueued ? 0.3 : 1 }}
             />
           </div>
         </div>
+
+        {isQueued && (
+          <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
+            This run is queued and will start automatically when the active experiment finishes.
+          </div>
+        )}
 
         {latest?.current_query && (
           <p className="truncate text-sm text-zinc-500">
@@ -91,7 +113,7 @@ export function LiveProgress({
           </p>
         )}
 
-        {accuracySeries.length > 0 && (
+        {!isQueued && accuracySeries.length > 0 && (
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
               <div className="text-sm font-medium text-zinc-900">Live accuracy</div>
@@ -138,7 +160,7 @@ export function LiveProgress({
           </div>
         )}
 
-        {showRoutingLlmRatio && llmRatioSeries.length > 0 && (
+        {!isQueued && showRoutingLlmRatio && llmRatioSeries.length > 0 && (
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
               <div className="text-sm font-medium text-zinc-900">Live LLM call ratio</div>

@@ -31,6 +31,7 @@ async def launch_experiment(
     return ExperimentLaunchResponse(
         experiment_id=exp.experiment_id,
         status=exp.status,
+        queue_position=exp.queue_position,
     )
 
 

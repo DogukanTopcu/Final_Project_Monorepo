@@ -30,11 +30,54 @@ from web.backend.schemas import (
 )
 from web.backend.services.model_host_service import reserve_llm_host
 
-_executor = ThreadPoolExecutor(max_workers=4)
+_executor = ThreadPoolExecutor(
+    max_workers=max(get_settings().experiment_max_concurrent_runs, 1)
+)
 
 _experiments: dict[str, ExperimentResponse] = {}
 _cancel_flags: dict[str, Event] = {}
 _sse_queues: dict[str, list[dict[str, Any]]] = {}
+
+
+def _refresh_queue_positions() -> None:
+    queued = sorted(
+        (
+            exp
+            for exp in _experiments.values()
+            if exp.status == ExperimentStatus.QUEUED
+        ),
+        key=lambda exp: exp.created_at,
+    )
+    for position, exp in enumerate(queued, start=1):
+        exp.queue_position = position
+
+    for exp in _experiments.values():
+        if exp.status != ExperimentStatus.QUEUED:
+            exp.queue_position = None
+
+
+def _result_json_path(settings: Settings, experiment_id: str) -> Path:
+    return Path(settings.results_dir) / f"{experiment_id}.json"
+
+
+def _persist_result_timestamps(
+    settings: Settings,
+    experiment_id: str,
+    *,
+    created_at: datetime,
+    completed_at: datetime,
+) -> None:
+    path = _result_json_path(settings, experiment_id)
+    if not path.exists():
+        return
+    try:
+        payload = json.loads(path.read_text())
+    except Exception:
+        return
+
+    payload["created_at"] = created_at.isoformat()
+    payload["completed_at"] = completed_at.isoformat()
+    path.write_text(json.dumps(payload, indent=2))
 
 
 def _build_persisted_experiment_response(path: Path) -> ExperimentResponse | None:
@@ -103,7 +146,10 @@ def _build_persisted_experiment_response(path: Path) -> ExperimentResponse | Non
                 data.get("created_at", datetime.now(UTC).isoformat())
             ),
             completed_at=datetime.fromisoformat(
-                data.get("created_at", datetime.now(UTC).isoformat())
+                data.get(
+                    "completed_at",
+                    data.get("created_at", datetime.now(UTC).isoformat()),
+                )
             ),
             metrics=metrics,
             progress=int(config.get("n_samples", 0)),
@@ -240,8 +286,18 @@ def _run_experiment(
     settings: Settings,
 ) -> None:
     exp = _experiments[experiment_id]
-    exp.status = ExperimentStatus.RUNNING
     cancel = _cancel_flags[experiment_id]
+
+    if cancel.is_set():
+        exp.status = ExperimentStatus.CANCELLED
+        exp.completed_at = datetime.now(UTC)
+        exp.queue_position = None
+        _refresh_queue_positions()
+        return
+
+    exp.status = ExperimentStatus.RUNNING
+    exp.queue_position = None
+    _refresh_queue_positions()
 
     callbacks = RunnerCallbacks(
         on_sample_complete=lambda cur, total, resp: _handle_sample_complete(
@@ -333,6 +389,13 @@ def _run_experiment(
         exp.metrics = metrics
         exp.completed_at = datetime.now(UTC)
         exp.progress = exp.total
+        _persist_result_timestamps(
+            settings,
+            experiment_id,
+            created_at=exp.created_at,
+            completed_at=exp.completed_at,
+        )
+        _refresh_queue_positions()
 
         _push_event(
             experiment_id,
@@ -346,6 +409,7 @@ def _run_experiment(
     except ExperimentCancelledError:
         exp.status = ExperimentStatus.CANCELLED
         exp.completed_at = datetime.now(UTC)
+        _refresh_queue_positions()
         _push_event(
             experiment_id,
             {
@@ -359,6 +423,7 @@ def _run_experiment(
         exp.error = str(exc)
         exp.completed_at = datetime.now(UTC)
         callbacks.error(exc)
+        _refresh_queue_positions()
         _push_event(
             experiment_id,
             {
@@ -504,6 +569,7 @@ def launch_experiment(params: ExperimentCreate, settings: Settings) -> Experimen
     _experiments[experiment_id] = exp
     _cancel_flags[experiment_id] = Event()
     _sse_queues[experiment_id] = []
+    _refresh_queue_positions()
 
     _executor.submit(_run_experiment, experiment_id, params, settings)
     return exp
@@ -537,4 +603,18 @@ def cancel_experiment(experiment_id: str) -> bool:
     if flag is None:
         return False
     flag.set()
+    exp = _experiments.get(experiment_id)
+    if exp is not None and exp.status == ExperimentStatus.QUEUED:
+        exp.status = ExperimentStatus.CANCELLED
+        exp.completed_at = datetime.now(UTC)
+        exp.queue_position = None
+        _refresh_queue_positions()
+        _push_event(
+            experiment_id,
+            {
+                "type": "complete",
+                "experiment_id": experiment_id,
+                "status": ExperimentStatus.CANCELLED.value,
+            },
+        )
     return True

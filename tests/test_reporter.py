@@ -213,6 +213,23 @@ def test_reporter_includes_model_runtime_settings_in_config_and_markdown(tmp_pat
     assert "| LLM Max Tokens | 600 |" in markdown
 
 
+def test_reporter_writes_completed_at_field(tmp_path):
+    result = ExperimentResult(
+        experiment_id="exp_completed_at",
+        config=ExperimentConfig(
+            architecture="routing",
+            benchmark="mmlu",
+        ),
+        samples=[],
+    )
+
+    path = Reporter(tmp_path).save(result)
+    payload = json.loads(path.read_text())
+
+    assert payload["created_at"]
+    assert payload["completed_at"]
+
+
 def test_reporter_preserves_architecture_specific_metadata(tmp_path):
     result = ExperimentResult(
         experiment_id="exp_ensemble_observability",

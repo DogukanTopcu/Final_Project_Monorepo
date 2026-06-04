@@ -206,6 +206,80 @@ def test_launch_dry_run_transitions_to_completed_and_surfaces_metrics(
     assert "total_cost_usd" in payload["metrics"]
 
 
+def test_launch_assigns_queue_positions_and_reorders_after_completion(
+    client: TestClient,
+    monkeypatch,
+):
+    executor = DeferredExecutor()
+    monkeypatch.setattr(experiment_service, "_executor", executor)
+
+    payload = {
+        "architecture": "routing",
+        "benchmark": "mmlu",
+        "n_samples": 3,
+        "slm": "qwen3.5-4b",
+        "llm": "gpt-oss-20b",
+        "config_overrides": {"dry_run": True},
+    }
+
+    first = client.post("/api/experiments", json=payload)
+    second = client.post("/api/experiments", json=payload)
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert first.json()["queue_position"] == 1
+    assert second.json()["queue_position"] == 2
+
+    second_id = second.json()["experiment_id"]
+    queued = client.get(f"/api/experiments/{second_id}")
+    assert queued.status_code == 200
+    assert queued.json()["status"] == "queued"
+    assert queued.json()["queue_position"] == 2
+
+    fn, args, kwargs = executor.tasks.pop(0)
+    fn(*args, **kwargs)
+
+    reprioritized = client.get(f"/api/experiments/{second_id}")
+    assert reprioritized.status_code == 200
+    assert reprioritized.json()["status"] == "queued"
+    assert reprioritized.json()["queue_position"] == 1
+
+
+def test_cancel_queued_experiment_updates_queue_immediately(
+    client: TestClient,
+    monkeypatch,
+):
+    executor = DeferredExecutor()
+    monkeypatch.setattr(experiment_service, "_executor", executor)
+
+    payload = {
+        "architecture": "routing",
+        "benchmark": "mmlu",
+        "n_samples": 3,
+        "slm": "qwen3.5-4b",
+        "llm": "gpt-oss-20b",
+        "config_overrides": {"dry_run": True},
+    }
+
+    first = client.post("/api/experiments", json=payload)
+    second = client.post("/api/experiments", json=payload)
+    first_id = first.json()["experiment_id"]
+    second_id = second.json()["experiment_id"]
+
+    cancelled = client.delete(f"/api/experiments/{first_id}")
+    assert cancelled.status_code == 200
+
+    first_state = client.get(f"/api/experiments/{first_id}")
+    assert first_state.status_code == 200
+    assert first_state.json()["status"] == "cancelled"
+    assert first_state.json()["queue_position"] is None
+
+    second_state = client.get(f"/api/experiments/{second_id}")
+    assert second_state.status_code == 200
+    assert second_state.json()["status"] == "queued"
+    assert second_state.json()["queue_position"] == 1
+
+
 def test_launch_accepts_per_model_runtime_settings(client: TestClient, monkeypatch):
     executor = DeferredExecutor()
     monkeypatch.setattr(experiment_service, "_executor", executor)
@@ -447,6 +521,7 @@ def test_experiments_endpoint_includes_persisted_local_results(client: TestClien
     persisted_payload = {
         "experiment_id": "exp_persisted_ui",
         "created_at": "2026-05-19T12:00:00+00:00",
+        "completed_at": "2026-05-19T12:42:00+00:00",
         "config": {
             "architecture": "routing",
             "benchmark": "mmlu",
@@ -466,6 +541,7 @@ def test_experiments_endpoint_includes_persisted_local_results(client: TestClien
     assert matching["status"] == "completed"
     assert matching["metrics"]["accuracy"] == 0.4
     assert matching["slm"] == "qwen3.5-4b"
+    assert matching["completed_at"] == "2026-05-19T12:42:00Z"
 
 
 def test_launch_rejects_unknown_llm_alias(client: TestClient, monkeypatch):

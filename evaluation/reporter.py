@@ -44,6 +44,7 @@ class Reporter:
         report = {
             "experiment_id": result.experiment_id,
             "created_at": now,
+            "completed_at": now,
             "config": config_payload,
             "metrics": metrics,
             "subject_accuracy": subject_accuracy,

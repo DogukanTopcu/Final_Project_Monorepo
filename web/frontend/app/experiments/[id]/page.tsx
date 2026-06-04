@@ -87,6 +87,21 @@ function formatTokenBudget(value: number | null | undefined): string {
   return formatNumber(value);
 }
 
+function formatCompletedValue(
+  createdAt: string | undefined,
+  completedAt: string,
+): string {
+  const completedLabel = formatDate(completedAt);
+  if (!createdAt) return completedLabel;
+
+  const createdLabel = formatDate(createdAt);
+  const deltaMs = new Date(completedAt).getTime() - new Date(createdAt).getTime();
+  if (createdLabel === completedLabel && deltaMs > 0) {
+    return `${completedLabel} (+${formatDurationMs(deltaMs)})`;
+  }
+  return completedLabel;
+}
+
 function hasTextValue(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
@@ -799,7 +814,7 @@ function getOverviewRows({
   if (experiment?.completed_at) {
     rows.push({
       label: "Completed",
-      value: formatDate(experiment.completed_at),
+      value: formatCompletedValue(experiment.created_at, experiment.completed_at),
     });
   }
 
@@ -1061,6 +1076,9 @@ export default function ExperimentDetailPage({
             {experiment.status}
           </Badge>
         )}
+        {experiment?.status === "queued" && experiment.queue_position != null && (
+          <Badge variant="secondary">queue #{experiment.queue_position}</Badge>
+        )}
         <Badge variant="outline" className="capitalize">
           {architectureLabel}
         </Badge>
@@ -1163,6 +1181,8 @@ export default function ExperimentDetailPage({
               experimentId={experiment.experiment_id}
               enabled={isActive}
               showRoutingLlmRatio={architecture === "routing"}
+              status={experiment.status}
+              queuePosition={experiment.queue_position}
             />
           )}
 

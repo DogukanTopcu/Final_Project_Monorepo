@@ -58,11 +58,13 @@ export interface ExperimentResponse {
   progress: number;
   total: number;
   error: string | null;
+  queue_position: number | null;
 }
 
 export interface ExperimentLaunchResponse {
   experiment_id: string;
   status: ExperimentStatus;
+  queue_position?: number | null;
 }
 
 export interface ModelInfo {

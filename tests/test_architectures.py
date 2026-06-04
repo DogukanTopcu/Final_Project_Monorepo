@@ -1,6 +1,7 @@
 """Unit tests for architectures — uses a stub ModelProvider (no API calls)."""
 from __future__ import annotations
 
+import time
 from unittest.mock import MagicMock
 
 from architectures.active_oracle import ActiveOracleArchitecture
@@ -69,6 +70,23 @@ class MetadataStubModel(RecordingStubModel):
             "finish_reason": self._finish_reason,
             "effective_max_tokens": self._effective_max_tokens,
         }
+        return super().generate(prompt, **kwargs)
+
+
+class SlowStubModel(StubModel):
+    def __init__(
+        self,
+        model_id: str,
+        answer: str = "A",
+        confidence: float | None = 0.9,
+        *,
+        delay_s: float = 0.15,
+    ) -> None:
+        super().__init__(model_id, answer=answer, confidence=confidence)
+        self.delay_s = delay_s
+
+    def generate(self, prompt: str, **kwargs):
+        time.sleep(self.delay_s)
         return super().generate(prompt, **kwargs)
 
 
@@ -365,6 +383,27 @@ class TestEnsembleArchitecture:
         assert member["finish_reason"] == "length"
         assert member["effective_max_tokens"] == 660
 
+    def test_ensemble_runs_distinct_members_in_parallel(self):
+        members = [
+            SlowStubModel("slm_a", answer="B", confidence=0.8, delay_s=0.15),
+            SlowStubModel("slm_b", answer="B", confidence=0.8, delay_s=0.15),
+            SlowStubModel("slm_c", answer="B", confidence=0.8, delay_s=0.15),
+        ]
+        arch = EnsembleArchitecture(slms=members, voting="majority")
+
+        started = time.perf_counter()
+        resp = arch.run(QUERY)
+        elapsed_s = time.perf_counter() - started
+
+        assert resp.predicted_answer == "B"
+        assert elapsed_s < 0.32
+        assert resp.latency_ms < 320
+        assert [member["model_id"] for member in resp.metadata["ensemble_member_responses"]] == [
+            "slm_a",
+            "slm_b",
+            "slm_c",
+        ]
+
 
 class TestActiveOracleArchitecture:
     def test_oracle_loop_calls_llm_and_returns_final_answer(self):
@@ -640,5 +679,4 @@ class TestSwarmAndBlackboardPromptWrapping:
         # Verification that prompt was formatted to allow subtasks
         assert "SUB_TASK: <query>" in captured_prompt
         assert "You MUST solve the problem step-by-step." in captured_prompt
-
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,10 @@ export function ExperimentForm() {
   const [ensembleSlms, setEnsembleSlms] = useState<string[]>([]);
   const [paramValues, setParamValues] = useState<Record<string, unknown>>({});
   const [dryRun, setDryRun] = useState(false);
+  const [lastQueued, setLastQueued] = useState<{
+    experimentId: string;
+    queuePosition: number | null;
+  } | null>(null);
 
   // Architectures available for the selected mode
   const archsForMode = useMemo(() => {
@@ -162,8 +167,7 @@ export function ExperimentForm() {
     return true;
   })();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (intent: "stay" | "open" = "stay") => {
     if (!archSpec) return;
 
     const configOverrides: Record<string, unknown> = { dry_run: dryRun };
@@ -186,7 +190,13 @@ export function ExperimentForm() {
     };
 
     const result = await launch.mutateAsync(payload);
-    router.push(`/experiments/${result.experiment_id}`);
+    setLastQueued({
+      experimentId: result.experiment_id,
+      queuePosition: result.queue_position ?? null,
+    });
+    if (intent === "open") {
+      router.push(`/experiments/${result.experiment_id}`);
+    }
   };
 
   return (
@@ -195,7 +205,13 @@ export function ExperimentForm() {
         <CardTitle>Launch experiment</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void handleSubmit("stay");
+          }}
+          className="space-y-6"
+        >
           {/* Mode */}
           <section className="space-y-2">
             <div className="text-sm font-medium text-zinc-900">1 · Mode</div>
@@ -381,9 +397,40 @@ export function ExperimentForm() {
             </label>
           </div>
 
-          <Button type="submit" disabled={launch.isPending || !canLaunch} className="w-full">
-            {launch.isPending ? "Launching…" : "Launch experiment"}
-          </Button>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button type="submit" disabled={launch.isPending || !canLaunch} className="flex-1">
+              {launch.isPending ? "Queueing…" : "Queue and stay here"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={launch.isPending || !canLaunch}
+              className="flex-1"
+              onClick={() => void handleSubmit("open")}
+            >
+              {launch.isPending ? "Queueing…" : "Queue and open detail"}
+            </Button>
+          </div>
+
+          {lastQueued && (
+            <div className="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+              <div className="font-medium">
+                Experiment queued: {lastQueued.experimentId}
+                {lastQueued.queuePosition != null ? ` · position #${lastQueued.queuePosition}` : ""}
+              </div>
+              <div className="mt-1 flex flex-wrap gap-3 text-green-900">
+                <Link
+                  href={`/experiments/${lastQueued.experimentId}`}
+                  className="underline underline-offset-2"
+                >
+                  Open detail
+                </Link>
+                <Link href="/experiments" className="underline underline-offset-2">
+                  View all experiments
+                </Link>
+              </div>
+            </div>
+          )}
 
           {launch.isError && (
             <p className="text-sm text-red-600">
