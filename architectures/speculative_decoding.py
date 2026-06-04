@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import math
 import os
+import re
 import time
 from dataclasses import dataclass
 
@@ -27,6 +28,8 @@ import requests
 from core.models import (
     ModelProvider,
     OpenAICompatibleModel,
+    _extract_message_text,
+    _extract_openai_compatible_metadata,
     _is_local_or_private_endpoint,
 )
 from core.prompt import build_prompt, parse_answer
@@ -49,6 +52,7 @@ class _GenerationResult:
     prompt_tokens: int
     completion_tokens: int
     latency_ms: float
+    wall_latency_ms: float
     finish_reason: str | None = None
     continuation_fallback_used: bool = False
 
@@ -88,6 +92,25 @@ def _common_prefix_length(left: str, right: str) -> int:
     return idx
 
 
+def _normalize_verification_text(text: str) -> str:
+    lowered = text.strip().lower()
+    lowered = re.sub(r"[*_`#>\-]+", " ", lowered)
+    lowered = re.sub(r"\s+", " ", lowered)
+    return lowered.strip()
+
+
+def _strip_generic_lead_in(text: str) -> str:
+    stripped = text.strip()
+    patterns = [
+        r"^(here(?:'s| is)\s+(?:a\s+)?(?:brief\s+)?(?:step-by-step\s+)?(?:analysis|reasoning|solution)\s*(?:to determine the correct answer)?[:\-\s]*)",
+        r"^(let(?:'s| us)\s+analy[sz]e[^:\n]*[:\-\s]*)",
+        r"^(to determine[^:\n]*[:\-\s]*)",
+    ]
+    for pattern in patterns:
+        stripped = re.sub(pattern, "", stripped, flags=re.IGNORECASE)
+    return stripped.strip()
+
+
 def _mean_confidence(logprobs: list[float]) -> float:
     if not logprobs:
         return 0.5
@@ -125,6 +148,7 @@ class SpeculativeDecodingArchitecture:
         llm_temperature: float | None = None,
         slm_max_tokens: int | None = None,
         llm_max_tokens: int | None = None,
+        draft_max_tokens: int | None = None,
         task_type: str | None = None,
         verifier_lookahead_tokens: int = 8,
     ) -> None:
@@ -154,13 +178,70 @@ class SpeculativeDecodingArchitecture:
             confidence_threshold if acceptance_threshold is None else acceptance_threshold
         )
         self.task_type = task_type or "open"
+        self.draft_max_tokens = max(int(draft_max_tokens or 0), 0)
         self.verifier_lookahead_tokens = max(int(verifier_lookahead_tokens), 1)
         self._drafter_is_local = _is_local_or_private_endpoint(self.drafter_url)
         self._verifier_is_local = _is_local_or_private_endpoint(self.verifier_url)
 
-    def run(self, query: Query) -> Response:
+    def _build_speculative_prompt(self, query: Query) -> str:
         prompt = build_prompt(query, self.task_type)
-        t0 = time.perf_counter()
+        if self.task_type == "mcq":
+            prompt += (
+                "\n\nKeep the rationale extremely short."
+                "\nUse at most one short sentence before the final answer."
+                "\nDo not use headings, bullets, or step-by-step sections."
+                "\nPrefer an answer-only response when possible."
+            )
+        return prompt
+
+    def _resolved_draft_max_tokens(self) -> int:
+        configured = max(int(self.drafter_max_tokens or 0), 0)
+        cap = max(int(self.draft_max_tokens or 0), 0)
+        if configured and cap:
+            return min(configured, cap)
+        return configured or cap
+
+    def _match_draft_prefix(
+        self,
+        *,
+        remaining_draft: str,
+        verifier_text: str,
+    ) -> tuple[int, str]:
+        raw_match_len = _common_prefix_length(remaining_draft, verifier_text)
+        if raw_match_len > 0:
+            return raw_match_len, "raw_prefix"
+
+        draft_answer = parse_answer(remaining_draft, self.task_type)
+        verifier_answer = parse_answer(verifier_text, self.task_type)
+        if (
+            self.task_type == "mcq"
+            and draft_answer is not None
+            and verifier_answer is not None
+            and draft_answer == verifier_answer
+        ):
+            return len(remaining_draft), "parsed_answer_agreement"
+
+        normalized_draft = _normalize_verification_text(_strip_generic_lead_in(remaining_draft))
+        normalized_verifier = _normalize_verification_text(_strip_generic_lead_in(verifier_text))
+        if normalized_draft and normalized_verifier and normalized_draft == normalized_verifier:
+            return len(remaining_draft), "normalized_equivalence"
+
+        return 0, "no_match"
+
+    def _can_reuse_verifier_answer(
+        self,
+        *,
+        accepted_prefix: str,
+        verifier_window: _GenerationResult | None,
+    ) -> bool:
+        if accepted_prefix:
+            return False
+        if verifier_window is None or verifier_window.finish_reason != "stop":
+            return False
+        return parse_answer(verifier_window.text, self.task_type) is not None
+
+    def run(self, query: Query) -> Response:
+        prompt = self._build_speculative_prompt(query)
 
         draft = self._generate(
             provider=self.drafter,
@@ -168,7 +249,7 @@ class SpeculativeDecodingArchitecture:
             api_key=self.drafter_api_key,
             model_name=self.drafter_model,
             messages=_messages(prompt, ""),
-            requested_max_tokens=self.drafter_max_tokens,
+            requested_max_tokens=self._resolved_draft_max_tokens(),
             temperature=self.drafter_temperature,
         )
         draft_cost = _estimate_cost(
@@ -183,6 +264,8 @@ class SpeculativeDecodingArchitecture:
         total_cost = draft_cost
         draft_text = draft.text
         draft_confidence = _mean_confidence(draft.logprobs)
+        total_model_latency_ms = draft.latency_ms
+        total_wall_latency_ms = draft.wall_latency_ms
 
         accepted_chars = 0
         verifier_requests = 0
@@ -194,6 +277,7 @@ class SpeculativeDecodingArchitecture:
                 "role": "drafter_proposal",
                 "model_id": self.drafter_model,
                 "latency_ms": draft.latency_ms,
+                "wall_latency_ms": draft.wall_latency_ms,
                 "input_tokens": draft.prompt_tokens,
                 "output_tokens": draft.completion_tokens,
                 "api_cost_usd": draft_cost,
@@ -203,6 +287,8 @@ class SpeculativeDecodingArchitecture:
         rewrite_reason = "draft_fully_verified"
         rewrite_suffix: _GenerationResult | None = None
         continuation_fallback_used = False
+        last_verifier_window: _GenerationResult | None = None
+        draft_parsed = parse_answer(draft_text, self.task_type)
 
         while accepted_chars < len(draft_text):
             verifier_window = self._generate(
@@ -224,6 +310,8 @@ class SpeculativeDecodingArchitecture:
             verifier_requests += 1
             verifier_prompt_tokens += verifier_window.prompt_tokens
             verifier_completion_tokens += verifier_window.completion_tokens
+            total_model_latency_ms += verifier_window.latency_ms
+            total_wall_latency_ms += verifier_window.wall_latency_ms
             verifier_cost = _estimate_cost(
                 self.verifier_model,
                 prompt_tokens=verifier_window.prompt_tokens,
@@ -235,10 +323,15 @@ class SpeculativeDecodingArchitecture:
             total_cost += verifier_cost
 
             remaining_draft = draft_text[accepted_chars:]
-            match_len = _common_prefix_length(remaining_draft, verifier_window.text)
+            match_len, match_strategy = self._match_draft_prefix(
+                remaining_draft=remaining_draft,
+                verifier_text=verifier_window.text,
+            )
             accepted_before = accepted_chars
             window_confidence = _mean_confidence(verifier_window.logprobs)
             accepted_chars += match_len
+            last_verifier_window = verifier_window
+            full_draft_verified = accepted_chars >= len(draft_text)
 
             verification_steps.append(
                 {
@@ -246,6 +339,7 @@ class SpeculativeDecodingArchitecture:
                     "accepted_chars_before": accepted_before,
                     "matched_chars": match_len,
                     "accepted_chars_after": accepted_chars,
+                    "match_strategy": match_strategy,
                     "window_text": verifier_window.text,
                     "remaining_draft_preview": remaining_draft[:160],
                     "window_confidence": window_confidence,
@@ -256,6 +350,7 @@ class SpeculativeDecodingArchitecture:
                     "role": "verifier_check",
                     "model_id": self.verifier_model,
                     "latency_ms": verifier_window.latency_ms,
+                    "wall_latency_ms": verifier_window.wall_latency_ms,
                     "input_tokens": verifier_window.prompt_tokens,
                     "output_tokens": verifier_window.completion_tokens,
                     "api_cost_usd": verifier_cost,
@@ -271,6 +366,8 @@ class SpeculativeDecodingArchitecture:
                 rewrite_triggered = True
                 rewrite_reason = "verifier_confidence_below_threshold"
                 break
+            if full_draft_verified:
+                continue
             if match_len < len(verifier_window.text):
                 rewrite_triggered = True
                 rewrite_reason = "verifier_diverged_from_draft"
@@ -280,47 +377,64 @@ class SpeculativeDecodingArchitecture:
                 rewrite_reason = "no_verified_progress"
                 break
 
+        reused_verifier_answer = False
         if rewrite_triggered:
             accepted_prefix = draft_text[:accepted_chars]
-            rewrite_suffix = self._generate(
-                provider=self.verifier,
-                base_url=self.verifier_url,
-                api_key=self.verifier_api_key,
-                model_name=self.verifier_model,
-                messages=_messages(prompt, accepted_prefix),
-                requested_max_tokens=self.verifier_max_tokens,
-                temperature=self.verifier_temperature,
-                continue_final_message=bool(accepted_prefix),
-            )
-            continuation_fallback_used = (
-                continuation_fallback_used or rewrite_suffix.continuation_fallback_used
-            )
-            verifier_requests += 1
-            verifier_prompt_tokens += rewrite_suffix.prompt_tokens
-            verifier_completion_tokens += rewrite_suffix.completion_tokens
-            rewrite_cost = _estimate_cost(
-                self.verifier_model,
-                prompt_tokens=rewrite_suffix.prompt_tokens,
-                completion_tokens=rewrite_suffix.completion_tokens,
-                local_endpoint=self._verifier_is_local,
-            )
-            total_in += rewrite_suffix.prompt_tokens
-            total_out += rewrite_suffix.completion_tokens
-            total_cost += rewrite_cost
-            inference_steps.append(
-                {
-                    "role": "verifier_rewrite",
-                    "model_id": self.verifier_model,
-                    "latency_ms": rewrite_suffix.latency_ms,
-                    "input_tokens": rewrite_suffix.prompt_tokens,
-                    "output_tokens": rewrite_suffix.completion_tokens,
-                    "api_cost_usd": rewrite_cost,
-                }
-            )
+            if self._can_reuse_verifier_answer(
+                accepted_prefix=accepted_prefix,
+                verifier_window=last_verifier_window,
+            ):
+                rewrite_suffix = last_verifier_window
+                reused_verifier_answer = True
+            else:
+                rewrite_suffix = self._generate(
+                    provider=self.verifier,
+                    base_url=self.verifier_url,
+                    api_key=self.verifier_api_key,
+                    model_name=self.verifier_model,
+                    messages=_messages(prompt, accepted_prefix),
+                    requested_max_tokens=self.verifier_max_tokens,
+                    temperature=self.verifier_temperature,
+                    continue_final_message=bool(accepted_prefix),
+                )
+                continuation_fallback_used = (
+                    continuation_fallback_used or rewrite_suffix.continuation_fallback_used
+                )
+                verifier_requests += 1
+                verifier_prompt_tokens += rewrite_suffix.prompt_tokens
+                verifier_completion_tokens += rewrite_suffix.completion_tokens
+                total_model_latency_ms += rewrite_suffix.latency_ms
+                total_wall_latency_ms += rewrite_suffix.wall_latency_ms
+                rewrite_cost = _estimate_cost(
+                    self.verifier_model,
+                    prompt_tokens=rewrite_suffix.prompt_tokens,
+                    completion_tokens=rewrite_suffix.completion_tokens,
+                    local_endpoint=self._verifier_is_local,
+                )
+                total_in += rewrite_suffix.prompt_tokens
+                total_out += rewrite_suffix.completion_tokens
+                total_cost += rewrite_cost
+                inference_steps.append(
+                    {
+                        "role": "verifier_rewrite",
+                        "model_id": self.verifier_model,
+                        "latency_ms": rewrite_suffix.latency_ms,
+                        "wall_latency_ms": rewrite_suffix.wall_latency_ms,
+                        "input_tokens": rewrite_suffix.prompt_tokens,
+                        "output_tokens": rewrite_suffix.completion_tokens,
+                        "api_cost_usd": rewrite_cost,
+                    }
+                )
             final_text = accepted_prefix + rewrite_suffix.text
             final_model_id = self.verifier_model
             llm_raw_text = rewrite_suffix.text
-            llm_latency_ms = rewrite_suffix.latency_ms
+            llm_latency_ms = (
+                sum(
+                    float(step.get("latency_ms", 0.0) or 0.0)
+                    for step in inference_steps
+                    if isinstance(step, dict) and str(step.get("model_id", "")) == self.verifier_model
+                )
+            )
             llm_input_tokens = verifier_prompt_tokens
             llm_output_tokens = verifier_completion_tokens
             llm_cost_usd = total_cost - draft_cost
@@ -339,7 +453,6 @@ class SpeculativeDecodingArchitecture:
             else 1.0
         )
         predicted = parse_answer(final_text, self.task_type)
-        latency_ms = (time.perf_counter() - t0) * 1000
 
         return Response(
             query_id=query.id,
@@ -347,7 +460,8 @@ class SpeculativeDecodingArchitecture:
             predicted_answer=predicted,
             model_id=final_model_id,
             llm_calls=1 if verifier_requests > 0 else 0,
-            latency_ms=latency_ms,
+            latency_ms=total_model_latency_ms,
+            algorithmic_latency_ms=total_model_latency_ms,
             input_tokens=total_in,
             output_tokens=total_out,
             cost_usd=total_cost,
@@ -361,7 +475,9 @@ class SpeculativeDecodingArchitecture:
                 "slm_output_tokens": draft.completion_tokens,
                 "slm_cost_usd": draft_cost,
                 "slm_latency_ms": draft.latency_ms,
+                "slm_wall_latency_ms": draft.wall_latency_ms,
                 "slm_confidence": draft_confidence,
+                "slm_parsed_answer": draft_parsed,
                 "llm_text": llm_raw_text,
                 "llm_raw_text": llm_raw_text,
                 "llm_model_id": self.verifier_model,
@@ -376,18 +492,26 @@ class SpeculativeDecodingArchitecture:
                 "final_answer_source": "verifier_rewrite" if rewrite_triggered else "verified_draft",
                 "accepted_draft_chars": accepted_chars,
                 "accepted_draft_ratio": final_confidence,
-                "verification_mode": "incremental_prefix_continuation",
+                "verification_mode": (
+                    "short_rationale_answer_agreement"
+                    if self.task_type == "mcq"
+                    else "incremental_prefix_continuation"
+                ),
                 "continuation_fallback_used": continuation_fallback_used,
                 "verifier_requests": verifier_requests,
                 "verifier_completion_tokens": verifier_completion_tokens,
                 "rewrite_triggered": rewrite_triggered,
                 "rewrite_reason": rewrite_reason,
+                "reused_verifier_answer": reused_verifier_answer,
                 "accepted_prefix_text": draft_text[:accepted_chars],
                 "speculative_acceptance_threshold": self.acceptance_threshold,
+                "speculative_max_draft_tokens": self.draft_max_tokens,
                 "verifier_lookahead_tokens": self.verifier_lookahead_tokens,
                 "verification_steps": verification_steps,
                 "used_llm": verifier_requests > 0,
                 "escalated": rewrite_triggered,
+                "model_latency_ms": total_model_latency_ms,
+                "wall_latency_ms": total_wall_latency_ms,
                 "inference_steps": inference_steps,
             },
         )
@@ -461,15 +585,26 @@ class SpeculativeDecodingArchitecture:
                 timeout=120,
             )
         response.raise_for_status()
-        latency_ms = (time.perf_counter() - t0) * 1000
+        wall_latency_ms = (time.perf_counter() - t0) * 1000
 
         data = response.json()
         choice = data["choices"][0]
         message = choice.get("message", {})
-        text = str(message.get("content") or "").strip()
+        text = _extract_message_text(message)
         if continuation_fallback_used and continuation_prefix and text.startswith(continuation_prefix):
             text = text[len(continuation_prefix):].lstrip()
         usage = data.get("usage", {})
+        provider_meta = _extract_openai_compatible_metadata(
+            data=data,
+            headers=getattr(response, "headers", {}),
+            requested_max_tokens=budget,
+        )
+        server_latency_ms = provider_meta.get("latency_ms_server")
+        latency_ms = (
+            float(server_latency_ms)
+            if isinstance(server_latency_ms, (int, float)) and server_latency_ms > 0
+            else wall_latency_ms
+        )
         content_logprobs = (choice.get("logprobs") or {}).get("content") or []
         tokens = [
             str(item.get("token", ""))
@@ -488,6 +623,7 @@ class SpeculativeDecodingArchitecture:
             prompt_tokens=int(usage.get("prompt_tokens", 0) or 0),
             completion_tokens=int(usage.get("completion_tokens", 0) or 0),
             latency_ms=latency_ms,
+            wall_latency_ms=wall_latency_ms,
             finish_reason=choice.get("finish_reason"),
             continuation_fallback_used=continuation_fallback_used,
         )

@@ -65,6 +65,7 @@ class ExperimentConfig:
     max_oracle_calls: int = 3
     # Speculative params
     speculative_acceptance_threshold: float = 0.7
+    speculative_max_draft_tokens: int = 64
     cost_weight: float = 0.15
     bid_threshold: float = 0.65
     initial_bid_threshold: float = 0.95
@@ -112,7 +113,9 @@ class ExperimentResult:
 
     @property
     def avg_latency_ms(self) -> float:
-        return sum(s.response.latency_ms for s in self.samples) / self.n_total if self.n_total else 0.0
+        if not self.n_total:
+            return 0.0
+        return sum(self._algorithmic_latency_of(s.response) for s in self.samples) / self.n_total
 
     @property
     def avg_algorithmic_latency_ms(self) -> float:
@@ -147,6 +150,12 @@ class ExperimentResult:
         metadata_latency = response.metadata.get("algorithmic_latency_ms")
         if isinstance(metadata_latency, (int, float)) and metadata_latency > 0:
             return float(metadata_latency)
+        model_latency = response.metadata.get("model_latency_ms")
+        if isinstance(model_latency, (int, float)) and model_latency > 0:
+            return float(model_latency)
+        server_latency = response.metadata.get("latency_ms_server")
+        if isinstance(server_latency, (int, float)) and server_latency > 0:
+            return float(server_latency)
         steps = response.metadata.get("inference_steps")
         if isinstance(steps, list):
             total = 0.0

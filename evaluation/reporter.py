@@ -187,13 +187,12 @@ class Reporter:
             "| Metric | Value |",
             "|--------|-------|",
             f"| Throughput (output tok/s) | {metrics.get('throughput_tokens_per_sec', 0.0):.1f} |",
-            f"| Wall-clock avg (ms) | {metrics.get('avg_latency_ms', 0.0):.1f} |",
-            f"| Algorithmic avg (ms) | {metrics.get('avg_algorithmic_latency_ms', 0.0):.1f} |",
-            f"| Wall-clock p50 (ms) | {metrics.get('latency_p50_ms', 0.0):.1f} |",
-            f"| Wall-clock p95 (ms) | {metrics.get('latency_p95_ms', 0.0):.1f} |",
+            f"| Model avg (ms) | {metrics.get('avg_latency_ms', 0.0):.1f} |",
+            f"| Summed model avg (ms) | {metrics.get('avg_algorithmic_latency_ms', 0.0):.1f} |",
+            f"| Model p50 (ms) | {metrics.get('latency_p50_ms', 0.0):.1f} |",
+            f"| Model p95 (ms) | {metrics.get('latency_p95_ms', 0.0):.1f} |",
             "",
-            "> **Wall-clock**: observed end-to-end time including network and queue.  ",
-            "> **Algorithmic**: intrinsic inference + orchestration time summed across steps.",
+            "> Latency metrics use model-reported inference time when available and fall back to observed timing otherwise.",
             "",
             "## Cost",
             "| Metric | Value |",
@@ -257,6 +256,19 @@ class Reporter:
                 "|--------|-------|",
                 f"| Oracle query rate | {metrics.get('oracle_query_rate', 0.0):.2%} |",
                 f"| LLM calls total | {int(metrics.get('n_escalated', 0))} |",
+            ]
+        elif arch == "speculative":
+            breakdown = [
+                "",
+                "## Speculative Breakdown",
+                "| Metric | Value |",
+                "|--------|-------|",
+                f"| Rewrite rate | {metrics.get('rewrite_rate', 0.0):.2%} |",
+                f"| Avg accepted draft ratio | {metrics.get('avg_accepted_draft_ratio', 0.0):.2%} |",
+                f"| Avg draft completion tokens | {metrics.get('avg_draft_completion_tokens', 0.0):.1f} |",
+                f"| Max draft completion tokens | {metrics.get('max_draft_completion_tokens', 0.0):.0f} |",
+                f"| Avg verifier requests | {metrics.get('avg_verifier_requests', 0.0):.2f} |",
+                f"| Avg verifier completion tokens | {metrics.get('avg_verifier_completion_tokens', 0.0):.1f} |",
             ]
         elif arch == "multi_agent":
             breakdown = [

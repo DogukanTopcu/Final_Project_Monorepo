@@ -36,8 +36,8 @@ export function formatMetricLabel(key: string): string {
   const labels: Record<string, string> = {
     accuracy: "Accuracy",
     llm_call_ratio: "LLM Call Ratio",
-    avg_latency_ms: "Average Latency",
-    avg_algorithmic_latency_ms: "Avg Algorithmic Latency",
+    avg_latency_ms: "Average Model Latency",
+    avg_algorithmic_latency_ms: "Avg Summed Model Latency",
     total_cost_usd: "Total Cost",
     n_total: "Total Samples",
     n_correct: "Correct Samples",
@@ -83,6 +83,12 @@ export function formatMetricLabel(key: string): string {
     avg_energy_per_sample_kwh: "Avg Energy / Sample",
     avg_co2_per_sample_g: "Avg CO2 / Sample",
     normalized_efficiency_penalty: "Normalized Efficiency Penalty",
+    rewrite_rate: "Rewrite Rate",
+    avg_accepted_draft_ratio: "Avg Accepted Draft Ratio",
+    avg_draft_completion_tokens: "Avg Draft Tokens",
+    max_draft_completion_tokens: "Max Draft Tokens",
+    avg_verifier_requests: "Avg Verifier Requests",
+    avg_verifier_completion_tokens: "Avg Verifier Tokens",
   };
   return labels[key] ?? key;
 }

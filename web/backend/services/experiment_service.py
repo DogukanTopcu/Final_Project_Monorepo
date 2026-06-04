@@ -199,6 +199,7 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         "slm_max_tokens",
         "llm_max_tokens",
         "speculative_acceptance_threshold",
+        "speculative_max_draft_tokens",
         "cost_weight",
         "bid_threshold",
         "initial_bid_threshold",
@@ -252,6 +253,9 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         llm_tiebreak=bool(overrides.get("llm_tiebreak", False)),
         speculative_acceptance_threshold=float(
             overrides.get("speculative_acceptance_threshold", 0.7)
+        ),
+        speculative_max_draft_tokens=int(
+            overrides.get("speculative_max_draft_tokens", 64)
         ),
         cost_weight=float(overrides.get("cost_weight", 0.15)),
         bid_threshold=float(overrides.get("bid_threshold", 0.65)),

@@ -18,7 +18,11 @@ import time
 
 import requests
 
-from core.models import ModelProvider, OpenAICompatibleModel
+from core.models import (
+    ModelProvider,
+    OpenAICompatibleModel,
+    _extract_openai_compatible_metadata,
+)
 from core.prompt import build_prompt, parse_answer
 from core.token_budget import compute_completion_budget
 from core.types import Query, Response
@@ -92,7 +96,18 @@ class MonolithicArchitecture:
             temperature=self.temperature,
             max_tokens=budget,
         )
-        latency_ms = (time.perf_counter() - t0) * 1000.0
+        wall_latency_ms = (time.perf_counter() - t0) * 1000.0
+        provider_meta = getattr(self.llm, "last_generation_metadata", {})
+        server_latency_ms = (
+            provider_meta.get("latency_ms_server")
+            if isinstance(provider_meta, dict)
+            else None
+        )
+        latency_ms = (
+            float(server_latency_ms)
+            if isinstance(server_latency_ms, (int, float)) and server_latency_ms > 0
+            else wall_latency_ms
+        )
 
         predicted = self._parse_answer(text, query)
         return Response(
@@ -102,11 +117,15 @@ class MonolithicArchitecture:
             model_id=self.llm.model_id,
             llm_calls=1,
             latency_ms=latency_ms,
+            algorithmic_latency_ms=latency_ms,
             input_tokens=in_t,
             output_tokens=out_t,
             cost_usd=cost,
             confidence=conf,
             metadata={
+                "wall_latency_ms": wall_latency_ms,
+                "model_latency_ms": latency_ms,
+                "latency_ms_server": server_latency_ms,
                 "inference_steps": [
                     {
                         "role": "monolithic_llm",
@@ -139,7 +158,7 @@ class MonolithicArchitecture:
         }
         resp = requests.post(f"{self.base_url}/chat/completions", json=payload, timeout=120)
         resp.raise_for_status()
-        latency_ms = (time.perf_counter() - t0) * 1000
+        wall_latency_ms = (time.perf_counter() - t0) * 1000
 
         data = resp.json()
         choice = data["choices"][0]
@@ -151,6 +170,17 @@ class MonolithicArchitecture:
         confidence = self._extract_confidence(choice)
         predicted = self._parse_answer(text, query)
         cost_usd = self._estimate_cost(prompt_tokens, completion_tokens)
+        provider_meta = _extract_openai_compatible_metadata(
+            data=data,
+            headers=resp.headers,
+            requested_max_tokens=budget,
+        )
+        server_latency_ms = provider_meta.get("latency_ms_server")
+        latency_ms = (
+            float(server_latency_ms)
+            if isinstance(server_latency_ms, (int, float)) and server_latency_ms > 0
+            else wall_latency_ms
+        )
 
         return Response(
             query_id=query.id,
@@ -159,11 +189,15 @@ class MonolithicArchitecture:
             model_id=self.model_name,
             llm_calls=1,
             latency_ms=latency_ms,
+            algorithmic_latency_ms=latency_ms,
             input_tokens=prompt_tokens,
             output_tokens=completion_tokens,
             cost_usd=cost_usd,
             confidence=confidence,
             metadata={
+                "wall_latency_ms": wall_latency_ms,
+                "model_latency_ms": latency_ms,
+                "latency_ms_server": server_latency_ms,
                 "inference_steps": [
                     {
                         "role": "monolithic_llm",

@@ -288,6 +288,7 @@ class TestSpeculativeDecodingArchitecture:
             def __init__(self, payload: dict, status_code: int = 200) -> None:
                 self._payload = payload
                 self.status_code = status_code
+                self.headers = {}
 
             def raise_for_status(self):
                 if self.status_code >= 400:
@@ -367,6 +368,7 @@ class TestSpeculativeDecodingArchitecture:
             def __init__(self, payload: dict, status_code: int = 200) -> None:
                 self._payload = payload
                 self.status_code = status_code
+                self.headers = {}
 
             def raise_for_status(self):
                 if self.status_code >= 400:
@@ -460,6 +462,7 @@ class TestSpeculativeDecodingArchitecture:
             def __init__(self, payload: dict, status_code: int = 200) -> None:
                 self._payload = payload
                 self.status_code = status_code
+                self.headers = {}
 
             def raise_for_status(self):
                 if self.status_code >= 400:
@@ -539,6 +542,80 @@ class TestSpeculativeDecodingArchitecture:
         assert calls[2]["json"]["continue_final_message"] is True
         assert "continue_final_message" not in calls[3]["json"]
         assert "Accepted prefix:" in calls[3]["json"]["messages"][0]["content"]
+
+    def test_tolerant_mcq_verification_accepts_same_answer_with_different_wording(self, monkeypatch):
+        calls: list[dict] = []
+
+        class FakeResponse:
+            def __init__(self, payload: dict, status_code: int = 200) -> None:
+                self._payload = payload
+                self.status_code = status_code
+                self.headers = {}
+
+            def raise_for_status(self):
+                if self.status_code >= 400:
+                    raise RuntimeError(f"{self.status_code} Client Error")
+                return None
+
+            def json(self):
+                return self._payload
+
+        def fake_post(url: str, json: dict, headers: dict, timeout: float):
+            calls.append({"url": url, "json": json, "headers": headers, "timeout": timeout})
+            if json["model"] == "Qwen/Qwen3.5-4B":
+                return FakeResponse(
+                    {
+                        "choices": [
+                            {
+                                "message": {"content": "Here's the short reason. Answer: B"},
+                                "logprobs": {
+                                    "content": [
+                                        {"token": "Here", "logprob": -0.01},
+                                        {"token": "B", "logprob": -0.01},
+                                    ]
+                                },
+                                "finish_reason": "stop",
+                            }
+                        ],
+                        "usage": {"prompt_tokens": 12, "completion_tokens": 7},
+                    }
+                )
+            return FakeResponse(
+                {
+                    "choices": [
+                        {
+                            "message": {"content": "The correct option is B.\nAnswer: B"},
+                            "logprobs": {
+                                "content": [
+                                    {"token": "Answer", "logprob": -0.02},
+                                    {"token": "B", "logprob": -0.02},
+                                ]
+                            },
+                            "finish_reason": "stop",
+                        }
+                    ],
+                    "usage": {"prompt_tokens": 18, "completion_tokens": 8},
+                }
+            )
+
+        monkeypatch.setattr("architectures.speculative_decoding.requests.post", fake_post)
+
+        arch = SpeculativeDecodingArchitecture(
+            drafter_url="http://draft/v1",
+            verifier_url="http://verify/v1",
+            task_type="mcq",
+            verifier_lookahead_tokens=12,
+            draft_max_tokens=32,
+        )
+        resp = arch.run(QUERY)
+
+        assert "Keep the rationale extremely short." in calls[0]["json"]["messages"][0]["content"]
+        assert calls[0]["json"]["max_tokens"] <= 32
+        assert resp.predicted_answer == "B"
+        assert resp.model_id == "Qwen/Qwen3.5-4B"
+        assert resp.metadata["rewrite_triggered"] is False
+        assert resp.metadata["accepted_draft_ratio"] == 1.0
+        assert resp.metadata["verification_steps"][0]["match_strategy"] == "parsed_answer_agreement"
 
 
 class TestMultiAgentArchitecture:

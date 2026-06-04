@@ -26,8 +26,21 @@ class BaseArchitecture(ABC):
     def _timed_generate(
         self, provider: ModelProvider, prompt: str, **kwargs
     ) -> tuple[str, float | None, int, int, float, float]:
-        """Wraps generate() with wall-clock timing."""
+        """Wraps generate() and prefers model-reported inference latency."""
         t0 = time.perf_counter()
         text, conf, in_tok, out_tok, cost = provider.generate(prompt, **kwargs)
-        latency_ms = (time.perf_counter() - t0) * 1000
+        wall_latency_ms = (time.perf_counter() - t0) * 1000
+        metadata = getattr(provider, "last_generation_metadata", {})
+        if isinstance(metadata, dict):
+            metadata["wall_latency_ms"] = wall_latency_ms
+        server_latency_ms = (
+            metadata.get("latency_ms_server")
+            if isinstance(metadata, dict)
+            else None
+        )
+        latency_ms = (
+            float(server_latency_ms)
+            if isinstance(server_latency_ms, (int, float)) and server_latency_ms > 0
+            else wall_latency_ms
+        )
         return text, conf, in_tok, out_tok, cost, latency_ms

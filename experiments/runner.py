@@ -241,6 +241,7 @@ class ExperimentRunner:
             arch_kwargs["max_oracle_calls"] = cfg.max_oracle_calls
         elif cfg.architecture == "speculative":
             arch_kwargs["acceptance_threshold"] = getattr(cfg, "speculative_acceptance_threshold", 0.8)
+            arch_kwargs["draft_max_tokens"] = getattr(cfg, "speculative_max_draft_tokens", 64)
 
         return get_architecture(cfg.architecture, **arch_kwargs)
 

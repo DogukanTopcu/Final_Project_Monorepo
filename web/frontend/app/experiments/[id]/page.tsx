@@ -848,6 +848,12 @@ export default function ExperimentDetailPage({
     "n_slm_only",
     "escalation_rate",
     "avg_slm_confidence",
+    "rewrite_rate",
+    "avg_accepted_draft_ratio",
+    "avg_draft_completion_tokens",
+    "max_draft_completion_tokens",
+    "avg_verifier_requests",
+    "avg_verifier_completion_tokens",
   ];
 
   const allMetricKeys = metrics

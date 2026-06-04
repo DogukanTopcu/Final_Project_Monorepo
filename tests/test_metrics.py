@@ -127,5 +127,34 @@ def test_algorithmic_latency_defaults_to_inference_steps_sum():
         samples=[SampleResult(query=Query(id="q0", text="x", answer="A"), response=response, correct=True)],
     )
     metrics = compute_metrics(result)
-    assert abs(metrics["avg_latency_ms"] - 90.0) < 1e-6
+    assert abs(metrics["avg_latency_ms"] - 25.0) < 1e-6
     assert abs(metrics["avg_algorithmic_latency_ms"] - 25.0) < 1e-6
+
+
+def test_metrics_expose_speculative_rewrite_and_draft_stats():
+    response = Response(
+        query_id="q0",
+        text="Answer: B",
+        predicted_answer="B",
+        latency_ms=40.0,
+        algorithmic_latency_ms=30.0,
+        metadata={
+            "accepted_draft_ratio": 0.75,
+            "rewrite_triggered": True,
+            "slm_output_tokens": 24,
+            "verifier_requests": 2,
+            "verifier_completion_tokens": 6,
+        },
+    )
+    result = ExperimentResult(
+        experiment_id="spec_metrics",
+        config=ExperimentConfig(architecture="speculative", benchmark="mmlu"),
+        samples=[SampleResult(query=Query(id="q0", text="x", answer="B"), response=response, correct=True)],
+    )
+    metrics = compute_metrics(result)
+    assert metrics["rewrite_rate"] == 1.0
+    assert metrics["avg_accepted_draft_ratio"] == 0.75
+    assert metrics["avg_draft_completion_tokens"] == 24.0
+    assert metrics["max_draft_completion_tokens"] == 24.0
+    assert metrics["avg_verifier_requests"] == 2.0
+    assert metrics["avg_verifier_completion_tokens"] == 6.0

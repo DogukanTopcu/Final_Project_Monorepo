@@ -81,6 +81,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--max_subtasks", type=int, default=2)
     p.add_argument("--allow_nested_subtasks", action="store_true")
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument("--speculative_max_draft_tokens", type=int, default=64)
     p.add_argument(
         "--n_runs",
         type=int,
@@ -122,6 +123,7 @@ def build_config(args: argparse.Namespace, architecture: str) -> ExperimentConfi
         long_input_token_threshold=args.long_input_token_threshold,
         arbitrator=args.arbitrator,
         max_oracle_calls=args.max_oracle_calls,
+        speculative_max_draft_tokens=args.speculative_max_draft_tokens,
         n_models=args.n_models,
         voting=args.voting,
         bid_threshold=args.bid_threshold,
