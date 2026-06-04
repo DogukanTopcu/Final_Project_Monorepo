@@ -61,12 +61,13 @@ async def list_models(settings: Settings = Depends(get_settings)):
         configured = bool(status.get("available", False))
         reason = str(status.get("reason", "")) or None
 
+        is_ready = configured
         if configured and base_url:
             cache_key = (provider, base_url)
             if cache_key not in reachability_cache:
                 reachability_cache[cache_key] = await _probe_runtime_endpoint(provider, base_url)
             reachable, runtime_reason = reachability_cache[cache_key]
-            configured = reachable
+            is_ready = reachable
             if not reachable and runtime_reason:
                 reason = runtime_reason
 
@@ -86,7 +87,7 @@ async def list_models(settings: Settings = Depends(get_settings)):
             runtime_provider=provider,
             type=spec.kind,
             configured=configured,
-            status="ready" if configured else "unavailable",
+            status="ready" if is_ready else "unavailable",
             base_url=base_url or None,
             reason=reason,
             host_id=host.host_id if host else None,
@@ -99,10 +100,10 @@ async def list_models(settings: Settings = Depends(get_settings)):
         else:
             llm_models.append(model)
 
-    if not any(model.configured for model in slm_models):
-        warnings.append("No runnable SLM is configured. Set a VLLM_* endpoint.")
-    if not any(model.configured for model in llm_models):
-        warnings.append("No runnable LLM is configured. Set a VLLM_* endpoint or matching API key.")
+    if not any(model.status == "ready" for model in slm_models):
+        warnings.append("No runnable SLM is configured or reachable.")
+    if not any(model.status == "ready" for model in llm_models):
+        warnings.append("No runnable LLM is configured or reachable.")
 
     return ModelListResponse(
         slm=slm_models,

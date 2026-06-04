@@ -58,6 +58,7 @@ export function ExperimentForm() {
   }, [architectures, mode]);
 
   const archSpec = architectures?.find((a) => a.id === architecture);
+  const isMultiSlm = archSpec?.supports_multi_slm ?? false;
 
   // When mode changes, snap architecture to a sensible default for that mode.
   useEffect(() => {
@@ -101,21 +102,21 @@ export function ExperimentForm() {
     }
   }, [models, slm, secondarySlm, llm]);
 
-  // When the user switches into ensemble mode for the first time, seed it
+  // When the user switches into multi-SLM mode for the first time, seed it
   // with their single SLM pick so the form is never empty.
   useEffect(() => {
-    if (architecture === "ensemble" && ensembleSlms.length === 0 && slm) {
+    if (isMultiSlm && ensembleSlms.length === 0 && slm) {
       setEnsembleSlms([slm]);
     }
-  }, [architecture, ensembleSlms.length, slm]);
+  }, [isMultiSlm, ensembleSlms.length, slm]);
 
   // Keep n_models in sync with the number of selected SLMs for ensemble.
   useEffect(() => {
-    if (architecture !== "ensemble") return;
+    if (!isMultiSlm) return;
     if (ensembleSlms.length >= 1) {
       setParamValues((prev) => ({ ...prev, n_models: ensembleSlms.length }));
     }
-  }, [architecture, ensembleSlms]);
+  }, [isMultiSlm, ensembleSlms]);
 
   const selectedSlmModel = models?.slm.find((m) => m.id === slm);
   const selectedLlmModel = models?.llm.find((m) => m.id === llm);
@@ -124,10 +125,10 @@ export function ExperimentForm() {
     if (!hostStatus) return null;
     const involvedModelIds: string[] = [];
     if (archSpec?.requires_llm && llm) involvedModelIds.push(llm);
-    if (archSpec?.requires_slm && slm && architecture !== "ensemble") {
+    if (archSpec?.requires_slm && slm && !isMultiSlm) {
       involvedModelIds.push(slm);
     }
-    if (architecture === "ensemble") involvedModelIds.push(...ensembleSlms);
+    if (isMultiSlm) involvedModelIds.push(...ensembleSlms);
     if (archSpec?.requires_secondary_slm && secondarySlm) involvedModelIds.push(secondarySlm);
 
     const sharedHostsTouched = new Set<string>();
@@ -154,7 +155,7 @@ export function ExperimentForm() {
     if (!archSpec) return false;
     if (archSpec.requires_llm && !llm) return false;
     if (archSpec.requires_slm) {
-      if (architecture === "ensemble") {
+      if (isMultiSlm) {
         if (ensembleSlms.length === 0) return false;
       } else if (!slm) return false;
     }
@@ -178,10 +179,10 @@ export function ExperimentForm() {
       architecture,
       benchmark,
       n_samples: nSamples,
-      slm: archSpec.requires_slm && architecture !== "ensemble" ? slm : null,
+      slm: archSpec.requires_slm && !isMultiSlm ? slm : null,
       secondary_slm: archSpec.requires_secondary_slm ? secondarySlm : null,
-      llm: archSpec.requires_llm ? llm : architecture === "ensemble" && paramValues.llm_tiebreak ? llm : null,
-      ensemble_slms: architecture === "ensemble" ? ensembleSlms : [],
+      llm: archSpec.requires_llm ? llm : isMultiSlm && paramValues.llm_tiebreak ? llm : null,
+      ensemble_slms: isMultiSlm ? ensembleSlms : [],
       config_overrides: configOverrides,
     };
 
@@ -264,7 +265,7 @@ export function ExperimentForm() {
           <section className="space-y-3">
             <div className="text-sm font-medium text-zinc-900">4 · Models</div>
 
-            {archSpec?.requires_slm && architecture !== "ensemble" && (
+            {archSpec?.requires_slm && !isMultiSlm && (
               <ModelPicker
                 label={archSpec.requires_secondary_slm ? "Primary SLM" : "SLM"}
                 description={
@@ -288,7 +289,7 @@ export function ExperimentForm() {
               />
             )}
 
-            {architecture === "ensemble" && (
+            {isMultiSlm && (
               <MultiModelPicker
                 label="Ensemble SLMs"
                 description="Each selected SLM contributes one vote."
@@ -301,7 +302,7 @@ export function ExperimentForm() {
             )}
 
             {(archSpec?.requires_llm ||
-              (architecture === "ensemble" && Boolean(paramValues.llm_tiebreak))) && (
+              (isMultiSlm && Boolean(paramValues.llm_tiebreak))) && (
               <ModelPicker
                 label={
                   architecture === "ensemble"
