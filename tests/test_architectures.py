@@ -8,6 +8,7 @@ from architectures.active_oracle import ActiveOracleArchitecture
 from architectures.ensemble import EnsembleArchitecture
 from architectures.multi_agent import MultiAgentArchitecture
 from architectures.routing import RoutingArchitecture, should_escalate
+from architectures.speculative_decoding import SpeculativeDecodingArchitecture
 from core.models import ModelProvider
 from core.types import Query
 
@@ -277,6 +278,267 @@ class TestRoutingArchitecture:
         assert resp.llm_calls == 0
         assert resp.model_id == "slm"
         assert llm.calls == []
+
+
+class TestSpeculativeDecodingArchitecture:
+    def test_verified_draft_is_returned_when_verifier_matches(self, monkeypatch):
+        calls: list[dict] = []
+
+        class FakeResponse:
+            def __init__(self, payload: dict, status_code: int = 200) -> None:
+                self._payload = payload
+                self.status_code = status_code
+
+            def raise_for_status(self):
+                if self.status_code >= 400:
+                    raise RuntimeError(f"{self.status_code} Client Error")
+                return None
+
+            def json(self):
+                return self._payload
+
+        def fake_post(url: str, json: dict, headers: dict, timeout: float):
+            calls.append({"url": url, "json": json, "headers": headers, "timeout": timeout})
+            model = json["model"]
+            if model == "Qwen/Qwen3.5-4B":
+                return FakeResponse(
+                    {
+                        "choices": [
+                            {
+                                "message": {"content": "Answer: B"},
+                                "logprobs": {
+                                    "content": [
+                                        {"token": "Answer", "logprob": -0.01},
+                                        {"token": ": ", "logprob": -0.01},
+                                        {"token": "B", "logprob": -0.01},
+                                    ]
+                                },
+                                "finish_reason": "stop",
+                            }
+                        ],
+                        "usage": {"prompt_tokens": 12, "completion_tokens": 3},
+                    }
+                )
+            return FakeResponse(
+                {
+                    "choices": [
+                        {
+                            "message": {"content": "Answer: B"},
+                            "logprobs": {
+                                "content": [
+                                    {"token": "Answer", "logprob": -0.02},
+                                    {"token": ": ", "logprob": -0.02},
+                                    {"token": "B", "logprob": -0.02},
+                                ]
+                            },
+                            "finish_reason": "stop",
+                        }
+                    ],
+                    "usage": {"prompt_tokens": 18, "completion_tokens": 3},
+                }
+            )
+
+        monkeypatch.setattr("architectures.speculative_decoding.requests.post", fake_post)
+
+        arch = SpeculativeDecodingArchitecture(
+            drafter_url="http://draft/v1",
+            verifier_url="http://verify/v1",
+            task_type="mcq",
+            verifier_lookahead_tokens=4,
+        )
+        resp = arch.run(QUERY)
+
+        assert resp.text == "Answer: B"
+        assert resp.predicted_answer == "B"
+        assert resp.model_id == "Qwen/Qwen3.5-4B"
+        assert resp.llm_calls == 1
+        assert resp.metadata["rewrite_triggered"] is False
+        assert resp.metadata["final_answer_source"] == "verified_draft"
+        assert resp.metadata["accepted_draft_chars"] == len("Answer: B")
+        assert resp.metadata["verifier_requests"] == 1
+        assert len(resp.metadata["verification_steps"]) == 1
+        assert resp.metadata["llm_raw_text"] is None
+        assert calls[1]["json"]["messages"] == [calls[1]["json"]["messages"][0]]
+
+    def test_verifier_rewrites_suffix_from_accepted_prefix(self, monkeypatch):
+        calls: list[dict] = []
+
+        class FakeResponse:
+            def __init__(self, payload: dict, status_code: int = 200) -> None:
+                self._payload = payload
+                self.status_code = status_code
+
+            def raise_for_status(self):
+                if self.status_code >= 400:
+                    raise RuntimeError(f"{self.status_code} Client Error")
+                return None
+
+            def json(self):
+                return self._payload
+
+        def fake_post(url: str, json: dict, headers: dict, timeout: float):
+            calls.append({"url": url, "json": json, "headers": headers, "timeout": timeout})
+            model = json["model"]
+            if model == "Qwen/Qwen3.5-4B":
+                return FakeResponse(
+                    {
+                        "choices": [
+                            {
+                                "message": {"content": "Answer: B"},
+                                "logprobs": {
+                                    "content": [
+                                        {"token": "Answer", "logprob": -0.01},
+                                        {"token": ": ", "logprob": -0.01},
+                                        {"token": "B", "logprob": -0.01},
+                                    ]
+                                },
+                                "finish_reason": "stop",
+                            }
+                        ],
+                        "usage": {"prompt_tokens": 12, "completion_tokens": 3},
+                    }
+                )
+
+            if len(calls) == 2:
+                return FakeResponse(
+                    {
+                        "choices": [
+                            {
+                                "message": {"content": "Answer: C"},
+                                "logprobs": {
+                                    "content": [
+                                        {"token": "Answer", "logprob": -0.02},
+                                        {"token": ": ", "logprob": -0.02},
+                                        {"token": "C", "logprob": -0.02},
+                                    ]
+                                },
+                                "finish_reason": "stop",
+                            }
+                        ],
+                        "usage": {"prompt_tokens": 18, "completion_tokens": 3},
+                    }
+                )
+
+            return FakeResponse(
+                {
+                    "choices": [
+                        {
+                            "message": {"content": "C"},
+                            "logprobs": {"content": [{"token": "C", "logprob": -0.02}]},
+                            "finish_reason": "stop",
+                        }
+                    ],
+                    "usage": {"prompt_tokens": 20, "completion_tokens": 1},
+                }
+            )
+
+        monkeypatch.setattr("architectures.speculative_decoding.requests.post", fake_post)
+
+        arch = SpeculativeDecodingArchitecture(
+            drafter_url="http://draft/v1",
+            verifier_url="http://verify/v1",
+            task_type="mcq",
+            verifier_lookahead_tokens=4,
+        )
+        resp = arch.run(QUERY)
+
+        assert resp.text == "Answer: C"
+        assert resp.predicted_answer == "C"
+        assert resp.model_id == "meta-llama/Llama-3.3-70B-Instruct"
+        assert resp.metadata["rewrite_triggered"] is True
+        assert resp.metadata["rewrite_reason"] == "verifier_diverged_from_draft"
+        assert resp.metadata["accepted_prefix_text"] == "Answer: "
+        assert resp.metadata["final_answer_source"] == "verifier_rewrite"
+        rewrite_payload = calls[2]["json"]
+        assert rewrite_payload["continue_final_message"] is True
+        assert rewrite_payload["messages"][-1] == {"role": "assistant", "content": "Answer: "}
+
+    def test_continuation_falls_back_when_endpoint_rejects_prefill(self, monkeypatch):
+        calls: list[dict] = []
+
+        class FakeResponse:
+            def __init__(self, payload: dict, status_code: int = 200) -> None:
+                self._payload = payload
+                self.status_code = status_code
+
+            def raise_for_status(self):
+                if self.status_code >= 400:
+                    raise RuntimeError(f"{self.status_code} Client Error")
+                return None
+
+            def json(self):
+                return self._payload
+
+        def fake_post(url: str, json: dict, headers: dict, timeout: float):
+            calls.append({"url": url, "json": json, "headers": headers, "timeout": timeout})
+            model = json["model"]
+            if model == "Qwen/Qwen3.5-4B":
+                return FakeResponse(
+                    {
+                        "choices": [
+                            {
+                                "message": {"content": "Answer: B"},
+                                "logprobs": {
+                                    "content": [
+                                        {"token": "Answer", "logprob": -0.01},
+                                        {"token": ": ", "logprob": -0.01},
+                                        {"token": "B", "logprob": -0.01},
+                                    ]
+                                },
+                                "finish_reason": "stop",
+                            }
+                        ],
+                        "usage": {"prompt_tokens": 12, "completion_tokens": 3},
+                    }
+                )
+            if json.get("continue_final_message") is True:
+                return FakeResponse({"error": {"message": "unsupported"}}, status_code=400)
+            if len(calls) == 2:
+                return FakeResponse(
+                    {
+                        "choices": [
+                            {
+                                "message": {"content": "Answer: "},
+                                "logprobs": {
+                                    "content": [
+                                        {"token": "Answer", "logprob": -0.02},
+                                        {"token": ": ", "logprob": -0.02},
+                                    ]
+                                },
+                                "finish_reason": "stop",
+                            }
+                        ],
+                        "usage": {"prompt_tokens": 20, "completion_tokens": 2},
+                    }
+                )
+            return FakeResponse(
+                {
+                    "choices": [
+                        {
+                            "message": {"content": "B"},
+                            "logprobs": {"content": [{"token": "B", "logprob": -0.02}]},
+                            "finish_reason": "stop",
+                        }
+                    ],
+                    "usage": {"prompt_tokens": 20, "completion_tokens": 1},
+                }
+            )
+
+        monkeypatch.setattr("architectures.speculative_decoding.requests.post", fake_post)
+
+        arch = SpeculativeDecodingArchitecture(
+            drafter_url="http://draft/v1",
+            verifier_url="http://verify/v1",
+            task_type="mcq",
+            verifier_lookahead_tokens=2,
+        )
+        resp = arch.run(QUERY)
+
+        assert resp.predicted_answer == "B"
+        assert resp.metadata["continuation_fallback_used"] is True
+        assert calls[2]["json"]["continue_final_message"] is True
+        assert "continue_final_message" not in calls[3]["json"]
+        assert "Accepted prefix:" in calls[3]["json"]["messages"][0]["content"]
 
 
 class TestMultiAgentArchitecture:
