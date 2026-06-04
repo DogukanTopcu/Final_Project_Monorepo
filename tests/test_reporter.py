@@ -281,3 +281,39 @@ def test_reporter_preserves_architecture_specific_metadata(tmp_path):
     assert sample["votes"] == ["B", "B", "C"]
     assert sample["vote_counts"] == {"B": 2, "C": 1}
     assert len(sample["ensemble_member_responses"]) == 3
+
+
+def test_reporter_includes_query_metadata_in_sample_payload(tmp_path):
+    result = ExperimentResult(
+        experiment_id="exp_query_meta",
+        config=ExperimentConfig(
+            architecture="routing",
+            benchmark="mmlu",
+        ),
+        samples=[
+            SampleResult(
+                query=Query(
+                    id="q_meta",
+                    text="Question",
+                    choices=["A1", "A2", "A3", "A4"],
+                    answer="B",
+                    metadata={"subject": "professional_law"},
+                ),
+                response=Response(
+                    query_id="q_meta",
+                    text="B",
+                    predicted_answer="B",
+                    model_id="gemma4-4b",
+                    llm_calls=0,
+                    metadata={},
+                ),
+                correct=True,
+            )
+        ],
+    )
+
+    path = Reporter(tmp_path).save(result)
+    payload = json.loads(path.read_text())
+    sample = payload["samples"][0]
+
+    assert sample["subject"] == "professional_law"

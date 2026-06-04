@@ -264,6 +264,26 @@ class TestRoutingArchitecture:
         assert slm.calls[0] == {"temperature": 0.15, "max_tokens": 128}
         assert llm.calls[0] == {"temperature": 0.65, "max_tokens": 256}
 
+    def test_routing_mcq_prompt_is_compact_and_latency_uses_model_time(self, monkeypatch):
+        slm = RecordingStubModel("slm", answer="B", confidence=0.9)
+        llm = RecordingStubModel("llm", answer="B", confidence=0.9)
+        arch = RoutingArchitecture(slm=slm, llm=llm, task_type="mcq")
+
+        captured_prompts: list[str] = []
+
+        def fake_timed_generate(provider, prompt, **kwargs):
+            captured_prompts.append(prompt)
+            provider.last_generation_metadata = {"wall_latency_ms": 120.0}
+            return "Answer: B", 0.9, 10, 5, 0.0, 25.0
+
+        monkeypatch.setattr(arch, "_timed_generate", fake_timed_generate)
+        resp = arch.run(QUERY)
+
+        assert "Keep the rationale extremely short." in captured_prompts[0]
+        assert resp.latency_ms == 25.0
+        assert resp.algorithmic_latency_ms == 25.0
+        assert resp.metadata["wall_latency_ms"] == 120.0
+
     def test_routing_slm_only_never_calls_llm(self):
         slm = RecordingStubModel("slm", answer="B", confidence=0.1)
         llm = RecordingStubModel("llm", answer="A", confidence=0.9)

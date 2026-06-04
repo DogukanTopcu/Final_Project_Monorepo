@@ -84,12 +84,14 @@ def open_prompt(query: Query) -> str:
 def parse_mcq_answer(text: str) -> str | None:
     """Extract single-letter MCQ answer from model output."""
     normalized = text.strip().upper()
+    normalized = re.sub(r"[*_`]+", "", normalized)
     if len(normalized) == 1 and normalized.isalpha():
         return normalized
 
     explicit_patterns = [
         r"\bANSWER\s*:\s*([A-Z])\b",
         r"\bFINAL\s+ANSWER\s*:\s*([A-Z])\b",
+        r"\bCORRECT\s+ANSWER\s+IS\s+([A-Z])\b",
         r"\bTHE\s+ANSWER\s+IS\s+([A-Z])\b",
         r"\bI\s+CHOOSE\s+([A-Z])\b",
         r"\bI\s+PICK\s+([A-Z])\b",

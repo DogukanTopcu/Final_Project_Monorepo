@@ -326,33 +326,39 @@ def compute_metrics(
                 if not slm_ids:
                     total_llm_api_cost_usd += step_cost
 
-    accepted_draft_ratios = [
-        float(s.response.metadata.get("accepted_draft_ratio"))
-        for s in result.samples
-        if isinstance(s.response.metadata.get("accepted_draft_ratio"), (int, float))
-    ]
-    rewrite_flags = [
-        bool(s.response.metadata.get("rewrite_triggered"))
-        for s in result.samples
-        if "rewrite_triggered" in s.response.metadata
-    ]
-    draft_completion_tokens = [
-        float(s.response.metadata.get("slm_output_tokens"))
-        for s in result.samples
-        if isinstance(s.response.metadata.get("slm_output_tokens"), (int, float))
-    ]
-    verifier_request_counts = [
-        float(s.response.metadata.get("verifier_requests"))
-        for s in result.samples
-        if isinstance(s.response.metadata.get("verifier_requests"), (int, float))
-    ]
-    verifier_completion_counts = [
-        float(s.response.metadata.get("verifier_completion_tokens"))
-        for s in result.samples
-        if isinstance(s.response.metadata.get("verifier_completion_tokens"), (int, float))
-    ]
+    accepted_draft_ratios: list[float] = []
+    rewrite_flags: list[bool] = []
+    draft_completion_tokens: list[float] = []
+    verifier_request_counts: list[float] = []
+    verifier_completion_counts: list[float] = []
+    if result.config.architecture == "speculative":
+        accepted_draft_ratios = [
+            float(s.response.metadata.get("accepted_draft_ratio"))
+            for s in result.samples
+            if isinstance(s.response.metadata.get("accepted_draft_ratio"), (int, float))
+        ]
+        rewrite_flags = [
+            bool(s.response.metadata.get("rewrite_triggered"))
+            for s in result.samples
+            if "rewrite_triggered" in s.response.metadata
+        ]
+        draft_completion_tokens = [
+            float(s.response.metadata.get("slm_output_tokens"))
+            for s in result.samples
+            if isinstance(s.response.metadata.get("slm_output_tokens"), (int, float))
+        ]
+        verifier_request_counts = [
+            float(s.response.metadata.get("verifier_requests"))
+            for s in result.samples
+            if isinstance(s.response.metadata.get("verifier_requests"), (int, float))
+        ]
+        verifier_completion_counts = [
+            float(s.response.metadata.get("verifier_completion_tokens"))
+            for s in result.samples
+            if isinstance(s.response.metadata.get("verifier_completion_tokens"), (int, float))
+        ]
 
-    return {
+    metrics = {
         **base,
         "accuracy_ci_low_95": acc_ci_low,
         "accuracy_ci_high_95": acc_ci_high,
@@ -411,30 +417,29 @@ def compute_metrics(
         "accuracy_majority_vote": accuracy_slm_handled, # ensemble alias (same split)
         "llm_tiebreak_rate": escalation_rate,           # ensemble: tiebreak fraction
         "oracle_query_rate": oracle_query_rate,         # active_oracle only
-        "rewrite_rate": (
-            sum(1 for flag in rewrite_flags if flag) / len(rewrite_flags)
-            if rewrite_flags else 0.0
-        ),
-        "avg_accepted_draft_ratio": (
-            sum(accepted_draft_ratios) / len(accepted_draft_ratios)
-            if accepted_draft_ratios else 0.0
-        ),
-        "avg_draft_completion_tokens": (
-            sum(draft_completion_tokens) / len(draft_completion_tokens)
-            if draft_completion_tokens else 0.0
-        ),
-        "max_draft_completion_tokens": (
-            max(draft_completion_tokens) if draft_completion_tokens else 0.0
-        ),
-        "avg_verifier_requests": (
-            sum(verifier_request_counts) / len(verifier_request_counts)
-            if verifier_request_counts else 0.0
-        ),
-        "avg_verifier_completion_tokens": (
-            sum(verifier_completion_counts) / len(verifier_completion_counts)
-            if verifier_completion_counts else 0.0
-        ),
         "baseline_cost_usd": full_llm_cost_usd if full_llm_cost_usd is not None else 0.0,
         "baseline_algorithmic_latency_ms": full_llm_avg_algorithmic_latency_ms if full_llm_avg_algorithmic_latency_ms is not None else 0.0,
         "baseline_energy_kwh": full_llm_energy_kwh if full_llm_energy_kwh is not None else 0.0,
     }
+    if rewrite_flags:
+        metrics["rewrite_rate"] = (
+            sum(1 for flag in rewrite_flags if flag) / len(rewrite_flags)
+        )
+    if accepted_draft_ratios:
+        metrics["avg_accepted_draft_ratio"] = (
+            sum(accepted_draft_ratios) / len(accepted_draft_ratios)
+        )
+    if draft_completion_tokens:
+        metrics["avg_draft_completion_tokens"] = (
+            sum(draft_completion_tokens) / len(draft_completion_tokens)
+        )
+        metrics["max_draft_completion_tokens"] = max(draft_completion_tokens)
+    if verifier_request_counts:
+        metrics["avg_verifier_requests"] = (
+            sum(verifier_request_counts) / len(verifier_request_counts)
+        )
+    if verifier_completion_counts:
+        metrics["avg_verifier_completion_tokens"] = (
+            sum(verifier_completion_counts) / len(verifier_completion_counts)
+        )
+    return metrics

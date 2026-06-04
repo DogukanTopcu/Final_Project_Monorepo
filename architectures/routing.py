@@ -110,8 +110,19 @@ class RoutingArchitecture(BaseArchitecture):
     def _parse_text(self, text: str | None) -> str | None:
         return parse_answer(text or "", self.task_type)
 
-    def run(self, query: Query) -> Response:
+    def _build_routing_prompt(self, query: Query) -> str:
         prompt = build_prompt(query, self.task_type)
+        if self.task_type == "mcq":
+            prompt += (
+                "\n\nKeep the rationale extremely short."
+                "\nUse at most one short sentence before the final answer."
+                "\nDo not use headings, bullets, or step-by-step sections."
+                "\nPrefer an answer-only response when possible."
+            )
+        return prompt
+
+    def run(self, query: Query) -> Response:
+        prompt = self._build_routing_prompt(query)
         slm_budget = compute_completion_budget(
             self.slm,
             prompt,
@@ -125,6 +136,12 @@ class RoutingArchitecture(BaseArchitecture):
             prompt,
             temperature=self.slm_temperature,
             max_tokens=slm_budget,
+        )
+        slm_generation_meta = getattr(self.slm, "last_generation_metadata", {})
+        slm_wall_latency = (
+            slm_generation_meta.get("wall_latency_ms")
+            if isinstance(slm_generation_meta, dict)
+            else None
         )
         slm_parsed = self._parse_text(slm_text)
         top2_margin = None
@@ -144,6 +161,7 @@ class RoutingArchitecture(BaseArchitecture):
         total_out = out_tok
         total_cost = cost
         total_latency = latency
+        total_wall_latency = float(slm_wall_latency or latency)
         llm_calls = 0
         final_text = slm_text
         final_parsed = slm_parsed
@@ -160,6 +178,7 @@ class RoutingArchitecture(BaseArchitecture):
                 "role": "slm_draft",
                 "model_id": self.slm.model_id,
                 "latency_ms": latency,
+                "wall_latency_ms": slm_wall_latency,
                 "input_tokens": in_tok,
                 "output_tokens": out_tok,
                 "api_cost_usd": cost,
@@ -180,11 +199,18 @@ class RoutingArchitecture(BaseArchitecture):
                 temperature=self.llm_temperature,
                 max_tokens=llm_budget,
             )
+            llm_generation_meta = getattr(self.llm, "last_generation_metadata", {})
+            llm_wall_latency_value = (
+                llm_generation_meta.get("wall_latency_ms")
+                if isinstance(llm_generation_meta, dict)
+                else None
+            )
             llm_parsed = self._parse_text(llm_text)
             total_in += l_in
             total_out += l_out
             total_cost += l_cost
             total_latency += l_lat
+            total_wall_latency += float(llm_wall_latency_value or l_lat)
             llm_calls = 1
             final_text = llm_text
             final_parsed = llm_parsed
@@ -193,6 +219,7 @@ class RoutingArchitecture(BaseArchitecture):
             llm_output_tokens = l_out
             llm_cost = l_cost
             llm_latency = l_lat
+            llm_wall_latency = llm_wall_latency_value
             if llm_parsed is not None:
                 final_answer_source = "llm"
                 accepted_by = "llm"
@@ -204,6 +231,7 @@ class RoutingArchitecture(BaseArchitecture):
                     "role": "llm_fallback",
                     "model_id": self.llm.model_id,
                     "latency_ms": l_lat,
+                    "wall_latency_ms": llm_wall_latency_value,
                     "input_tokens": l_in,
                     "output_tokens": l_out,
                     "api_cost_usd": l_cost,
@@ -211,6 +239,7 @@ class RoutingArchitecture(BaseArchitecture):
             )
         else:
             accepted_by = "slm"
+            llm_wall_latency = None
             if escalate and self.slm_only:
                 final_answer_source = "slm" if final_parsed is not None else "none"
 
@@ -221,6 +250,7 @@ class RoutingArchitecture(BaseArchitecture):
             confidence=slm_confidence,
             model_id=used_model,
             latency_ms=total_latency,
+            algorithmic_latency_ms=total_latency,
             input_tokens=total_in,
             output_tokens=total_out,
             cost_usd=total_cost,
@@ -235,6 +265,7 @@ class RoutingArchitecture(BaseArchitecture):
                 "slm_confidence": slm_confidence,
                 "slm_model_id": self.slm.model_id,
                 "slm_latency_ms": latency,
+                "slm_wall_latency_ms": slm_wall_latency,
                 "slm_input_tokens": in_tok,
                 "slm_output_tokens": out_tok,
                 "slm_cost_usd": cost,
@@ -248,6 +279,7 @@ class RoutingArchitecture(BaseArchitecture):
                 ),
                 "llm_model_id": self.llm.model_id if llm_calls == 1 else None,
                 "llm_latency_ms": llm_latency,
+                "llm_wall_latency_ms": llm_wall_latency,
                 "llm_input_tokens": llm_input_tokens,
                 "llm_output_tokens": llm_output_tokens,
                 "llm_cost_usd": llm_cost,
@@ -265,6 +297,8 @@ class RoutingArchitecture(BaseArchitecture):
                 "final_parsed_answer": final_parsed,
                 "final_answer_source": final_answer_source,
                 "escalation_reason": escalation_reason,
+                "model_latency_ms": total_latency,
+                "wall_latency_ms": total_wall_latency,
                 "routing_decision": {
                     "accepted_by": accepted_by,
                     "threshold": self.threshold,

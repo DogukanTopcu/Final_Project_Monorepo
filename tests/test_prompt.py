@@ -39,6 +39,11 @@ def test_parse_mcq_answer_accepts_inline_explanatory_phrasing():
     assert parse_mcq_answer(text) == "B"
 
 
+def test_parse_mcq_answer_accepts_markdown_bold_correct_answer():
+    text = "The correct answer is **C**.\nHere is a breakdown of the reasoning."
+    assert parse_mcq_answer(text) == "C"
+
+
 def test_parse_mcq_answer_accepts_extended_choice_letters():
     text = "After checking all five choices, Answer: E"
     assert parse_mcq_answer(text) == "E"

@@ -222,8 +222,8 @@ class Reporter:
             f"**EATS = {metrics.get('eats_score', 0):.4f}**  ",
             f"Normalized efficiency penalty: {metrics.get('normalized_efficiency_penalty', 0):.4f}  ",
             "",
-            "> EATS = accuracy² / (accuracy² + cost^0.5 × latency^0.3 × energy^0.2).  ",
-            "> Range [0, 1]; higher is better. Penalties are relative to the monolithic LLM baseline.",
+            "> EATS = accuracy / (accuracy + efficiency penalty).  ",
+            "> Efficiency penalty = 0.5 × normalized cost + 0.3 × normalized latency + 0.2 × normalized energy.",
         ]
 
         arch = cfg.architecture
@@ -388,6 +388,8 @@ class Reporter:
             "slm_text": slm_raw_text,
             "final_text": final_raw_text,
         }
+        for meta_key, meta_value in (sample.query.metadata or {}).items():
+            payload.setdefault(meta_key, meta_value)
         for key, value in metadata.items():
             payload.setdefault(key, value)
         return payload

@@ -68,6 +68,7 @@ def test_compute_metrics_structure():
     assert "normalized_energy" in metrics
     assert "normalized_efficiency_penalty" in metrics
     assert abs(metrics["accuracy"] - 0.8) < 1e-6
+    assert "rewrite_rate" not in metrics
 
 
 def test_accuracy_and_llm_ratio():
