@@ -100,7 +100,7 @@ def _build_persisted_experiment_response(path: Path) -> ExperimentResponse | Non
             
         metrics = data.get("metrics", {})
         llm = config.get("llm")
-        if metrics.get("baseline_cost_usd", 0.0) == 0.0:
+        if metrics.get("baseline_accuracy") is None or metrics.get("baseline_cost_usd", 0.0) == 0.0:
             n_samples = int(config.get("n_samples", 500))
             baseline = resolve_recommended_baseline(benchmark, llm, n_samples=n_samples)
             if baseline:
