@@ -1,7 +1,15 @@
 \chapter*{ALIGNMENT WITH UN SUSTAINABLE DEVELOPMENT GOALS}
 \addcontentsline{toc}{chapter}{ALIGNMENT WITH UN SUSTAINABLE DEVELOPMENT GOALS}
 
-This project does not target a single social sector such as healthcare or education. Its contribution is infrastructural: it improves how language-model systems are evaluated, compared, and governed. That still creates meaningful alignment with sustainable development goals because the platform makes hidden resource trade-offs visible and helps avoid wasteful deployment choices.
+This project does not target a single social sector such as healthcare or education.
+Its contribution is infrastructural: it improves how language-model systems are evaluated,
+compared, and governed under a shared measurement policy.
+That still creates meaningful alignment with the United Nations Sustainable Development Goals
+because the platform makes hidden resource trade-offs visible, discourages wasteful deployment
+choices, and lowers the technical and economic barriers to competitive AI development.
+The Efficiency-Adjusted Task Score (EATS) makes this alignment concrete by treating
+energy and cost as primary ranking criteria rather than secondary diagnostics,
+so every architecture comparison the platform produces carries an explicit sustainability signal.
 
 \begin{table}[htbp]
     \centering
@@ -9,13 +17,100 @@ This project does not target a single social sector such as healthcare or educat
     \small
     \begin{tabularx}{\linewidth}{@{} l l X @{}}
         \toprule
-        \textbf{Impact area} & \textbf{Direct / indirect impact} & \textbf{Project relevance} \\
+        \textbf{SDG} & \textbf{Impact} & \textbf{Project relevance} \\
         \midrule
-        Social (SDG 10: Reduced Inequalities) & Indirect & By comparing smaller and larger model architectures under a common framework, the project supports more accessible AI deployment paths for teams that cannot afford frontier-scale hardware or API usage. \\
-        Health (SDG 3: Good Health and Well-being) & Indirect & The project reduces engineering uncertainty and manual experimentation overhead by providing a structured platform for comparison, reporting, and reproducibility. \\
-        Security (SDG 16: Peace, Justice and Strong Institutions) & Indirect & The platform encourages transparent reporting of model behavior, host usage, and benchmark assumptions, which supports more accountable evaluation practices. \\
-        Economic (SDG 8: Decent Work and Economic Growth) & Direct & Cost-aware orchestration and shared-host visibility help teams reason about whether a workload really requires an expensive LLM, which can improve engineering productivity and reduce unnecessary spending. \\
-        Sustainability and environment (SDGs 12 and 13) & Direct & Energy, carbon, and EATS reporting are central to the platform. The project explicitly tracks \texttt{energy\_kwh} and \texttt{co2\_g} so that model quality can be discussed alongside environmental cost. \\
+        SDG 8 --- Decent Work and Economic Growth
+            & Direct
+            & Cost-aware orchestration and shared-host visibility help engineering teams reason
+              about whether a workload truly requires a frontier-scale model.
+              Quantifying the cost--quality trade-off improves allocation decisions and reduces
+              unnecessary API and infrastructure spending. \\
+        \addlinespace
+        SDG 9 --- Industry, Innovation \& Infrastructure
+            & Direct
+            & The project delivers an open, reproducible experiment platform for AI system evaluation.
+              Common \texttt{Query}/\texttt{Response} contracts, shared benchmark tasks, and a
+              public reporting schema lower the cost of replication and extend the evaluation
+              infrastructure available to the research community. \\
+        \addlinespace
+        SDGs 12 \& 13 --- Responsible Consumption \& Climate Action
+            & Direct
+            & Energy and carbon tracking (\texttt{energy\_kwh}, \texttt{co2\_g}) are first-class
+              platform outputs.
+              EATS incorporates both cost and energy into its composite score, so architectures
+              are ranked on quality \emph{per unit of environmental cost}, not on accuracy alone.
+              This directly incentivises the selection of lower-energy deployment paths. \\
+        \addlinespace
+        SDG 10 --- Reduced Inequalities
+            & Indirect
+            & By empirically validating that hybrid and multi-SLM architectures can approach
+              monolithic LLM accuracy on reasoning tasks, the platform provides evidence that
+              competitive AI development is achievable without frontier-scale hardware or cloud
+              budgets, lowering the economic barrier to adoption for resource-constrained teams. \\
+        \addlinespace
+        SDG 16 --- Peace, Justice and Strong Institutions
+            & Indirect
+            & Transparent reporting of model behavior, host utilization, token budgets, and
+              benchmark assumptions supports accountable evaluation practices.
+              Reproducible, open reporting reduces the risk of misleading benchmark claims and
+              contributes to norms of integrity in AI system assessment. \\
         \bottomrule
     \end{tabularx}
 \end{table}
+
+\section*{SDG 8 and SDG 9: Economic Efficiency and Open Infrastructure}
+
+SDG~8 is addressed through the cost dimension of EATS and through the explicit cost reporting
+that accompanies every result.
+By quantifying token usage, API cost, and host resource consumption for each architecture,
+the platform enables teams to identify when a cheaper, smaller-model solution is sufficient for
+a given workload.
+The experimental results confirm that hybrid and ensemble architectures can match or closely
+approach monolithic LLM accuracy at meaningfully lower cost, providing evidence-based guidance
+for engineering investment decisions.
+
+The platform itself is simultaneously a contribution to shared AI evaluation infrastructure,
+directly supporting SDG~9.
+The common \texttt{Query}/\texttt{Response} contract, the benchmark task library, and the
+reporting schema are all designed to be architecture-agnostic and reusable, so that future
+studies can extend the platform rather than rebuild it.
+This reduces the duplication of effort that currently characterises LLM evaluation work and
+lowers the barrier to reproducible AI research for teams without dedicated infrastructure.
+
+\section*{SDGs 12 and 13: Responsible Consumption and Climate Action}
+
+The strongest direct alignment arises from the platform's environmental measurement layer.
+Every experiment records \texttt{energy\_kwh} and \texttt{co2\_g} alongside the conventional
+accuracy and latency outcomes.
+These fields are not optional annotations; they are required fields in the shared
+\texttt{Response} schema, so no architecture can be evaluated without also producing an
+energy and carbon footprint.
+EATS formalises this alignment: because EATS is a composite of accuracy, cost, latency,
+and energy, an architecture that consumes excessive energy is penalised in the primary
+ranking signal even if its raw accuracy is competitive.
+The practical consequence is that every architecture comparison the platform produces is
+simultaneously a comparison of environmental impact, making SDG~12 and SDG~13 goals
+operational rather than aspirational within the evaluation workflow.
+It is worth acknowledging that running benchmarks itself incurs an energy cost; the platform
+is designed to execute on shared, multi-tenant infrastructure so that this overhead is
+amortized across multiple concurrent experiments rather than dedicated to a single run.
+
+\section*{SDG 10 and SDG 16: Reducing Inequalities and Accountable AI}
+
+The platform's most significant indirect contribution to reduced inequality is the empirical
+grounding it provides for SLM-based deployment strategies.
+A recurring finding in the systematic literature review (Chapter~2) is that small-model
+solutions are rarely benchmarked against frontier models under identical conditions, which
+makes it difficult for resource-constrained teams to justify adopting them.
+By placing monolithic LLM baselines and hybrid or multi-SLM architectures on the same
+evaluation surface, the platform produces direct, comparable evidence for the accuracy--cost
+trade-off, reducing the informational disadvantage that teams without frontier-model budgets
+currently face.
+
+Alignment with SDG~16 follows from the platform's transparency design.
+Benchmark tasks, evaluation prompts, scoring policies, and measurement methodology are all
+documented and version-controlled.
+Host assignment logs and token budget records make it possible to audit whether any
+architecture received a systematic advantage.
+These properties support the kind of accountable, reproducible AI evaluation that is a
+prerequisite for trustworthy institutional decision-making about which systems to deploy.
