@@ -148,35 +148,32 @@ The model pool was assembled through a principled tier-based stratification stra
 
 Three additional criteria governed model selection within each tier. First, \textbf{model family diversity}: multiple families (Gemma, Qwen, LLaMA, Mistral, Phi) are represented so that architecture comparisons are not confounded by idiosyncrasies of a single model family's instruction-following or confidence calibration behaviour. Second, \textbf{conditional computation coverage}: two Mixture-of-Experts checkpoints (\texttt{gemma4-26b-a4b} and \texttt{qwen3.5-35b-a3b}) are included as standalone MoE baselines, enabling the thesis to directly compare efficiency gains from internal expert sparsity with those arising from external orchestration---one of the principal conceptual boundaries identified in the literature review \cite{slrmanuscript2026}. Third, \textbf{reproducibility}: all selected models are open-weight checkpoints available through Hugging Face, ensuring that serving configurations are fully reproducible and independent of proprietary API agreements or access constraints.
 
-\begingroup
+\begin{table}[htbp]
+\centering
+\caption{Language-model pool. Rows are grouped by capability tier; horizontal rules mark tier boundaries. \emph{Params} gives the total parameter count (dense models) or total / active count (MoE models). Hugging Face checkpoint URLs are listed in the Appendix.}
+\label{tab:model-pool}
 \small
-\setlength{\tabcolsep}{2.5pt}
-\begin{longtable}{@{} >{\raggedright\arraybackslash}p{1.65cm} >{\raggedright\arraybackslash}p{1.75cm} >{\raggedright\arraybackslash}p{1.7cm} >{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}p{0.75cm} >{\raggedright\arraybackslash}p{3.0cm} >{\raggedright\arraybackslash}p{2.45cm} @{}}
-    \caption{Current language-model pool used in the thesis platform.}
-    \label{tab:model-pool} \\
-    \toprule
-    \textbf{Alias} & \textbf{Category} & \textbf{GPU Instance} & \textbf{GPU Service} & \textbf{VRAM} & \textbf{Hugging Face URL} & \textbf{Deployment Role} \\
-    \midrule
-    \endfirsthead
-    \toprule
-    \textbf{Alias} & \textbf{Category} & \textbf{GPU Instance} & \textbf{GPU Service} & \textbf{VRAM} & \textbf{Hugging Face URL} & \textbf{Deployment Role} \\
-    \midrule
-    \endhead
-    \texttt{gemma4-4b} & SLM & L4 & GCP L4 on-demand & 24 & \url{https://huggingface.co/google/gemma-4-E4B-it} & Primary drafter and router-side first responder. \\
-    \texttt{qwen3.5-4b} & SLM & L4 & GCP L4 on-demand & 24 & \url{https://huggingface.co/Qwen/Qwen3.5-4B} & Fast compact model for drafting, voting, and peer reasoning. \\
-    \texttt{llama3.2-3b} & SLM & L4 & GCP L4 on-demand & 24 & \url{https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct} & Low-footprint dense SLM for peer-agent and compact-baseline runs. \\
-    \texttt{ministral3-3b} & SLM & L4 & GCP L4 on-demand & 24 & \url{https://huggingface.co/mistralai/Ministral-3-3B-Instruct-2512} & Edge-oriented SLM for multilingual and instruction-heavy comparisons. \\
-    \texttt{phi4-mini} & SLM & L4 & GCP L4 on-demand & 24 & \url{https://huggingface.co/microsoft/Phi-4-mini-instruct} & Compact reasoning-oriented SLM under tight compute budgets. \\
-    \texttt{gpt-oss-20b} & Mid-tier LLM & RTX PRO6000 & GCP RTX PRO6000 spot & 96 & \url{https://huggingface.co/openai/gpt-oss-20b} & Mid-tier verifier, arbitrator, and stronger fallback model. \\
-    \texttt{qwen3.5-27b} & Mid-tier LLM & RTX PRO6000 & GCP RTX PRO6000 spot & 96 & \url{https://huggingface.co/Qwen/Qwen3.5-27B} & Strong dense mid-tier baseline for escalation-quality comparison. \\
-    \texttt{gemma4-31b} & Mid-tier LLM & RTX PRO6000 & GCP RTX PRO6000 spot & 96 & \url{https://huggingface.co/nvidia/Gemma-4-31B-IT-NVFP4} & Quantized mid-tier model for routing fallback and speculative verification. \\
-    \texttt{gemma4-26b-a4b} & Mid-tier LLM (MoE) & RTX PRO6000 & GCP RTX PRO6000 spot & 96 & \url{https://huggingface.co/nvidia/Gemma-4-26B-A4B-NVFP4} & Standalone MoE baseline for internal sparse-expert comparison. \\
-    \texttt{qwen3.5-35b-a3b} & Mid-tier LLM (MoE) & RTX PRO6000 & GCP RTX PRO6000 spot & 96 & \url{https://huggingface.co/Qwen/Qwen3.5-35B-A3B} & Standalone MoE baseline against external orchestration. \\
-    \texttt{llama3.3-70b} & Heavy LLM & H200 & Nebius H200 spot & 141 & \url{https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct} & Frontier dense baseline and high-capability fallback. \\
-    \texttt{gpt-oss-120b} & Heavy LLM & H200 & Nebius H200 spot & 141 & \url{https://huggingface.co/openai/gpt-oss-120b} & Strongest heavy baseline in the current open-weight pool. \\
-    \bottomrule
-\end{longtable}
-\endgroup
+\begin{tabular}{@{} l l l r l r @{}}
+\toprule
+\textbf{Alias} & \textbf{Tier} & \textbf{Family} & \textbf{Params} & \textbf{Host} & \textbf{VRAM (GB)} \\
+\midrule
+\texttt{gemma4-4b}       & SLM           & Gemma 4       & $\approx$4B        & GCP L4          & 24  \\
+\texttt{qwen3.5-4b}      & SLM           & Qwen 3.5      & $\approx$4B        & GCP L4          & 24  \\
+\texttt{llama3.2-3b}     & SLM           & LLaMA 3.2     & 3B                 & GCP L4          & 24  \\
+\texttt{ministral3-3b}   & SLM           & Mistral 3     & $\approx$3B        & GCP L4          & 24  \\
+\texttt{phi4-mini}       & SLM           & Phi 4         & $\approx$4B        & GCP L4          & 24  \\
+\midrule
+\texttt{gpt-oss-20b}     & Mid-tier      & OpenAI OSS    & 20B                & GCP RTX 6000    & 96  \\
+\texttt{qwen3.5-27b}     & Mid-tier      & Qwen 3.5      & 27B                & GCP RTX 6000    & 96  \\
+\texttt{gemma4-31b}      & Mid-tier      & Gemma 4       & 31B                & GCP RTX 6000    & 96  \\
+\texttt{gemma4-26b-a4b}  & Mid-tier MoE  & Gemma 4       & 26B\,/\,4B act.    & GCP RTX 6000    & 96  \\
+\texttt{qwen3.5-35b-a3b} & Mid-tier MoE  & Qwen 3.5      & 35B\,/\,3B act.    & GCP RTX 6000    & 96  \\
+\midrule
+\texttt{llama3.3-70b}    & Heavy         & LLaMA 3.3     & 70B                & Nebius H200     & 141 \\
+\texttt{gpt-oss-120b}    & Heavy         & OpenAI OSS    & 120B               & Nebius H200     & 141 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsection{Deployment Topology Rationale}
 \label{sec:topology}
@@ -191,19 +188,28 @@ The shared RTX PRO6000 and H200 hosts reflect the opposite design intent: mid-ti
 The architecture taxonomy was constructed by combining patterns extracted from the systematic literature review with novel architectural contributions introduced by the present project. The review demonstrated that most collaborative SLM--LLM systems can be grouped around a few recurring orchestration ideas: direct standalone baselines, selective hybrid collaboration, and multi-agent or multi-SLM coordination \cite{slrmanuscript2026, hao2024hybrid, shao2025dot, debateagents2025, sentensemble2026}. We therefore organised the thesis architecture space into three categories: \textbf{Standalone}, \textbf{Hybrid}, and \textbf{Multi-SLM}. Within that taxonomy, some architectures were directly inspired by published patterns, while others represent novel architectural contributions introduced by the present project.
 
 \begin{table}[htbp]
-    \centering
-    \caption{Architecture taxonomy used in the thesis platform.}
-    \label{tab:architecture-taxonomy}
-    \small
-    \begin{tabularx}{\linewidth}{@{} >{\raggedright\arraybackslash}p{2.1cm} >{\raggedright\arraybackslash}p{3.3cm} >{\raggedright\arraybackslash}p{2.2cm} X @{}}
-        \toprule
-        \textbf{Category} & \textbf{Architectures} & \textbf{Origin} & \textbf{Methodological Role} \\
-        \midrule
-        Standalone & Standalone (Single-Model), Standalone (MoE) & Literature-derived baseline class & Establishes the no-orchestration reference point and isolates the effect of internal expert gating from external multi-model collaboration. \\
-        Hybrid & Routing, Speculative Decoding, Debate (POA), Active Oracle, Blackboard, Entropy Blackboard & Mixed: literature-derived + project-developed & Studies how SLMs and stronger models collaborate through escalation, verification, adversarial critique, targeted consultation, or decentralized fallback. \\
-        Multi-SLM & Ensemble, Pure Swarm & Mixed: literature-derived + project-developed & Tests whether multiple compact models can collectively recover part of the capability gap without relying on a permanently active large model. \\
-        \bottomrule
-    \end{tabularx}
+\centering
+\caption{Architecture taxonomy. Each architecture occupies one row. \emph{Type} distinguishes literature-derived designs from novel contributions ($\dagger$) introduced by the present project. \emph{Key Mechanism} states the distinguishing orchestration principle; full descriptions appear in the subsections below.}
+\label{tab:architecture-taxonomy}
+\small
+\begin{tabularx}{\linewidth}{@{} l l l X @{}}
+\toprule
+\textbf{Category} & \textbf{Architecture} & \textbf{Type} & \textbf{Key Mechanism} \\
+\midrule
+Standalone & Single-Model         & Baseline         & Single model, direct inference; no inter-model interaction. \\
+           & MoE                  & Baseline         & Internal sparse expert activation; single external endpoint. \\
+\midrule
+Hybrid     & Routing              & Literature       & Confidence-based SLM-first escalation to a stronger LLM. \\
+           & Speculative Decoding & Literature       & SLM drafts; LLM verifies and rewrites only the divergent suffix. \\
+           & Debate (POA)         & Literature       & Proponent--Opponent--Arbitrator adversarial role separation. \\
+           & Active Oracle        & $\dagger$ Novel  & SLM-initiated targeted LLM sub-queries on reasoning impasse. \\
+           & Blackboard           & $\dagger$ Novel  & Bid-based asynchronous task allocation; LLM sweeper fallback. \\
+           & Entropy Blackboard   & $\dagger$ Novel  & Uncertainty-penalised bidding; conservative SLM claim policy. \\
+\midrule
+Multi-SLM  & Ensemble             & Literature       & Majority or confidence-weighted voting across SLM responses. \\
+           & Pure Swarm           & $\dagger$ Novel  & SLM-only peer coordination; no LLM in the online inference path. \\
+\bottomrule
+\end{tabularx}
 \end{table}
 
 \subsection{Standalone Architectures}
@@ -279,66 +285,54 @@ The project distinguishes between \textbf{wall-clock latency} and \textbf{algori
 \label{sec:eats}
 \label{sec:eats-definition}
 
-To jointly compare answer quality and resource consumption, the thesis introduces the Efficiency-Accuracy Trade-off Score (EATS). The current formulation uses an additive efficiency penalty normalised against a benchmark-specific standalone baseline:
+To jointly compare answer quality and resource consumption, the thesis introduces the Efficiency-Accuracy Trade-off Score (EATS). Let $\alpha \in [0,1]$ denote the architecture's task accuracy, $C \geq 0$ its total monetary cost per run (USD), $L \geq 0$ its mean algorithmic latency per query (s), and $E \geq 0$ its total energy consumption (kWh). The corresponding benchmark-specific standalone baseline values are $C_0$, $L_0$, and $E_0$, all strictly positive by construction. Three dimensionless normalisation ratios are defined as:
 
-\begin{equation}
-\text{normalized\_cost} =
-\frac{\text{total\_cost\_usd}}
-{\text{baseline\_cost\_usd}}
-\end{equation}
+\begin{align}
+    \tilde{C} = \frac{C}{C_0}, \qquad
+    \tilde{L} = \frac{L}{L_0}, \qquad
+    \tilde{E} = \frac{E}{E_0}.
+    \label{eq:norm-components}
+\end{align}
 
-\begin{equation}
-\text{normalized\_latency} =
-\frac{\text{avg\_algorithmic\_latency\_ms}}
-{\text{baseline\_avg\_algorithmic\_latency\_ms}}
-\end{equation}
+The tilde notation denotes a dimensionless ratio, following the convention used in ML efficiency literature for normalised quantities; a circumflex ($\hat{\cdot}$) is reserved for estimated quantities in the statistical sense and is not used here. The additive efficiency penalty $P$ and the EATS score are:
 
-\begin{equation}
-\text{normalized\_energy} =
-\frac{\text{total\_energy\_kwh}}
-{\text{baseline\_energy\_kwh}}
-\end{equation}
+\begin{align}
+    P       &= 0.5\,\tilde{C} \;+\; 0.3\,\tilde{L} \;+\; 0.2\,\tilde{E}, \label{eq:penalty} \\[6pt]
+    \text{EATS} &= \frac{\alpha}{\alpha + P}. \label{eq:eats}
+\end{align}
 
-\begin{equation}
-\text{efficiency\_penalty} =
-0.5 \times \text{normalized\_cost} +
-0.3 \times \text{normalized\_latency} +
-0.2 \times \text{normalized\_energy}
-\end{equation}
+Three structural properties follow directly from these definitions and should be noted explicitly.
 
-\begin{equation}
-\text{EATS} =
-\frac{\text{accuracy}}
-{\text{accuracy} + \text{efficiency\_penalty}}
-\end{equation}
+First, \textbf{baseline identity}: when Eq.~\eqref{eq:eats} is applied to the standalone baseline itself, $\tilde{C} = \tilde{L} = \tilde{E} = 1$ by construction, so $P_{\text{baseline}} = 1$ identically, and therefore:
+\[
+  \text{EATS}_{\text{baseline}} = \frac{\alpha}{\alpha + 1} \quad \text{for all } \alpha > 0.
+\]
+This means the baseline EATS is a function of accuracy alone, providing a clean reference curve against which every collaborative architecture can be placed.
 
-This formulation is intentionally conservative. Accuracy remains the numerator and therefore the primary objective, but the denominator grows when an architecture becomes more expensive, slower, or more energy-intensive relative to the full-LLM standalone baseline. The weights are assigned according to the relative prioritisation of efficiency dimensions in production deployment contexts, as informed by the literature review \cite{slrmanuscript2026, energytoken2025}: direct monetary cost is assigned the highest weight (0.5) because it constitutes the most immediately measurable and actionable deployment constraint for practitioners; algorithmic latency carries the second weight (0.3) because it directly governs interactive responsiveness; and energy consumption receives the lowest weight (0.2) because, while ecologically significant, it is currently the dimension most subject to measurement approximation in the present platform. These weights are held fixed for all pilot comparisons reported in this term report; a sensitivity analysis of alternative weight configurations is planned as part of the full thesis evaluation.
+Second, \textbf{monotonicity}: $\partial\,\text{EATS}/\partial\alpha = P/(\alpha+P)^2 > 0$ and $\partial\,\text{EATS}/\partial P = -\alpha/(\alpha+P)^2 < 0$, confirming that EATS is strictly increasing in accuracy and strictly decreasing in the efficiency penalty.
 
-The additive penalty was chosen because it degrades gracefully when one dimension is only approximately measured. A multiplicative penalty would collapse too aggressively if one component were near zero or temporarily unavailable. EATS therefore does not replace raw accuracy; it provides a single composite ranking signal for the quality--efficiency trade-off identified as underreported in the literature \cite{slrmanuscript2026, energytoken2025}.
+Third, \textbf{domain}: the formula is undefined when $\alpha = P = 0$ simultaneously; this edge case is excluded by design because every experiment records at least one inference step, which guarantees $C, L, E > 0$ and therefore $P > 0$.
+
+The structure $\alpha/(\alpha + P)$ is deliberately analogous to the F-score harmonic mean, where $P$ acts as a resource-consumption counterpart to accuracy. Unlike a multiplicative penalty, the additive form degrades gracefully when one efficiency dimension is only approximately measured---a multiplicative structure would collapse EATS toward zero if any single component were unmeasured or near zero.
+
+The weights (0.5 for cost, 0.3 for latency, 0.2 for energy) reflect the relative prioritisation of efficiency dimensions in production deployment contexts, as informed by the literature \cite{slrmanuscript2026, energytoken2025}: monetary cost is weighted highest as the most immediately actionable constraint for practitioners; latency ranks second because it directly governs interactive responsiveness; energy is lowest because it is currently the dimension most subject to measurement approximation in the present platform. These weights are held fixed throughout this term report. To verify that architecture rankings are robust to this choice, the full thesis evaluation will include a sensitivity analysis varying each weight by $\pm 0.1$ under the constraint $w_C + w_L + w_E = 1$.
+
+EATS does not replace raw accuracy; it provides a single composite ranking signal for the quality--efficiency trade-off identified as systematically underreported in the literature \cite{slrmanuscript2026, energytoken2025}.
 
 \subsection{Energy, Carbon, and Cost Measurement}
 \label{sec:energy}
 
-The VM-side metrics proxy is the primary measurement instrument. When a request arrives at the proxy endpoint, the proxy records a high-resolution start time, forwards the request to the local vLLM process, and upon receiving the response computes a thesis-specific telemetry block. Energy is estimated using two mechanisms in priority order: (1) \textbf{CodeCarbon}, used as the preferred software-level estimator; (2) \textbf{NVIDIA NVML}, accessed through \texttt{pynvml} to sample instantaneous GPU power, used as a fallback by integrating mean power over the measured inference duration. Carbon emissions are computed as:
+The VM-side metrics proxy is the primary measurement instrument. When a request arrives at the proxy endpoint, the proxy records a high-resolution start time, forwards the request to the local vLLM process, and upon receiving the response computes a thesis-specific telemetry block. Energy is estimated using two mechanisms in priority order: (1) \textbf{CodeCarbon}, the preferred software-level estimator; (2) \textbf{NVIDIA NVML}, accessed through \texttt{pynvml} to sample the instantaneous GPU power draw at the host level, used as a fallback by integrating mean power over the measured inference duration. The following notation is used throughout: $P_{\text{GPU}} \geq 0$ denotes the mean GPU power in watts reported by NVML during a single inference step; $\Delta s \geq 0$ denotes the NVML-measured inference duration in seconds, converted to hours as $t = \Delta s\,/\,3600$; $r \geq 0$ denotes the hourly cloud-instance rate in USD/h; $C_{\text{API}} \geq 0$ denotes the direct token-level cost charged by the model provider in USD (computed from the per-token price and the input/output token counts returned by the endpoint); and $k$ denotes the grid carbon intensity factor in gCO$_2$/kWh. The per-step resource estimates are:
 
-\begin{equation}
-\text{co2\_g} = \text{energy\_kwh} \times \text{grid\_factor}
-\end{equation}
+\begin{align}
+    E \;[\text{kWh}]            &= \frac{P_{\text{GPU}}}{1\,000} \times t
+                                  \;=\; \frac{P_{\text{GPU}} \cdot \Delta s}{3\,600\,000},     \label{eq:energy} \\[4pt]
+    \text{CO}_2 \;[\text{g}]    &= k \times E,                                                \label{eq:co2}    \\[4pt]
+    C_{\text{infra}} \;[\$]     &= r \times t,                                                \label{eq:infra}  \\[4pt]
+    C \;[\$]                    &= C_{\text{API}} + C_{\text{infra}}.                         \label{eq:cost}
+\end{align}
 
-The current default grid factor is 380 gCO$_2$/kWh. Infrastructure cost per step is estimated as:
-
-\begin{equation}
-\text{energy\_kwh} =
-\left(\frac{\text{gpu\_power\_w}}{1000}\right) \times \text{duration\_hours}
-\end{equation}
-
-\begin{equation}
-\text{infra\_cost\_usd} = \text{hourly\_usd} \times \text{duration\_hours}
-\end{equation}
-
-\begin{equation}
-\text{total\_cost\_usd} = \text{api\_cost\_usd} + \text{infra\_cost\_usd}
-\end{equation}
+The dimensional consistency of Eq.~\eqref{eq:energy} follows from $(\text{W}/1000) \times (\text{s}/3600) = \text{kW}\cdot\text{h} = \text{kWh}$. The current default value is $k = 380\;\text{gCO}_2/\text{kWh}$, which is the approximate European average grid carbon intensity \cite{energytoken2025}. This value constitutes a conservative upper bound: cloud providers (GCP, Nebius) frequently procure renewable energy certificates that substantially reduce effective per-kWh emissions, as further discussed in Section~\ref{sec:threats}.
 
 A resource-profile fallback layer handles multi-step architectures and endpoints that expose only partial proxy telemetry. Each model alias is mapped to a host profile containing an hourly infrastructure price and an approximate GPU power value. Current profile values are: L4 at \$0.75/h and 72~W, RTX PRO6000 at \$2.35/h and 320~W, and H200 at \$6.50/h and 600~W. This fallback mechanism does not claim measurement equivalence with direct proxy readings; it provides a consistent experiment-wide accounting policy so that multi-step architectures can still be compared fairly at the aggregate level.
 
