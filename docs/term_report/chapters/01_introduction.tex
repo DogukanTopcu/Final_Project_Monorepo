@@ -2,20 +2,20 @@
 
 \section{Motivation}
 
-Large language models have achieved state-of-the-art performance across reasoning and multimodal tasks, but their computational requirements remain substantial~\cite{egi2025,wang2024slmsurvey,chen2025collabmech}. Serving a frontier model demands high-end GPU infrastructure, creates dependence on cloud providers, and carries non-trivial energy, cost, and latency overhead~\cite{energytoken2025,qwqrouting2025,tigani2025cpu}. Small language models offer an appealing alternative for latency-sensitive or resource-constrained settings, yet they consistently trail frontier models on broad reasoning tasks~\cite{egi2025,dorfner2024comparing}. Recent research therefore asks not which model is best, but which \emph{architecture} provides the best capability--efficiency trade-off under real deployment conditions: the central question is one of systems design, not model selection~\cite{hao2024hybrid,shao2025dot,multiagent2025}.
+Large language models have achieved state-of-the-art performance across diverse language understanding and reasoning tasks, but their computational requirements remain substantial~\cite{egi2025,wang2024slmsurvey,chen2025collabmech}. Serving a frontier model demands high-end GPU infrastructure, creates dependence on cloud providers, and carries non-trivial energy, cost, and latency overhead~\cite{energytoken2025,qwqrouting2025,tigani2025cpu}. Small language models offer an appealing alternative for latency-sensitive or resource-constrained settings, yet they consistently trail frontier models on broad reasoning tasks~\cite{egi2025,dorfner2024comparing}. Recent research therefore asks not which model is best, but which \emph{architecture} provides the best capability--efficiency trade-off under real deployment conditions: the central question is one of systems design, not model selection~\cite{hao2024hybrid,shao2025dot,multiagent2025}.
 
 A systematic literature review conducted as part of this project synthesized 54 primary studies on collaborative SLM--LLM architectures under a PRISMA 2020-guided protocol~\cite{slrmanuscript2026}. That review confirmed a strong and ongoing shift toward hybrid and multi-agent designs in which small models handle routine sub-tasks while large models are invoked selectively for escalation, verification, or arbitration. It also identified a clear reporting asymmetry: accuracy is quantified in nearly every study, while cost, latency, and energy are treated as secondary observations and are frequently omitted altogether. No included study provided a unified comparison of multiple architecture families under a shared measurement policy. This asymmetry---and the absence of a shared evaluation framework---directly motivates the platform design described in this report.
 
-The thesis project described in this term report responds to that gap with a measurement-first experiment platform. Every architecture receives the same \texttt{Query} object and returns the same \texttt{Response} object, ensuring that monolithic, hybrid, ensemble, and swarm-style strategies are evaluated on identical inputs under identical reporting conditions. Accuracy, latency, token usage, cost, energy, and carbon are all treated as first-class outcomes rather than secondary diagnostics. To rank architectures across all these dimensions simultaneously, the platform introduces EATS (Efficiency-Adjusted Task Score; a composite of accuracy, cost, latency, and energy), a unified quality--efficiency signal.
+The thesis project described in this term report responds to that gap with a measurement-first experiment platform. Every architecture receives the same \texttt{Query} object and returns the same \texttt{Response} object, ensuring that standalone, hybrid, and multi-SLM strategies are evaluated on identical inputs under identical reporting conditions. Accuracy, latency, token usage, cost, energy, and carbon are all treated as first-class outcomes rather than secondary diagnostics. To rank architectures across all these dimensions simultaneously, the platform introduces EATS (Efficiency-Accuracy Trade-off Score; a composite of accuracy, cost, latency, and energy), a unified quality--efficiency signal.
 
 \section{Research Questions}
 
 The platform is designed to address four empirical research questions:
 
 \begin{itemize}
-    \item \textbf{RQ1 (Performance):} Can SLM--LLM collaborative architectures match monolithic LLM accuracy on reasoning tasks under a shared benchmark and evaluation policy?
+    \item \textbf{RQ1 (Performance):} Can SLM--LLM collaborative architectures match standalone LLM accuracy on reasoning tasks under a shared benchmark and evaluation policy?
 
-    \item \textbf{RQ2 (Efficiency):} What are the cost, latency, and energy trade-offs across monolithic, hybrid, ensemble, and multi-SLM orchestration families when evaluated on the same workload?
+    \item \textbf{RQ2 (Efficiency):} What are the cost, latency, and energy trade-offs across standalone, hybrid, ensemble, and multi-SLM orchestration families when evaluated on the same workload?
 
     \item \textbf{RQ3 (Unified Metric):} Does EATS provide a stable, architecture-agnostic ranking signal for the quality--efficiency trade-off across the studied architecture families?
 
@@ -26,7 +26,7 @@ These questions operationalize the most underserved dimensions identified in the
 
 \section{Project Scope and Research Goal}
 
-The thesis project implements an experiment platform in which every architecture receives the same \texttt{Query} object and returns the same \texttt{Response} object. This common contract makes it possible to compare standalone, hybrid, ensemble, and swarm-style strategies under the same benchmark conditions. The project therefore treats architecture as the primary independent variable. Models still matter, but they are studied as components inside a larger orchestration surface.
+The thesis project treats architecture as the primary independent variable within the shared \texttt{Query}/\texttt{Response} platform introduced above. Models still matter, but they are studied as components inside a larger orchestration surface.
 
 The current report focuses on four tightly connected goals:
 
@@ -34,7 +34,7 @@ The current report focuses on four tightly connected goals:
     \item building a reproducible experiment platform for SLM--LLM architecture comparison, providing the shared infrastructure needed to address RQ1 and RQ2;
     \item grounding the platform design in the findings of the completed systematic literature review;
     \item defining a benchmark and evaluation protocol, including the EATS metric, as the primary instrument for addressing RQ3; and
-    \item evaluating monolithic, hybrid, ensemble, and swarm-style orchestration families under the shared benchmark and measurement policy.
+    \item evaluating standalone, hybrid, and multi-SLM orchestration families under the shared benchmark and measurement policy.
 \end{itemize}
 
 Training and fine-tuning are intentionally outside the scope of this report. Although the repository contains training-related material, this term report does not treat training as part of the completed experiment pipeline and does not use it to support any claim.
@@ -46,7 +46,7 @@ This report makes the following contributions:
 \begin{itemize}
     \item a documented experiment platform that integrates remote model serving, a local control plane, experiment execution, reporting, and a web-based management interface;
     \item a measurement methodology that treats latency, token usage, cost, energy, and carbon as first-class outcomes, directly addressing the cost-energy reporting asymmetry identified in the companion systematic literature review~\cite{slrmanuscript2026};
-    \item a comparative evaluation of monolithic, hybrid, ensemble, and swarm-style architectures under a unified measurement policy, with EATS as the primary ranking instrument.
+    \item a comparative evaluation of standalone, hybrid, and multi-SLM architectures under a unified measurement policy, with EATS as the primary ranking instrument.
 \end{itemize}
 
 \section{Structure of the Report}

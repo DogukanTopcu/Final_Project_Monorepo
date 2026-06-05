@@ -1,16 +1,63 @@
 \chapter{CONCLUSIONS AND FUTURE WORK}
 
-This term report demonstrates that the thesis project has matured into a substantial experimental platform, even though the full validation phase is still in progress. The implemented contribution now includes a shared architecture contract in which the same \texttt{Query} can be processed by different response-generation strategies that all return the same \texttt{Response}, a remote inference topology spanning multiple GPU tiers, MLflow-backed tracking and reporting, and an instrumentation layer that records latency, tokens, cost, energy, and emissions. Together, these components make the project more than a collection of model scripts: they provide a reusable platform for architecture-level comparison under a consistent measurement policy.
+This report presents a measurement-first experiment platform for comparing SLM--LLM collaborative architectures and reports the results of 88 experiments executed across five public benchmarks and six architecture families. This chapter synthesizes the principal findings, revisits the four research questions from Chapter~1, identifies the limitations of the current evaluation, and sets out the work that remains before the final thesis submission.
 
-The pilot results also support a clear but carefully bounded empirical takeaway: there is no universally superior architecture across all evaluation dimensions. The standalone single-model configuration remains the strongest raw-accuracy operating point in the reported pilots, while routing and other hybrid designs represent viable intermediate operating points by reducing the frequency of large-model invocations and improving parts of the cost-energy profile. At the same time, the pilots show that these savings may come with noticeable latency overhead, which is why EATS should not be read in isolation; it is most informative when interpreted together with accuracy, latency, cost, and energy.
+\section{Principal Findings}
 
-The most important contribution of this term report is therefore not a final leaderboard claim, but the establishment of a repeatable measurement-first infrastructure for comparing orchestration architectures rather than models alone. The current quantitative evidence is promising and already useful for shaping the thesis direction, yet it remains exploratory because the intended coding benchmark, the human preference workflow, and the fully stable end-to-end validation path are not complete enough for final thesis-grade conclusions.
+\paragraph{Platform maturity.}
+The experiment platform has moved well beyond a proof-of-concept state. A shared architecture contract---in which the same \texttt{Query} object is processed by any architecture and returns the same \texttt{Response}---makes monolithic, hybrid, ensemble, and swarm-style strategies directly comparable under identical benchmark conditions. The instrumentation layer records latency, token counts, cost, energy, and estimated CO$_2$ for every query. MLflow-backed tracking and a JSON/Markdown reporting pipeline make results reproducible and auditable. This shared measurement policy was the primary platform contribution targeted for this term report, and it is now operational.
+
+\paragraph{Efficiency--quality frontier.}
+The most consistent finding across the benchmark suite is that routing and speculative decoding using the \texttt{gemma4-4b}$\rightarrow$\texttt{gemma4-31b} pair occupy the top positions on the efficiency--quality frontier on ARC, HellaSwag, and TruthfulQA. On these benchmarks, routing EATS values of 0.884, 0.869, and 0.844 represent improvements of 15--21 EATS points over the best standalone options, achieved at sub-2-second algorithmic latency and per-query costs below \$0.001. Speculative decoding reaches 1--5 percentage points higher accuracy than routing on these benchmarks at EATS values of 0.817--0.856. This pattern directly addresses the central thesis hypothesis: well-designed collaborative architectures can match or approach standalone LLM accuracy while delivering substantial efficiency gains.
+
+\paragraph{Standalone MoE checkpoints as a competitive baseline.}
+Among standalone models, the mixture-of-experts checkpoints \texttt{qwen3.5-35b-a3b} and \texttt{gemma4-26b-a4b} are consistently the most efficient options. They achieve EATS values of 0.629--0.738 across benchmarks---substantially above the dense-model standalone range---because their sparse activation profiles keep latency and cost low relative to their accuracy. Any thesis conclusion about collaborative efficiency gains must account for this: the relevant comparison is not against an expensive dense LLM but against the best-efficiency standalone alternative.
+
+\paragraph{Swarm and ensemble accuracy ceilings.}
+Pure Swarm achieves the highest raw accuracy on ARC (96.0\%) using no heavy-model calls, and the four-SLM ensemble achieves the highest raw accuracy on GSM8K (96.0\%), demonstrating that compact peer coordination can reach frontier-level accuracy on structured reasoning tasks. Both findings corroborate multi-SLM collaboration results from the companion systematic literature review. However, both architectures are penalized heavily on EATS by their high wall-clock latency, which reflects the current gap between architectural capability and deployment-level efficiency. Reducing multi-agent coordination latency is therefore as important an engineering challenge as improving accuracy.
+
+\paragraph{Active Oracle and the cost of oracle queries.}
+Active Oracle consistently underperforms both routing and speculative decoding in accuracy and EATS despite using the same SLM--LLM pair. The sub-query mechanism incurs additional latency and cost without reliably recovering the correct answer on multiple-choice tasks, indicating that targeted oracle consultation is a poor fit for benchmark formats where the answer is a single letter rather than a free-form explanation. Active Oracle may show different behavior on open-ended generation tasks; the current evidence is specific to the multiple-choice evaluation surface.
+
+\paragraph{Measurement limitations.}
+One methodological issue is carried into the full thesis evaluation. The GSM8K anomaly for GPT-family models (67.8\% and 59.4\% accuracy) is most likely an output-parsing artifact rather than a true capability finding, and it requires targeted re-evaluation before final thesis claims are advanced.
+
+\section{Research Questions Revisited}
+
+\textbf{RQ1 (Performance):} Routing and speculative decoding match or approach the accuracy of the best standalone models on ARC, HellaSwag, and TruthfulQA. Pure Swarm exceeds every standalone model on ARC. The answer to RQ1 is affirmative for these benchmarks: collaborative architectures can match standalone LLM accuracy. On MMLU, speculative decoding achieves the highest observed accuracy, and the coding-benchmark evaluation---the primary thesis surface---is still in progress.
+
+\textbf{RQ2 (Efficiency):} On ARC, HellaSwag, and TruthfulQA, routing reduces per-query cost by factors of 3--12 and latency by factors of 2--7 relative to the same LLM running in standalone mode, while maintaining near-monolithic accuracy. The MoE standalone checkpoints represent the most efficient non-collaborative alternative. Ensemble and Pure Swarm architectures achieve competitive accuracy at the cost of elevated latency. The efficiency picture is therefore architecture- and workload-dependent rather than universal.
+
+\textbf{RQ3 (Unified Metric):} EATS provides a stable ranking signal that captures the joint accuracy-efficiency trade-off in a single score. On ARC, HellaSwag, and TruthfulQA, EATS correctly identifies routing and speculative decoding as the top-ranked configurations and separates the efficient MoE standalone checkpoints from the less efficient dense-model alternatives.
+
+\textbf{RQ4 (Empirical Grounding):} The platform-measured results corroborate several findings from the companion systematic literature review. The ability of SLM-first routing to achieve near-LLM accuracy while limiting heavy-model invocations was a frequently reported trend in the reviewed studies; the ARC, HellaSwag, and TruthfulQA results confirm this empirically under a controlled measurement policy. The ensemble accuracy ceiling on GSM8K and the Pure Swarm result on ARC are consistent with multi-SLM coordination findings from the literature. The Active Oracle underperformance is consistent with reports that oracle-query mechanisms are sensitive to task format.
+
+\section{Limitations}
+
+The current evaluation has three principal limitations.
+
+First, the five benchmarks are all multiple-choice or numeric-answer tasks. The thesis is centered on coding tasks, where verifiable unit-test correctness is the primary quality signal. The multiple-choice results provide useful evidence for the research questions but do not constitute the primary thesis comparison.
+
+Second, all routing and speculative experiments use a single SLM--LLM pair (\texttt{gemma4-4b}$\rightarrow$\texttt{gemma4-31b}). It is unknown whether the efficiency gains generalize to other pair configurations or whether the specific confidence-threshold setting contributes substantially to the observed results.
+
+Third, three architecture families from the Chapter~3 taxonomy---Debate (POA), Blackboard, and Entropy Blackboard---have not been benchmarked. The current evaluation therefore does not yet cover the full architecture space defined by the thesis.
 
 \section{Future Work}
 
 \begin{enumerate}
-    \item The planned internal coding benchmark should be finalized as a revision-stage \texttt{custom\_stratified} track with clearly validated easy, medium, and hard tasks, so that the main thesis comparison rests on a stable coding-oriented benchmark rather than on a legacy placeholder.
-    \item The experiment runner and benchmark-loader path should be stabilized for repeatable end-to-end runs, including cleaner configuration validation, more explicit registry behavior, and less environment-dependent launch friction during repeated comparisons.
-    \item The project-specific \texttt{HumanEval} workflow should be completed as a UI-backed human preference evaluation surface, explicitly preserving that it is not the OpenAI code-generation benchmark, while the blackboard-style and pure-swarm architectures should be validated on proper benchmarks instead of remaining conceptual or pilot-only contributions.
-    \item The experimental scope should then be expanded through additional benchmark coverage, routing-threshold calibration, fine-tuned SLM ablations, and stronger cross-architecture comparisons that include standalone, hybrid, ensemble, and swarm operating points under the same reporting policy.
+    \item \textbf{Coding benchmark completion.} The \texttt{custom\_stratified} coding benchmark should be finalized with validated easy, medium, and hard tasks and a unit-test-based correctness scorer. This is the primary missing component for the thesis evaluation and the most important near-term priority.
+
+    \item \textbf{GSM8K output-parsing fix.} The numeric answer extraction heuristic should be audited and corrected for GPT-family output formats. The GPT-family GSM8K runs should then be re-executed to verify whether the 67.8\%/59.4\% anomaly was a parsing artifact.
+
+    \item \textbf{Remaining architecture benchmarking.} Debate (POA), Blackboard, and Entropy Blackboard architectures are implemented in the repository but have not been evaluated. Benchmarking these families on the same five tasks---and on the coding benchmark once stable---will complete the taxonomy coverage promised in Chapter~3.
+
+    \item \textbf{Routing-threshold and pair ablations.} The confidence threshold used for routing (\texttt{gemma4-4b}$\rightarrow$\texttt{gemma4-31b}) has not been systematically varied. Ablations across threshold values and across alternative SLM--LLM pairs will clarify whether the observed EATS gains are robust to configuration choice or specific to the current setting.
+
+    \item \textbf{Human preference evaluation.} For open-ended and coding tasks where correctness alone does not capture response quality, a UI-backed human preference workflow is planned as a complementary evaluation surface. This component is defined in the repository but not yet operational.
+
+    \item \textbf{Standardized coding benchmark integration.} Beyond the internal \texttt{custom\_stratified} dataset, established coding benchmarks such as LiveCodeBench should be incorporated once the platform's code-execution scorer is stable. LiveCodeBench is regularly updated with contest-sourced problems and tracks newly released models, making it a durable long-term reference point that prevents benchmark saturation and enables comparison against published state-of-the-art results.
+
+    \item \textbf{Expanded sample counts and experiment diversity.} Current per-configuration sample counts range from 20 to 520. Increasing sample counts to a consistent minimum of 500 per configuration across all benchmarks would reduce variance in accuracy and EATS estimates and strengthen the statistical reliability of architecture comparisons. Experiment diversity should also be extended to cover a broader set of SLM candidates, additional routing-threshold values, and larger model-tier combinations not yet represented in the registry.
+
+    \item \textbf{Edge device deployment study.} If a collaborative architecture demonstrates a strong EATS profile---specifically, high accuracy at low per-query cost and latency---its feasibility on resource-constrained edge hardware should be investigated. Running a quantized SLM locally on an edge device for the draft stage, with selective escalation to a remote LLM only when the SLM confidence is insufficient, would extend the platform's deployment surface beyond cloud GPU hosts and open a new efficiency dimension not captured by the current cost model.
 \end{enumerate}

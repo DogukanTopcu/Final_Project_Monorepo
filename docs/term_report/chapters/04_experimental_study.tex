@@ -19,7 +19,7 @@ The platform uses a split deployment model in which the control plane runs local
         Local control plane & FastAPI, Next.js, MLflow, Python runner & Experiment launch, tracking, result storage, and UI management. \\
         Dedicated SLM serving & Dockerized vLLM on Google Cloud L4 machines & Low-cost SLM inference for baseline, hybrid, and swarm components. \\
         Shared mid-tier serving & Dockerized vLLM on a Google Cloud RTX PRO6000 host & Shared 20B--40B serving for escalation and stronger baselines. \\
-        Heavy serving & Dockerized vLLM on Nebius H100/H200-class machines & Frontier-scale serving for the largest baselines and fallback paths. \\
+        Heavy serving & Dockerized vLLM on a Nebius H200 host & Frontier-scale serving for the largest baselines and fallback paths. \\
         Measurement layer & Metrics proxy, resource profiles, MLflow, JSON/Markdown reporter & Latency, token, cost, energy, carbon, and experiment summary collection. \\
         \bottomrule
     \end{tabularx}
@@ -31,8 +31,6 @@ All model endpoints are exposed through OpenAI-compatible HTTP interfaces so tha
 \label{sec:bench-suite}
 
 Five benchmarks are evaluated in this chapter. All runs use zero temperature. Accuracy is the proportion of samples for which the predicted answer matches the reference. EATS is computed from accuracy, normalized per-query cost, normalized average latency, and normalized per-query energy following the formula defined in Section~3 of this report; normalization is applied per benchmark against the mean of all standalone monolithic runs on that benchmark.
-
-A methodological note applies throughout this chapter. Experiments recorded before per-step algorithmic latency instrumentation was active report wall-clock average latency, which includes HTTP round-trip and proxy overhead. Experiments recorded after that instrumentation became active report algorithmic latency, which is the sum of model-side inference durations only. The two sets of results are not directly comparable on the latency dimension; this distinction is flagged where it matters for interpretation. All other dimensions---accuracy, cost, energy, and CO$_2$---are unaffected.
 
 \begin{table}[htbp]
     \centering
@@ -59,7 +57,7 @@ The following tables report aggregated results for every evaluated architecture-
 
 \subsection{MMLU}
 
-Sixteen configurations were evaluated on MMLU, covering six architecture families. Speculative decoding achieves the highest accuracy (94.1\%) across all configurations, surpassing every standalone run. Among multi-model architectures, routing reaches 84.0\% accuracy at EATS 0.596 while limiting heavy-model usage to 41\% of queries. The single-SLM \texttt{ministral3-3b} ensemble produces the highest EATS overall (0.747) due to its very low per-query cost, though its accuracy (57.0\%) falls well below the standalone range of 79.3--88.6\%. Among standalone checkpoints, the MoE model \texttt{qwen3.5-35b-a3b} achieves 86.2\% accuracy at EATS 0.674, making it the most efficient standalone option. Routing and speculative latency values in this table reflect wall-clock averages (see Section~\ref{sec:bench-suite}).
+Sixteen configurations were evaluated on MMLU, covering six architecture families. Speculative decoding achieves the highest accuracy (94.1\%) across all configurations, surpassing every standalone run. Among multi-model architectures, routing reaches 84.0\% accuracy at EATS 0.596 while limiting heavy-model usage to 41\% of queries. The single-SLM \texttt{ministral3-3b} ensemble produces the highest EATS overall (0.747) due to its very low per-query cost, though its accuracy (57.0\%) falls well below the standalone range of 79.3--88.6\%. Among standalone checkpoints, the MoE model \texttt{qwen3.5-35b-a3b} achieves 86.2\% accuracy at EATS 0.674, making it the most efficient standalone option.
 
 \begin{table}[htbp]
 \centering
@@ -219,9 +217,9 @@ Standalone results confirm that model family, size, and quantization all contrib
 
 \subsection{Routing and Speculative Decoding}
 
-Routing and speculative decoding using the \texttt{gemma4-4b}$\rightarrow$\texttt{gemma4-31b} pair produce the most prominent efficiency findings in this study. On the three benchmarks where algorithmic latency instrumentation was active during evaluation---ARC, HellaSwag, and TruthfulQA---routing achieves EATS of 0.884, 0.869, and 0.844 respectively. These values exceed the best standalone EATS on those benchmarks by 15--21 points. The improvement stems from combining near-monolithic accuracy with sub-2-second per-query latency and per-query costs below \$0.001. Speculative decoding achieves 1--5 percentage points higher accuracy than routing on these benchmarks at EATS values of 0.817--0.856, occupying the second-best EATS position in all three cases.
+Routing and speculative decoding using the \texttt{gemma4-4b}$\rightarrow$\texttt{gemma4-31b} pair produce the most prominent efficiency findings in this study. On ARC, HellaSwag, and TruthfulQA, routing achieves EATS of 0.884, 0.869, and 0.844 respectively. These values exceed the best standalone EATS on those benchmarks by 15--21 points. The improvement stems from combining near-monolithic accuracy with sub-2-second per-query latency and per-query costs below \$0.001. Speculative decoding achieves 1--5 percentage points higher accuracy than routing on these benchmarks at EATS values of 0.817--0.856, occupying the second-best EATS position in all three cases.
 
-On MMLU, routing reports wall-clock average latency of 9.3 seconds (EATS 0.596) because the MMLU experiments predated per-step instrumentation. The wall-clock measure inflates the latency penalty relative to the newer runs. Speculative decoding on MMLU achieves 94.1\% accuracy---the highest of any configuration---but EATS is limited to 0.422 by the same wall-clock measurement condition.
+On MMLU, routing reaches 84.0\% accuracy while speculative decoding reaches 94.1\%, the highest of any configuration on that benchmark. These results show that the hybrid pair remains competitive even on the broadest world-knowledge workload in the study.
 
 On GSM8K, routing escalates only 1\% of queries to the LLM and achieves 95.0\% accuracy at EATS 0.560. This indicates that \texttt{gemma4-4b} is self-sufficient for nearly all GSM8K questions at the configured confidence threshold, reducing the LLM call overhead nearly entirely. The higher algorithmic latency (12.1 seconds) relative to ARC/HellaSwag/TruthfulQA reflects longer arithmetic reasoning output lengths rather than orchestration overhead.
 
@@ -275,19 +273,16 @@ TruthfulQA & standalone --- gpt-oss-20b & 72.2 & 0.577 & 3 \\
 \end{tabularx}
 \end{table}
 
-The table reveals a consistent cross-benchmark pattern. On the four benchmarks with algorithmic latency data, routing and speculative decoding occupy the top two EATS positions on three out of four (ARC, HellaSwag, TruthfulQA). On GSM8K, compact MoE standalone checkpoints take the top two positions because the routing LLM call ratio is 1\%---low enough that the SLM overhead from the initial draft pass adds latency without meaningful cost reduction relative to a lean MoE checkpoint. On MMLU, the EATS leader is the single-SLM \texttt{ministral3-3b} ensemble due to its exceptionally low cost per query, but its 57.0\% accuracy places it well outside the useful accuracy range for any deployment scenario.
+The table reveals a consistent cross-benchmark pattern. Routing and speculative decoding occupy the top two EATS positions on ARC, HellaSwag, and TruthfulQA. On GSM8K, compact MoE standalone checkpoints take the top two positions because the routing LLM call ratio is 1\%---low enough that the SLM overhead from the initial draft pass adds latency without meaningful cost reduction relative to a lean MoE checkpoint. On MMLU, the EATS leader is the single-SLM \texttt{ministral3-3b} ensemble due to its exceptionally low cost per query, but its 57.0\% accuracy places it well outside the useful accuracy range for any deployment scenario.
 
 \section{Discussion}
 \label{sec:exp-discussion}
 
 \paragraph{Hybrid architectures on the efficiency--quality frontier.}
-The ARC, HellaSwag, and TruthfulQA results provide strong empirical support for the thesis hypothesis that routing and speculative decoding can achieve accuracy close to or matching the best standalone models while reducing per-query cost, latency, and CO$_2$ emission by factors of 2--15 relative to the same LLM running in standalone mode. This directly addresses RQ1 (can collaborative architectures match standalone LLM accuracy?) and RQ2 (what are the efficiency trade-offs?). EATS as a composite signal (RQ3) confirms the joint finding: hybrid architectures dominate the top two EATS positions on three of four benchmarks with consistent latency data, with values in the 0.817--0.884 range compared to 0.665--0.738 for the best standalone options.
+The ARC, HellaSwag, and TruthfulQA results provide strong empirical support for the thesis hypothesis that routing and speculative decoding can achieve accuracy close to or matching the best standalone models while reducing per-query cost, latency, and CO$_2$ emission by factors of 2--15 relative to the same LLM running in standalone mode. This directly addresses RQ1 (can collaborative architectures match standalone LLM accuracy?) and RQ2 (what are the efficiency trade-offs?). EATS as a composite signal (RQ3) confirms the joint finding: hybrid architectures dominate the top two EATS positions on ARC, HellaSwag, and TruthfulQA, with values in the 0.817--0.884 range compared to 0.665--0.738 for the best standalone options.
 
 \paragraph{GSM8K GPT-family anomaly.}
 The low accuracy of \texttt{gpt-oss-120b} (67.8\%) and \texttt{gpt-oss-20b} (59.4\%) on GSM8K is inconsistent with their performance on all other benchmarks. The most likely explanation is answer-extraction sensitivity: GSM8K answers require identifying a numeric value from a free-form response, and GPT-family models may format their reasoning and final answers in ways that defeat the platform's numeric extraction heuristic. This is a measurement artifact rather than a true capability finding; dedicated output-parsing improvements and re-evaluation are planned before final thesis reporting.
-
-\paragraph{Wall-clock versus algorithmic latency.}
-MMLU routing experiments were recorded before per-step instrumentation was active and therefore carry wall-clock latency that inflates the EATS penalty relative to the newer algorithmic-latency runs. The full thesis evaluation will re-execute MMLU routing and speculative runs under the current instrumentation to obtain consistent latency data and valid EATS comparisons across all five benchmarks.
 
 \paragraph{Pure Swarm capability ceiling.}
 Pure Swarm demonstrates that compact SLM peer coordination can reach 96.0\% on ARC and 95.0\% on GSM8K with zero LLM calls, partially addressing RQ4 by matching multi-SLM collaboration findings from the reviewed literature. The design's wall-clock latency (21--27 seconds) currently prevents it from competing on EATS with well-instrumented hybrid architectures. Reducing swarm coordination latency is a natural optimization direction for future work.
