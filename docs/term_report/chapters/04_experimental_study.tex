@@ -97,12 +97,18 @@ answers. This 9 percentage point gap is expected because the monolithic
 baseline always uses the stronger \texttt{gemma4-31b} model.
 
 The EATS comparison now tells a more conservative story. Routing reached an
-EATS of 0.325, while the monolithic baseline reached 0.419. Under the current
-bounded accuracy-first formulation, routing no longer wins the primary score
-because its large latency penalty outweighs its small cost and energy savings.
-The main driver is selective escalation overhead: 66 samples were accepted at
+EATS of 0.373, while the monolithic baseline reached 0.483. Under the current
+additive efficiency-penalty formulation---normalized against the average of all
+MMLU monolithic baselines in the platform registry---routing does not win the
+primary score because its latency penalty (normalized latency 2.54$\times$ the
+reference) outweighs its modest cost and energy savings. The main driver is
+selective escalation overhead: 66 samples were accepted at
 the SLM stage, but 34 required the heavy LLM and every routing request still
-paid for an initial SLM pass.
+paid for an initial SLM pass. Note that these pilots use wall-clock
+\texttt{avg\_latency\_ms} as the latency proxy because per-step algorithmic
+latency annotation was not yet active at the time these runs were recorded;
+the normalized latency values therefore include HTTP and proxy overhead in
+addition to model-side inference time.
 
 \begin{figure}[htbp]
 \centering
@@ -119,8 +125,8 @@ Monolithic & \metricbar{monolithiccolor}{4.00cm} & 85.0 \\
 \centering
 \textbf{EATS (higher is better)}\\[0.6em]
 \begin{tabular}{@{}l l r@{}}
-Routing & \metricbar{routingcolor}{3.10cm} & 0.325 \\
-Monolithic & \metricbar{monolithiccolor}{4.00cm} & 0.419 \\
+Routing & \metricbar{routingcolor}{3.09cm} & 0.373 \\
+Monolithic & \metricbar{monolithiccolor}{4.00cm} & 0.483 \\
 \end{tabular}
 \end{minipage}
 \caption{Score comparison between routing and monolithic architectures on MMLU}
@@ -139,7 +145,7 @@ Monolithic & \metricbar{monolithiccolor}{4.00cm} & 0.419 \\
 \hline
 Accuracy & 76.0\% & 85.0\% \\
 \hline
-EATS & 0.325 & 0.419 \\
+EATS & 0.373 & 0.483 \\
 \hline
 Correct answers & 76 / 100 & 85 / 100 \\
 \hline
@@ -279,7 +285,7 @@ Total energy & 0.0205 kWh & 0.0306 kWh & 0.0527 kWh \\
 Total CO$_2$ & 7.78 g & 11.63 g & 20.02 g \\
 Total tokens & 30,574 & 35,141 & 25,233 \\
 LLM call ratio & 0\% & 19\% & 100\% \\
-EATS & 0.488 & 0.467 & 0.474 \\
+EATS & 0.570 & 0.546 & 0.596 \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -321,16 +327,24 @@ which the routing system stayed with the SLM answer even though the monolithic
 LLM answered correctly. In other words, the current threshold policy clearly
 captures several useful recoveries, but it also misses some salvageable cases.
 
-EATS is still useful in this table, but it now behaves much more reasonably.
-The single-SLM baseline reaches the highest EATS at 0.488 because its strong
-cost and energy savings slightly outweigh its accuracy loss under the current
-accuracy-squared versus efficiency-penalty formulation. The monolithic LLM
-baseline follows at 0.474, and the routing hybrid reaches 0.467 because its
-two-stage control flow raises latency enough to offset some of its resource
-savings. The scores are close, which is the right signal: none of the three
-operating points dominates all dimensions. The more reliable interpretation
-still comes from reading EATS together with accuracy, latency, cost, and
-resource metrics.
+EATS is still useful in this table and its behavior is consistent with the
+additive penalty formulation. Under normalization against the average GSM8K
+monolithic baseline in the platform registry, the monolithic LLM baseline
+reaches the highest EATS at 0.596 because its strong accuracy (95\%) keeps the
+accuracy term large while its latency and cost are both below the multi-model
+reference average. The single-SLM baseline follows at 0.570: its lower cost
+and energy offset its accuracy shortfall (83\%), but its normalized latency
+(1.43$\times$ the reference) partially erodes that advantage. The routing
+hybrid reaches the lowest EATS at 0.546 because the two-stage control flow
+raises its normalized latency (1.61$\times$ the reference) enough to offset the
+resource savings it achieves by limiting heavy-model usage to 19\% of queries.
+The spread across all three operating points is narrow (0.546--0.596), which
+is the right signal: no single configuration dominates all dimensions, and EATS
+is most informative when read alongside raw accuracy, cost, and energy. As
+with the MMLU pilots, these runs use wall-clock \texttt{avg\_latency\_ms} as
+the latency proxy, so the normalized latency values include orchestration
+overhead that will be separated in later runs with per-step algorithmic latency
+instrumentation.
 
 \section{Implemented and Usable Today}
 
