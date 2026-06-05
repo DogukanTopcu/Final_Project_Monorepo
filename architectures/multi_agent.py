@@ -17,6 +17,8 @@ checkpoint as the arbitrator).
 """
 from __future__ import annotations
 
+import time
+
 from architectures.base import BaseArchitecture
 from core.models import ModelProvider
 from core.prompt import build_prompt, parse_answer
@@ -95,6 +97,8 @@ class MultiAgentArchitecture(BaseArchitecture):
         total_cost = total_latency = 0.0
         llm_calls = 0
         inference_steps: list[dict[str, object]] = []
+
+        t0 = time.perf_counter()
 
         # --- Proponent (SLM) ---
         prop_prompt = _PROPONENT_TEMPLATE.format(question=base_prompt)
@@ -186,6 +190,7 @@ class MultiAgentArchitecture(BaseArchitecture):
             }
         )
 
+        wall_latency_ms = (time.perf_counter() - t0) * 1000
         parsed = parse_answer(arb_text, self.task_type)
 
         return Response(
@@ -195,6 +200,7 @@ class MultiAgentArchitecture(BaseArchitecture):
             confidence=0.85,
             model_id=self.llm.model_id if llm_calls else self.slm.model_id,
             latency_ms=total_latency,
+            algorithmic_latency_ms=total_latency,
             input_tokens=total_in,
             output_tokens=total_out,
             cost_usd=total_cost,
@@ -204,5 +210,7 @@ class MultiAgentArchitecture(BaseArchitecture):
                 "opponent": opp_text,
                 "arbitrator_role": self.arbitrator_role,
                 "inference_steps": inference_steps,
+                "wall_latency_ms": wall_latency_ms,
+                "model_latency_ms": total_latency,
             },
         )

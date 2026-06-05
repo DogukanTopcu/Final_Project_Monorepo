@@ -40,11 +40,20 @@ class ActiveOracleArchitecture(BaseArchitecture):
         base_prompt = mcq_prompt(query) if self.task_type == "mcq" else open_prompt(query)
         
         execution_prompt = (
-            "You are a smart logical reasoning agent. You MUST work step-by-step.\n"
+            "You are a smart logical reasoning agent. Think briefly about the problem.\n"
             "If you encounter a specific factual detail, formula, or sub-calculation that you are unsure about, DO NOT GUESS. \n"
             "Instead, pause and ask the Oracle by writing exactly:\n"
             "CALL_ORACLE: <your specific question>\n\n"
-            "Wait for the ORACLE_ANSWER. Once you receive it, or if you don't need the Oracle, continue your reasoning.\n"
+            "Wait for the ORACLE_ANSWER. Once you receive it, you may either make another CALL_ORACLE if you need more facts, or if you have enough information, output the final Answer. Keep all reasoning extremely brief.\n\n"
+            "Example:\n"
+            "Problem: Did the author of '1984' also write 'Brave New World'?\n"
+            "A. Yes\n"
+            "B. No\n"
+            "Reasoning: I know the author of '1984' is George Orwell. I need to find out who wrote 'Brave New World'.\n"
+            "CALL_ORACLE: Who wrote the book 'Brave New World'?\n"
+            "ORACLE_ANSWER: Aldous Huxley.\n"
+            "Brief Reasoning (Max 1 sentence): I now have all the facts.\n"
+            "Answer: B\n\n"
             f"Problem:\n{base_prompt.strip()}\n\n"
             "Reasoning:\n"
         )
@@ -62,7 +71,7 @@ class ActiveOracleArchitecture(BaseArchitecture):
         t0 = time.perf_counter()
         
         while True:
-            slm_budget = self.slm_max_tokens if self.slm_max_tokens > 0 else 1536
+            slm_budget = self.slm_max_tokens if self.slm_max_tokens > 0 else 512
             
             slm_text, conf, in_t, out_t, cost, lat = self._timed_generate(
                 self.slm, current_prompt, temperature=self.slm_temperature, max_tokens=slm_budget
@@ -127,7 +136,7 @@ class ActiveOracleArchitecture(BaseArchitecture):
                 final_confidence = conf 
                 break
 
-        total_latency = (time.perf_counter() - t0) * 1000
+        wall_latency_ms = (time.perf_counter() - t0) * 1000
         
         parsed = (
             parse_mcq_answer(current_prompt)
@@ -142,6 +151,7 @@ class ActiveOracleArchitecture(BaseArchitecture):
             confidence=final_confidence,
             model_id=self.slm.model_id,
             latency_ms=total_latency,
+            algorithmic_latency_ms=total_latency,
             input_tokens=total_in,
             output_tokens=total_out,
             cost_usd=total_cost,
@@ -155,5 +165,7 @@ class ActiveOracleArchitecture(BaseArchitecture):
                 "oracle_answers": oracle_answers,
                 "inference_steps": inference_steps,
                 "framework": "single_pass_active_oracle",
+                "wall_latency_ms": wall_latency_ms,
+                "model_latency_ms": total_latency,
             },
         )
