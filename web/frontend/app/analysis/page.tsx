@@ -29,8 +29,6 @@ const BENCHMARK_OPTIONS = [
   "hellaswag",
   "gsm8k",
   "truthfulqa",
-  "humaneval_plus",
-  "livecodebench",
   "custom_stratified",
 ];
 

@@ -32,8 +32,6 @@ class Benchmark(StrEnum):
     HELLASWAG = "hellaswag"
     GSM8K = "gsm8k"
     TRUTHFULQA = "truthfulqa"
-    HUMANEVAL_PLUS = "humaneval_plus"
-    LIVECODEBENCH = "livecodebench"
     CUSTOM_STRATIFIED = "custom_stratified"
 
 
