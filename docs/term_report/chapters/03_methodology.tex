@@ -42,16 +42,16 @@ Because every architecture must conform to this contract, the experiment runner,
 
 Figure~\ref{fig:dataflow} illustrates the end-to-end data flow for a single experiment run. A researcher submits a configuration specifying the target architecture, benchmark, sample count, random seed, confidence threshold (where applicable), and model aliases. The control plane validates model availability, resolves aliases to remote endpoints, and initiates the experiment runner. For each benchmark item, the runner: (1) normalises the dataset record into a \texttt{Query} and constructs the appropriate prompt; (2) passes the \texttt{Query} to the selected architecture, which issues one or more HTTP requests to remote inference endpoints according to its orchestration policy; (3) receives annotated responses from the metrics proxy, each carrying host-side latency, energy, and cost telemetry; (4) assembles the final \texttt{Response} from the orchestration outcome and step-level telemetry; and (5) evaluates correctness against the gold label and appends the result to the structured experiment log.
 
-\begin{figure}[htbp]
+\begin{figure}[h!]
 \centering
 \begin{tikzpicture}[
-    node distance = 0.55cm,
+    node distance = 0.35cm,
     %--- box styles ---
     mainbox/.style = {
         rectangle, rounded corners = 4pt,
         draw = black!40, line width = 0.6pt,
-        minimum width = 9.2cm, minimum height = 1.0cm,
-        align = center, inner sep = 6pt, font = \small\sffamily
+        minimum width = 8.5cm, minimum height = 0.85cm,
+        align = center, inner sep = 4pt, font = \small\sffamily
     },
     inputbox/.style  = {mainbox, fill = gray!12},
     ctrlbox/.style   = {mainbox, fill = blue!9},
@@ -85,7 +85,7 @@ Figure~\ref{fig:dataflow} illustrates the end-to-end data flow for a single expe
     {\footnotesize\itshape routing $\;|\;$ debate $\;|\;$ ensemble $\;|\;$ swarm $\;|\;$ \ldots}
 };
 
-\node[proxybox, below = 1.5cm of arch] (proxy) {
+\node[proxybox, below = 1.0cm of arch] (proxy) {
     \textbf{Metrics Proxy} $+$ \textbf{vLLM}\\[0.15em]
     {\footnotesize\itshape latency $\cdot$ GPU power $\cdot$ energy $\cdot$ CO$_2$ $\cdot$ cost}
 };
