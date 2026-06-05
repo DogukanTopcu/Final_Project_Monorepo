@@ -2,103 +2,274 @@
 
 \section{System Overview}
 
-The project is implemented as an experiment platform rather than as a single benchmark script. The shared pipeline is built around a common input/output contract: a benchmark loader or user-facing interface produces a \texttt{Query}, an architecture consumes that query using one or more models, and the system returns a normalized \texttt{Response}. Because every architecture produces the same response structure, the runner, metric computation, reporting code, and user interface can remain architecture-agnostic.
+The methodology of this thesis was not defined by implementation convenience alone. It was derived from the separate systematic literature review conducted within the same project, which synthesized 54 studies on collaborative SLM--LLM systems under a PRISMA-oriented protocol \cite{slrmanuscript2026, page2021prisma}. That review showed four recurring design pressures. First, recent systems increasingly treat orchestration, not raw parameter count, as the main lever for balancing capability and efficiency \cite{hao2024hybrid, shao2025dot, multiagent2025}. Second, the literature repeatedly reuses a small set of collaboration patterns such as selective routing, verification, debate, and voting \cite{oh2025uncertainty, citer2025, debateagents2025, sentensemble2026}. Third, deployment topology matters because collaborative systems usually span heterogeneous compute tiers rather than a single homogeneous model server \cite{slrmanuscript2026}. Fourth, and most importantly for this thesis, cost and energy are still weakly reported compared with accuracy, which motivated the measurement-first design of our platform \cite{slrmanuscript2026, energytoken2025}.
 
-The current control plane runs locally and includes a FastAPI backend, a Next.js frontend, MLflow tracking, an experiment runner, and JSON/Markdown reporting. The inference plane is remote. Models are served through Dockerized OpenAI-compatible vLLM endpoints, and the control plane communicates with those endpoints through canonical model aliases stored in the repository. This separation allows the platform to compare heterogeneous deployments without changing the benchmark or reporting surface.
+\subsection{Literature-Driven Platform Design}
+
+Instead of implementing each architecture as a one-off script, the platform was structured around a common experimental contract. A benchmark loader or user-initiated run produces a normalized \texttt{Query}; an architecture consumes that query using one or more model providers; and the system returns a normalized \texttt{Response}. This design choice directly operationalizes the comparison principle suggested by the literature review: architectures should be compared on the same inputs, under the same evaluation policy, with the same reporting surface. By forcing every architecture to emit the same response schema, the runner, scoring logic, energy annotation, reporting layer, and experiment UI remain architecture-agnostic. As a result, the thesis can compare single-model baselines, SLM--LLM hybrids, and multi-SLM coordination patterns without changing the benchmark interface itself.
+
+\subsection{Control Plane}
+
+The control plane runs locally and is intentionally lightweight. It consists of a FastAPI backend, a Next.js frontend, an experiment runner, MLflow logging, and JSON/Markdown report generation. The backend is responsible for receiving experiment configurations, validating model availability, launching runs, streaming progress, and persisting results. The experiment runner loads the benchmark, instantiates the selected architecture, executes queries one-by-one, evaluates correctness, enriches responses with resource estimates, and finally computes aggregate metrics such as accuracy, latency, cost, energy, and EATS. MLflow is used as the structured experiment log, while JSON and Markdown artifacts are used as the thesis-facing analysis layer. The web interface is operationally useful because it allows experiments to be configured, started, monitored, and inspected through a consistent screen; however, it is not itself the core methodological contribution. In this project, the interface is merely the operator surface of the experiment stack, not the object of evaluation.
+
+\subsection{Inference Plane}
+
+The inference plane is remote and heterogeneous by design. This is a direct methodological response to the literature: reviewed collaborative systems are rarely deployed on a single uniform machine class. Instead, they mix compact models for cheap or local inference with stronger remote models for escalation, arbitration, or verification \cite{hao2024hybrid, oh2025uncertainty, shao2025dot}. To reproduce that systems reality, the thesis platform deploys models on multiple GPU virtual machines rather than colocating all checkpoints on one server. Small language models are hosted on dedicated Google Cloud L4 instances, mid-tier LLMs and MoE models share a Google Cloud RTX PRO6000 host, and the heaviest models are deployed on a Nebius H200 host.
+
+All remote inference endpoints are served through Dockerized vLLM instances exposing an OpenAI-compatible API. vLLM was selected because it offers a high-throughput serving stack with memory-efficient KV-cache management through PagedAttention, making it well suited for a thesis platform that must host models with very different parameter counts while keeping the serving interface uniform \cite{kwon2023vllm}. In practical terms, this means that the control plane can talk to every model through the same \texttt{/v1/chat/completions} API shape even when the underlying checkpoint families, quantization schemes, and GPU classes differ. This uniformity is crucial for fair architecture comparison because the orchestration code should not depend on model-family-specific serving logic.
+
+\subsection{Dockerized Serving and Proxy Topology}
+
+The serving stack is organized as a two-layer endpoint on the shared hosts. vLLM itself runs inside a Docker container and typically listens on host port \texttt{8001}. A thin FastAPI-based metrics proxy then listens on public port \texttt{8000} and forwards requests to the local vLLM server. The proxy layer exists for methodological reasons, not only operational ones. The systematic literature review showed that energy and carbon are frequently missing from collaborative-system evaluation \cite{slrmanuscript2026, energytoken2025}. Because standard vLLM responses do not provide thesis-specific energy, carbon, or infrastructure-cost fields, the proxy intercepts each request, measures host-side inference duration, samples GPU power, estimates energy and emissions, and appends a thesis-specific metadata block before returning the OpenAI-compatible JSON response to the control plane.
+
+On dedicated L4 hosts, the platform may run either vLLM directly on port \texttt{8000} or the same proxy-wrapped topology. On the shared RTX PRO6000 and H200 hosts, the proxy-wrapped design is preferred because these machines are also the most important targets for stronger-model verification and fallback measurements. The proxy is persisted with a systemd service so that the public endpoint remains stable across host restarts. This arrangement decouples the external address used by the control plane from the internal vLLM process lifecycle and makes it possible to change the served model without changing the API contract seen by experiments.
+
+\subsection{Infrastructure Control and Reproducibility}
+
+The infrastructure also contains an explicit host-governance layer. The dedicated L4 machines map one model alias to one host, so they do not require switching. By contrast, the RTX PRO6000 and H200 machines are shared hosts: only one large model is active on each shared machine at a time. This is not merely an implementation limitation; it is a methodological variable that must be controlled. If two experiments try to run incompatible shared-host models at the same time, latency, availability, and cost measurements become incomparable. The platform therefore uses canonical model aliases, host mapping, and shared-host awareness in the control plane. Mid-tier switching on the RTX PRO6000 host is performed through a dedicated launch script and can also be triggered automatically before an experiment starts. The heavy host follows the same pattern. As a result, the architecture layer can request a model symbolically while the infrastructure layer guarantees that the correct shared host is actually serving that model at run time. This separation of symbolic experiment configuration from physical serving state is important for repeatability and for making collaborative-model studies operationally defensible.
 
 \section{Model Pool and Deployment Topology}
 
-The selected model pool spans small, mid-tier, and heavy model classes. SLMs are hosted on dedicated Google Cloud L4 machines, mid-tier models are hosted on a shared Google Cloud RTX PRO6000 machine, and the heaviest models are intended for a separate Nebius H100/H200-class host. Table \ref{tab:model-topology} summarizes the current deployment structure used by the platform.
+The model pool was selected through a stratified sampling strategy rather than through ad hoc model availability. The literature review repeatedly distinguished between compact local models, stronger remote models, and collaborative systems that derive efficiency from how those tiers interact rather than from model size alone \cite{slrmanuscript2026, hao2024hybrid, oh2025uncertainty}. We therefore built a three-tier pool: SLMs for low-cost drafting and peer coordination, mid-tier LLMs for stronger verification and fallback behavior, and heavy LLMs for frontier baselines. In addition, we included two MoE checkpoints as monolithic conditional-computation baselines so that the thesis can compare external orchestration against internal expert gating.
 
-\begin{table}[htbp]
-    \centering
-    \caption{Current model and host topology used by the experiment platform.}
-    \label{tab:model-topology}
-    \small
-    \begin{tabularx}{\linewidth}{@{} >{\raggedright\arraybackslash}p{2.1cm} >{\raggedright\arraybackslash}p{5.2cm} >{\raggedright\arraybackslash}X @{}}
-        \toprule
-        \textbf{Tier} & \textbf{Representative aliases} & \textbf{Deployment role} \\
-        \midrule
-        SLM tier & \texttt{gemma4-4b}\\ \texttt{qwen3.5-4b}\\ \texttt{llama3.2-3b}\\ \texttt{ministral3-3b}\\ \texttt{phi4-mini} & Dedicated Google Cloud L4 hosts for low-cost primary inference. \\
-        Mid-tier LLM / MoE tier & \texttt{gpt-oss-20b}\\ \texttt{qwen3.5-27b}\\ \texttt{gemma4-31b}\\ \texttt{qwen3.5-35b-a3b}\\ \texttt{gemma4-26b-a4b} & Shared Google Cloud RTX PRO6000 host for escalation, verification, and stronger baselines. \\
-        Heavy LLM tier & \texttt{llama3.3-70b}, \texttt{gpt-oss-120b} & Separate Nebius heavy host for frontier baselines and expensive fallback paths. \\
-        \bottomrule
-    \end{tabularx}
-\end{table}
+\begingroup
+\small
+\setlength{\tabcolsep}{2.5pt}
+\begin{longtable}{@{} >{\raggedright\arraybackslash}p{1.65cm} >{\raggedright\arraybackslash}p{1.75cm} >{\raggedright\arraybackslash}p{1.7cm} >{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}p{0.75cm} >{\raggedright\arraybackslash}p{3.0cm} >{\raggedright\arraybackslash}p{2.45cm} @{}}
+    \caption{Current language-model pool used in the thesis platform.}
+    \label{tab:model-pool} \\
+    \toprule
+    \textbf{Alias} & \textbf{Category} & \textbf{GPU Instance} & \textbf{GPU Service} & \textbf{VRAM} & \textbf{Hugging Face URL} & \textbf{Deployment Role} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Alias} & \textbf{Category} & \textbf{GPU Instance} & \textbf{GPU Service} & \textbf{VRAM} & \textbf{Hugging Face URL} & \textbf{Deployment Role} \\
+    \midrule
+    \endhead
+    \texttt{gemma4-4b} & SLM & L4 & GCP L4 on-demand & 24 & \url{https://huggingface.co/google/gemma-4-E4B-it} & Primary drafter and router-side first responder. \\
+    \texttt{qwen3.5-4b} & SLM & L4 & GCP L4 on-demand & 24 & \url{https://huggingface.co/Qwen/Qwen3.5-4B} & Fast compact model for drafting, voting, and peer reasoning. \\
+    \texttt{llama3.2-3b} & SLM & L4 & GCP L4 on-demand & 24 & \url{https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct} & Low-footprint dense SLM for peer-agent and compact-baseline runs. \\
+    \texttt{ministral3-3b} & SLM & L4 & GCP L4 on-demand & 24 & \url{https://huggingface.co/mistralai/Ministral-3-3B-Instruct-2512} & Edge-oriented SLM for multilingual and instruction-heavy comparisons. \\
+    \texttt{phi4-mini} & SLM & L4 & GCP L4 on-demand & 24 & \url{https://huggingface.co/microsoft/Phi-4-mini-instruct} & Compact reasoning-oriented SLM under tight compute budgets. \\
+    \texttt{gpt-oss-20b} & Mid-tier LLM & RTX PRO6000 & GCP RTX PRO6000 spot & 96 & \url{https://huggingface.co/openai/gpt-oss-20b} & Mid-tier verifier, arbitrator, and stronger fallback model. \\
+    \texttt{qwen3.5-27b} & Mid-tier LLM & RTX PRO6000 & GCP RTX PRO6000 spot & 96 & \url{https://huggingface.co/Qwen/Qwen3.5-27B} & Strong dense mid-tier baseline for escalation-quality comparison. \\
+    \texttt{gemma4-31b} & Mid-tier LLM & RTX PRO6000 & GCP RTX PRO6000 spot & 96 & \url{https://huggingface.co/nvidia/Gemma-4-31B-IT-NVFP4} & Quantized mid-tier model for routing fallback and speculative verification. \\
+    \texttt{gemma4-26b-a4b} & Mid-tier LLM (MoE) & RTX PRO6000 & GCP RTX PRO6000 spot & 96 & \url{https://huggingface.co/nvidia/Gemma-4-26B-A4B-NVFP4} & Monolithic MoE baseline for internal sparse-expert comparison. \\
+    \texttt{qwen3.5-35b-a3b} & Mid-tier LLM (MoE) & RTX PRO6000 & GCP RTX PRO6000 spot & 96 & \url{https://huggingface.co/Qwen/Qwen3.5-35B-A3B} & Monolithic MoE baseline against external orchestration. \\
+    \texttt{llama3.3-70b} & Heavy LLM & H200 & Nebius H200 spot & 141 & \url{https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct} & Frontier dense baseline and high-capability fallback. \\
+    \texttt{gpt-oss-120b} & Heavy LLM & H200 & Nebius H200 spot & 141 & \url{https://huggingface.co/openai/gpt-oss-120b} & Strongest heavy baseline in the current open-weight pool. \\
+    \bottomrule
+\end{longtable}
+\endgroup
 
-The shared mid-tier and heavy hosts introduce an operational constraint: only one large model should be active on each shared host at a time. The platform therefore includes host-status tracking and a reservation lock mechanism so that two experiments do not attempt to use incompatible shared-host model aliases simultaneously. This is an important methodological choice because scheduling constraints affect experiment reproducibility in multi-model systems.
+\subsection{Deployment Logic}
+
+The deployment topology follows a methodological rather than purely economic rationale. Every SLM is given a dedicated L4 host because SLM-focused experiments are especially sensitive to latency and because peer architectures such as ensembles or swarms should not inherit queueing noise from unrelated model switches. The RTX PRO6000 host, by contrast, is intentionally shared across mid-tier models because the thesis frequently uses those models as mutually exclusive fallback or verification targets rather than as permanently co-resident services. The same logic applies to the H200 host, where the heavy-tier models are not intended to run simultaneously. This layout mirrors the system-level trade-offs highlighted in the review: the local or cheap tier should be stable and always available, while the stronger tier may remain scarce and selectively invoked \cite{hao2024hybrid, oh2025uncertainty, shao2025dot}.
+
+\subsection{Virtual Machine Bring-Up Procedure}
+
+Each GPU host is provisioned with a repeatable setup sequence. First, the machine is verified with \texttt{nvidia-smi} to ensure that the expected GPU type is visible. Second, Docker and the NVIDIA Container Toolkit are installed so that vLLM containers can access the GPU. Third, a persistent Hugging Face cache directory is created on the host to avoid repeated checkpoint downloads. Fourth, an access token is exported through \texttt{HF\_TOKEN} so that gated or provider-hosted checkpoints can be pulled by the container. Fifth, the relevant vLLM container is launched with explicit values for \texttt{--model}, \texttt{--served-model-name}, \texttt{--max-model-len}, and \texttt{--gpu-memory-utilization}. Sixth, host health is checked through \texttt{/v1/models}. Finally, on the shared hosts, the metrics proxy is started on port \texttt{8000} while vLLM itself remains on \texttt{8001}. This procedure ensures that every model service has the same externally visible API shape while allowing the internal serving parameters to be adapted to the checkpoint and GPU class.
+
+The exact launch parameters are also model-specific. For example, Qwen-family models are served with \texttt{enable\_thinking=false} in the default chat template so that benchmark runs do not accumulate unnecessary reasoning traces. Gemma-family models use the Gemma reasoning parser in vLLM when appropriate. Heavy models receive more conservative memory-utilization and context-length settings so that the H200 machine has room for KV-cache growth during long prompts. The heavy-host launcher explicitly encodes these operational assumptions; for instance, \texttt{llama3.3-70b} uses an 8192-token context with very high memory utilization, while \texttt{gpt-oss-120b} uses a longer context window but lower nominal memory utilization because its weight format and cache behavior differ. These are important methodological choices because serving parameters directly influence latency, throughput, and failure rate.
+
+\subsection{Shared-Host Switching and Proxy Persistence}
+
+Because only one mid-tier or heavy model runs on a shared host at a time, the platform includes a switching workflow. On the RTX PRO6000 host, a dedicated script stops the currently running container and launches the requested model under a stable container name. The H200 host uses the same pattern for \texttt{llama3.3-70b} and \texttt{gpt-oss-120b}. Above that, the control plane can trigger an automatic switch before starting an experiment if the selected model is not already active. This is methodologically important for two reasons. First, it prevents accidental comparisons against the wrong backend model. Second, it prevents hidden contention between experiments, which would otherwise contaminate latency and energy measurements.
+
+The proxy layer is kept persistent with a systemd unit. This means that public requests always enter through the same service, even when the underlying vLLM container is restarted or switched. In effect, the proxy becomes the stable measurement boundary of the experiment platform. This is particularly useful for thesis reporting because the resource annotations seen by the control plane come from a consistent instrumentation point rather than from model-specific wrappers or manually merged logs.
 
 \section{Architecture Taxonomy}
 
-The architecture surface is intentionally broader than a single baseline. In the current state of the repository, the implemented and available comparison surface consists of the following core architecture groups:
+The architecture taxonomy was constructed by combining two sources: the patterns extracted from the systematic literature review and the thesis project's own experimental designs. The literature review showed that most collaborative SLM--LLM systems can be grouped around a few recurring orchestration ideas: direct monolithic baselines, selective hybrid collaboration, and multi-agent or multi-SLM coordination \cite{slrmanuscript2026, hao2024hybrid, shao2025dot, debateagents2025, sentensemble2026}. We therefore organized the thesis architecture space into three categories: \textbf{Monolithic}, \textbf{Hybrid}, and \textbf{Multi-SLM}. Within that taxonomy, some architectures were directly inspired by published patterns, while others were introduced by the project as new design hypotheses.
 
 \begin{table}[htbp]
     \centering
-    \caption{Architecture groups used in the current thesis platform.}
-    \label{tab:architecture-groups}
+    \caption{Architecture taxonomy used in the thesis platform.}
+    \label{tab:architecture-taxonomy}
     \small
-    \begin{tabularx}{\linewidth}{@{} >{\raggedright\arraybackslash}p{3.2cm} >{\raggedright\arraybackslash}p{4.4cm} >{\raggedright\arraybackslash}X @{}}
+    \begin{tabularx}{\linewidth}{@{} >{\raggedright\arraybackslash}p{2.1cm} >{\raggedright\arraybackslash}p{3.3cm} >{\raggedright\arraybackslash}p{2.2cm} X @{}}
         \toprule
-        \textbf{Status} & \textbf{Architectures} & \textbf{Purpose in the thesis} \\
+        \textbf{Category} & \textbf{Architectures} & \textbf{Origin} & \textbf{Methodological Role} \\
         \midrule
-        Implemented comparison surface & \texttt{monolithic}, \texttt{routing},\\ \texttt{multi\_agent}, \texttt{ensemble} & Core thesis comparison set: direct LLM baseline, selective router, debate-style multi-agent flow, and voting ensemble. \\
-        Exposed but experimental & \texttt{speculative}, \texttt{multi\_agent\_crew} & Available in the repository and UI, but not treated as validated result surfaces in this report. \\
-        Project-proposed preliminary swarm family & \texttt{blackboard},\\ \texttt{entropy\_blackboard},\\ \texttt{pure\_swarm} & Decentralized architecture proposals under development and awaiting benchmark-backed validation. \\
+        Monolithic & Monolithic, MoE & Literature-derived baseline class & Establishes the no-orchestration comparison point and isolates the effect of internal expert gating from external collaboration. \\
+        Hybrid & Routing, Speculative Decoding, Debate (POA), Active Oracle, Blackboard, Entropy Blackboard & Mixed: literature-derived + project-developed & Studies how SLMs and stronger models collaborate through escalation, verification, adversarial critique, targeted consultation, or decentralized fallback. \\
+        Multi-SLM & Ensemble, Pure Swarm & Mixed: literature-derived + project-developed & Tests whether multiple compact models can collectively recover part of the capability gap without relying on a permanently active large model. \\
         \bottomrule
     \end{tabularx}
 \end{table}
 
-The first group represents the currently usable evaluation surface. The second group remains experimental. The third group is the most original part of the project and therefore requires careful framing. The decentralized blackboard architecture allows two SLM workers to bid for tasks, while a heavier model acts as a sweeper if a task exceeds its time-to-live. The entropy-based variant penalizes uncertain claims through an entropy-informed bid. The pure swarm variant removes the heavy fallback altogether and asks how far peer-only SLM coordination can go on constrained hardware. These swarm ideas are central to the novelty of the project, but this report does not present them as already validated experimental findings.
+\subsection{Monolithic Architectures}
 
-\section{Measurement and Logging}
+\subsubsection{Monolithic}
 
-The measurement stack was designed to keep operational costs visible throughout the pipeline. Each normalized \texttt{Response} stores at least the following resource-oriented fields: latency in milliseconds, input and output token counts, total cost in U.S. dollars, separated API and infrastructure cost estimates, energy in \texttt{kWh}, emissions in \texttt{co2\_g}, average GPU power, and an LLM-call count used to estimate escalation behavior.
+The monolithic architecture is the simplest methodological baseline: the full query is sent to a single model, and that model alone produces the final answer. No routing, verification, voting, or role decomposition occurs. In this thesis, both heavy LLM-only runs and single-SLM runs are treated as monolithic because the decisive property is not model size but the absence of inter-model collaboration. This baseline is essential because the literature repeatedly compares hybrid and multi-agent systems against single-model references rather than against each other alone \cite{slrmanuscript2026, hao2024hybrid, multiagent2025}. Without a monolithic baseline, it would be impossible to determine whether a collaborative design truly adds value or merely reproduces the behavior of the stronger model with extra overhead.
 
-The thesis introduces the Efficiency-Accuracy Trade-off Score (EATS) to make this comparison explicit:
+\subsubsection{MoE (Mixture of Experts)}
+
+MoE models are also treated as monolithic within the thesis taxonomy, even though they implement conditional computation internally. The reason is methodological: from the experiment platform's point of view, an MoE checkpoint still receives one query and returns one response through one model endpoint. The expert selection happens inside the model weights rather than through an external orchestration policy. This makes MoE an especially useful comparison surface. If an MoE model improves efficiency, that gain comes from internal sparse activation; if a collaborative architecture improves efficiency, the gain comes from system-level orchestration. By including checkpoints such as \texttt{gemma4-26b-a4b} and \texttt{qwen3.5-35b-a3b}, the thesis can distinguish internal expert sparsity from external multi-model collaboration, which is one of the main conceptual boundaries identified during the literature review \cite{slrmanuscript2026}.
+
+\subsection{Hybrid Architectures}
+
+\subsubsection{Routing}
+
+Routing is the clearest query-level hybrid pattern in the thesis. The compact model answers first, the system parses its answer and confidence, and the stronger model is invoked only if the compact model appears unreliable. This design was derived from the literature on uncertainty-aware hybrid inference and selective escalation, where the central question is whether the system can preserve most of the quality of a large model while paying for it only on difficult cases \cite{hao2024hybrid, oh2025uncertainty, citer2025, rethinkllm2025}. In the thesis implementation, the SLM handles the entire query first. If the answer cannot be parsed, if the confidence is below a threshold, or if other routing rules fire, the full query is escalated to the LLM. This keeps the orchestration policy transparent and makes the LLM-call ratio directly interpretable. Methodologically, routing is the baseline hybrid architecture because it captures the simplest form of SLM--LLM collaboration.
+
+\subsubsection{Speculative Decoding}
+
+Speculative Decoding was derived from token-level collaboration studies in which a smaller model proposes text and a stronger model selectively verifies or corrects it \cite{hao2024hybrid, oh2025uncertainty, citer2025}. In our platform, the architecture is implemented as a drafter--verifier system. The SLM first generates a compact draft, especially for multiple-choice tasks where long reasoning traces create unnecessary latency. The verifier then checks the draft incrementally. If the verifier agrees with the current draft prefix, that prefix is accepted. On the first meaningful divergence, only the remaining suffix is rewritten by the stronger model. Because the thesis uses heterogeneous open-weight models with different tokenizers, the implementation is a text-prefix approximation of speculative decoding rather than a tokenizer-coupled identical-token verifier. Even so, it preserves the core methodological idea from the literature: the large model should not be forced to regenerate the entire answer if the small model has already solved part of the response correctly.
+
+\subsubsection{Debate (POA)}
+
+Debate in this thesis follows a Proponent--Opponent--Arbitrator (POA) structure. One agent proposes an answer, a second agent critiques that proposal, and an arbitrator produces the final decision. This pattern comes directly from the debate and collaborative-checking literature, which reports that role separation can improve reasoning discipline even when the participating models are individually weaker than a frontier baseline \cite{debateagents2025, resiliomate2025}. In our implementation, the Proponent and Opponent are SLMs, while the Arbitrator can be either another SLM or a stronger LLM. For the thesis taxonomy, we classify the default configuration as hybrid because the highest-quality setting typically uses an LLM arbitrator. Methodologically, POA matters because it tests whether accuracy gains can come from adversarial internal critique rather than from direct fallback alone.
+
+\subsubsection{Active Oracle}
+
+Active Oracle is one of the thesis project's own architecture proposals. It was motivated by a gap between simple routing and full debate. In many tasks, the SLM is not globally incapable; it is blocked only by one missing fact, one sub-calculation, or one uncertain rule. Routing the entire query to an LLM is then wasteful, while multi-round debate is often overkill. Active Oracle therefore keeps the SLM as the primary reasoner but allows it to emit an explicit \texttt{CALL\_ORACLE: <question>} request when it gets stuck. The LLM responds only to that narrow sub-question, and the SLM resumes from that point. Conceptually, this architecture was inspired by the broader literature on task decomposition, grounded support, and specialized helper roles \cite{shao2025dot, lee2024orchestrallm, alabbasi2024teleoracle}. Its core methodological purpose is to test whether sparse, targeted LLM interventions can close the quality gap more efficiently than full-query fallback.
+
+\subsubsection{Blackboard}
+
+Blackboard is another project-developed architecture and represents the first major move away from centralized routing. Instead of asking one router to decide which model should answer, the system maintains a shared task board. Tasks can be \texttt{OPEN}, \texttt{IN\_PROGRESS}, \texttt{BLOCKED}, or \texttt{RESOLVED}. Two SLM workers continuously inspect the board, compute bids based on predicted confidence and compute cost, and claim tasks whose expected utility exceeds a threshold. If neither SLM claims a task before its time-to-live expires, a heavier LLM sweeper resolves it. Workers can also emit \texttt{SUB\_TASK: <query>} requests, which cause the architecture to post a dependent subtask, block the parent task, and resume it once the dependency has been solved. This design was not copied from a single paper; rather, it synthesizes ideas from decomposition, asynchronous coordination, and resilient multi-agent execution found across the literature \cite{shao2025dot, multiagent2025, resiliomate2025, bioagents2025}. Methodologically, Blackboard tests whether decentralized coordination can replace a single global router while still retaining a strong safety fallback.
+
+\subsubsection{Entropy Blackboard}
+
+Entropy Blackboard extends Blackboard by changing only the bidding rule. In the standard Blackboard architecture, a worker's bid depends primarily on confidence minus a compute penalty. In Entropy Blackboard, the bid is additionally penalized by an entropy term derived from the worker's output uncertainty. This makes the architecture less willing to let an apparently confident but internally unstable SLM claim a difficult task. The design is directly motivated by uncertainty-aware hybrid inference studies, which argue that the real challenge is not merely detecting low confidence but calibrating when a small model should abstain \cite{oh2025uncertainty}. Entropy Blackboard is therefore the thesis's uncertainty-sensitive decentralized architecture: it keeps the same asynchronous task board as Blackboard but makes task-claiming more conservative when the SLM's own signal is ambiguous.
+
+\subsection{Multi-SLM Architectures}
+
+\subsubsection{Ensemble}
+
+The Ensemble architecture was derived from the literature on voting, agreement, and zero-shot SLM collectives \cite{sentensemble2026, compos2024}. Multiple SLMs receive the same query in parallel, each produces one answer, and the system selects the final prediction through majority voting or confidence-weighted voting. An LLM tiebreaker is optionally available, but the core design intent is multi-SLM collaboration rather than hybrid escalation. Methodologically, Ensemble asks a very direct question: if several cheap models disagree, can their aggregate decision outperform any single cheap model often enough to justify the extra calls? This architecture is important because it represents the simplest non-hierarchical form of small-model collaboration.
+
+\subsubsection{Pure Swarm}
+
+Pure Swarm is the thesis project's strictest resource-constrained coordination design. It starts from the blackboard idea but removes the heavy-model sweeper entirely. Two SLM peers bid on tasks and subtasks, and the system reduces the claim threshold after a task's time-to-live expires so that one of the peers eventually takes responsibility instead of deadlocking. In other words, Pure Swarm asks how far multi-SLM cooperation can go when the system is not allowed to ``escape'' to a large model at all. This idea was motivated by the broader multi-agent literature but deliberately pushes it toward a more deployment-constrained regime \cite{multiagent2025, resiliomate2025}. Methodologically, Pure Swarm is valuable because it provides the lower-bound counterpart to the hybrid family: rather than asking how selectively we can use LLMs, it asks whether we can remove them from the online path altogether.
+
+\section{Measurement and Resource Accounting}
+
+The measurement methodology was designed in direct response to the literature review. Across the reviewed studies, accuracy was usually the headline metric, while latency, cost, and especially energy were either missing or reported only partially \cite{slrmanuscript2026, energytoken2025}. The thesis therefore treats resource usage as a first-class outcome. Every normalized \texttt{Response} stores not only the predicted answer but also latency, token counts, total cost, direct API cost, infrastructure cost, energy in \texttt{kWh}, emissions in \texttt{co2\_g}, average GPU power, LLM-call count, and a structured \texttt{inference\_steps} trace. This schema ensures that every architecture is measured under the same output contract, regardless of whether it performs one call or a complex multi-step collaboration.
+
+\subsection{Latency Semantics}
+
+The project distinguishes between \textbf{wall-clock latency} and \textbf{algorithmic/model latency}. Wall-clock latency is the full observed duration from the caller's perspective, including HTTP round trips, proxy work, and local orchestration overhead. Algorithmic latency, which is the primary latency used in aggregate thesis metrics, is the sum of the actual model-side inference latencies reported by the provider or by step-level instrumentation. If a model endpoint exposes a server-side latency value, that value is preferred. If not, the platform sums the latency of the recorded inference steps. Only when neither source is available does the system fall back to total wall-clock duration. This distinction is methodologically important because the thesis compares architectures, not incidental network noise. A routing architecture should not appear artificially worse than a monolithic baseline merely because its measurement path includes extra proxy bookkeeping or UI-trigger overhead.
+
+\subsection{EATS Definition}
+
+To compare solution quality against resource consumption, the thesis uses the Efficiency-Accuracy Trade-off Score (EATS). The current version of EATS is defined by an additive efficiency penalty rather than by the earlier multiplicative form:
+
+\begin{equation}
+\text{normalized\_cost} =
+\frac{\text{total\_cost\_usd}}
+{\text{baseline\_cost\_usd}}
+\end{equation}
+
+\begin{equation}
+\text{normalized\_latency} =
+\frac{\text{avg\_algorithmic\_latency\_ms}}
+{\text{baseline\_avg\_algorithmic\_latency\_ms}}
+\end{equation}
+
+\begin{equation}
+\text{normalized\_energy} =
+\frac{\text{total\_energy\_kwh}}
+{\text{baseline\_energy\_kwh}}
+\end{equation}
+
+\begin{equation}
+\text{efficiency\_penalty} =
+0.5 \times \text{normalized\_cost} +
+0.3 \times \text{normalized\_latency} +
+0.2 \times \text{normalized\_energy}
+\end{equation}
 
 \begin{equation}
 \text{EATS} =
-\frac{A^2}
-{A^2 + c_{\text{norm}}^{0.5}\, l_{\text{norm}}^{0.3}\, e_{\text{norm}}^{0.2}}
+\frac{\text{accuracy}}
+{\text{accuracy} + \text{efficiency\_penalty}}
 \end{equation}
 
-where $A$ is the experiment accuracy, $c_{\text{norm}}$ is total cost normalized against a full-LLM baseline, $l_{\text{norm}}$ is average algorithmic latency normalized against the same baseline, and $e_{\text{norm}}$ is total energy normalized against that baseline. Here, algorithmic latency refers to the intrinsic inference-and-orchestration time of the architecture rather than the full observed wall-clock delay, so unrelated queueing, proxy bookkeeping, and concurrent-run noise are excluded from the primary score as much as possible. The squared accuracy term makes answer quality the dominant objective, while the multiplicative penalty term discourages systems that only achieve quality through expensive, slow, or energy-intensive execution. The score is bounded to the interval $[0,1]$. EATS does not replace raw accuracy. Rather, it complements it by compressing the main efficiency-quality trade-off into a single primary ranking signal.
+This formulation is deliberately conservative. Accuracy remains the numerator and therefore the primary objective, but the denominator grows when an architecture becomes more expensive, slower, or more energy-intensive relative to a full-LLM monolithic baseline. The weights sum to one and reflect the current thesis emphasis: direct monetary cost is given the largest weight (0.5), latency is the second most important operational constraint (0.3), and energy is the third (0.2). The additive penalty was chosen because it degrades gracefully when one dimension is only approximately measured. A multiplicative penalty would collapse too aggressively if one component were near zero or temporarily unavailable. EATS therefore does not replace raw accuracy; rather, it provides a single ranking signal for the quality--efficiency trade-off identified as missing in the literature \cite{slrmanuscript2026, energytoken2025}.
 
-The measurement data comes from two complementary mechanisms. First, the proxy layer in front of selected vLLM hosts measures host-side latency and can expose \texttt{energy\_kwh}, \texttt{co2\_g}, and GPU power values directly in the response metadata. Second, the platform supports resource-profile estimation based on model-to-host mappings when direct host measurement is unavailable or when experiment-level aggregation is needed. These measurements are then propagated into MLflow, JSON summaries, Markdown reports, and the frontend result views. This design reflects the concern raised in prior work that energy and resource use should be treated as first-class inference outcomes rather than as afterthoughts \cite{energytoken2025}.
+\subsection{Proxy-Based Energy, CO2, and Cost Measurement}
 
-To keep benchmark normalization reproducible, the project now separates raw run artifacts from baseline artifacts. A fixed monolithic sweep covers seven stronger LLM aliases across the five automated benchmarks with shared defaults of 1000 samples, seed 42, zero temperature, and automatic token budgeting. The resulting monolithic runs are copied into a repo-local baseline registry keyed by benchmark, sample size, seed, model alias, and latency source. This registry supplies the normalized cost, algorithmic latency, and energy denominators used by architecture-level analysis and prevents ad hoc reuse of values from environment variables or handwritten notes.
-
-The same monolithic sweep also supports a benchmark-local dense-versus-MoE comparison. For each benchmark, the dense LLM runs are treated as the candidate reference pool, and the recommended normalization baseline is selected by highest accuracy, then lower algorithmic latency, then lower cost. In parallel, a separate monolithic-only \texttt{llm\_benchmark\_score} summarizes accuracy, cost efficiency, latency efficiency, and energy efficiency inside each benchmark. This score is used only to compare dense and MoE monolithic operating points; it does not replace EATS for architecture-level evaluation.
-
-\section{Benchmark Surfaces and Semantics}
-
-The benchmark layer includes both automated and planned human-evaluation surfaces. The automated benchmark surface currently includes \texttt{mmlu}, \texttt{arc}, \texttt{hellaswag}, \texttt{gsm8k}, and \texttt{truthfulqa}. These provide a mixed evaluation space covering multiple-choice reasoning, commonsense completion, mathematical reasoning, and hallucination resistance.
-
-Two names require explicit clarification because the repository semantics differ from common external expectations:
+The VM-side metrics proxy is the heart of the resource-accounting method. The proxy is implemented with FastAPI, \texttt{httpx}, and \texttt{uvicorn}. When a request arrives at \texttt{/v1/chat/completions}, the proxy starts an \texttt{EnergyTracker}, records a high-resolution start time, forwards the request to the local vLLM upstream, waits for the upstream JSON response, and then computes a thesis-specific metadata block before returning the final response. The \texttt{EnergyTracker} combines two measurement mechanisms:
 
 \begin{itemize}
-    \item \texttt{HumanEval} in this project does \emph{not} mean the OpenAI HumanEval coding benchmark. Its intended meaning is a UI-backed human preference evaluation workflow, including an LLM Arena-style prompt comparison surface and a live chat preference surface.
-    \item \texttt{custom\_stratified} is intended to become the thesis coding benchmark with \texttt{easy}, \texttt{medium}, and \texttt{hard} difficulty bands. Its current repository implementation is still a legacy placeholder and must be replaced before it can support thesis-grade claims.
+    \item \textbf{CodeCarbon} is used as the first-choice software-level estimator. If it returns usable energy and emissions values, the proxy keeps them.
+    \item \textbf{NVIDIA NVML} is accessed through \texttt{pynvml} to sample instantaneous GPU power on the host. If direct energy from CodeCarbon is unavailable, the proxy falls back to integrating mean GPU power over the measured inference duration.
 \end{itemize}
 
-Table \ref{tab:benchmark-status} summarizes the intended status of each benchmark surface.
+The proxy then appends a \texttt{\_thesis} block containing at least the measured host-side latency, completion timestamp, finish reason, energy in \texttt{kWh}, emissions in grams of CO$_2$, average GPU power in watts, and infrastructure cost in U.S. dollars. These values are also mirrored in response headers for debugging and downstream ingestion. This design makes the measurement boundary explicit: resource accounting happens on the same VM that actually executes the inference rather than on the local control plane, which is exactly the kind of hardware-specific evaluation the literature calls for \cite{energytoken2025}.
 
-\begin{table}[htbp]
-    \centering
-    \caption{Benchmark surfaces and their current methodological status.}
-    \label{tab:benchmark-status}
-    \small
-    \begin{tabularx}{\linewidth}{@{} l l X @{}}
-        \toprule
-        \textbf{Benchmark surface} & \textbf{Type} & \textbf{Current status in the thesis} \\
-        \midrule
-        \texttt{mmlu}, \texttt{arc}, \texttt{hellaswag}, \texttt{gsm8k}, \texttt{truthfulqa} & Automated benchmarks & Implemented and usable for pipeline testing and early comparative runs. \\
-        \texttt{custom\_stratified} & Coding benchmark & Planned as the main thesis coding benchmark, but its current loader is still a legacy placeholder and therefore not yet valid for final claims. \\
-        \texttt{HumanEval} & Human preference benchmark & Planned as a UI-backed evaluation workflow; the current repository file is a legacy prototype and does not define the final benchmark semantics. \\
-        \bottomrule
-    \end{tabularx}
-\end{table}
+\subsection{Resource-Profile Fallback and Experiment Aggregation}
+
+Not every architecture step can rely on a proxy measurement alone. Multi-step architectures may combine several calls across different hosts, and some endpoints may expose only partial telemetry. For this reason, the platform also includes a resource-profile fallback layer. Each model alias is mapped to a host profile containing an hourly infrastructure price and an approximate GPU power value. In the current configuration, L4 SLM hosts are modeled at \$0.75 per hour and 72 W, the shared RTX PRO6000 host at \$2.35 per hour and 320 W, and the H200 host at \$6.50 per hour and 600 W. When the runner annotates a completed \texttt{Response}, it applies these profiles to the recorded step latencies and estimates:
+
+\begin{equation}
+\text{energy\_kwh} =
+\left(\frac{\text{gpu\_power\_w}}{1000}\right) \times \text{duration\_hours}
+\end{equation}
+
+\begin{equation}
+\text{co2\_g} =
+\text{energy\_kwh} \times \text{grid\_factor}
+\end{equation}
+
+\begin{equation}
+\text{infra\_cost\_usd} =
+\text{hourly\_usd} \times \text{duration\_hours}
+\end{equation}
+
+The current default grid factor is 380 gCO$_2$/kWh. The total response cost is then computed as:
+
+\begin{equation}
+\text{total\_cost\_usd} =
+\text{api\_cost\_usd} + \text{infra\_cost\_usd}
+\end{equation}
+
+This fallback mechanism is not intended to pretend that every measurement is equally direct. Instead, it creates a consistent experiment-wide accounting policy so that architectures involving multiple calls can still be compared fairly at aggregate level.
+
+\subsection{Baseline Normalization}
+
+EATS normalization is tied to benchmark-specific monolithic baselines. The platform maintains a registry of baseline runs that record full-LLM cost, model-side latency, and total energy for a given benchmark, sample size, seed, and model alias. Architecture-level runs are normalized against these values rather than against handwritten constants. This is methodologically important because a benchmark such as GSM8K has a very different latency and token profile from HellaSwag or ARC. Using benchmark-local monolithic references ensures that the ``penalty'' part of EATS reflects the actual difficulty and output characteristics of the workload being studied.
+
+\section{Benchmark Selection and Standardization}
+
+The benchmark suite was selected to cover the capability dimensions emphasized by the systematic literature review: broad knowledge, structured reasoning, commonsense continuation, arithmetic reasoning, and truthfulness \cite{slrmanuscript2026}. The final automated benchmark set for the current thesis platform consists of \texttt{mmlu}, \texttt{arc}, \texttt{hellaswag}, \texttt{gsm8k}, and \texttt{truthfulqa}. These benchmarks were chosen not because they are individually sufficient, but because together they create a diversified workload on which routing, verification, debate, and multi-SLM coordination can be tested under one shared measurement policy.
+
+\subsection{Benchmark Roles}
+
+\subsubsection{MMLU}
+
+MMLU is the broadest benchmark in the suite and functions as the thesis platform's main general-reasoning benchmark. It contains 57 academic and professional subject areas and is loaded in zero-shot multiple-choice form \cite{hendrycks2021mmlu}. In the thesis methodology, MMLU serves two roles. First, it measures whether an architecture can preserve broad knowledge when relying on smaller models. Second, because each query carries a \texttt{subject} field, it enables subject-level disaggregation of accuracy. This makes it possible to ask not only whether a hybrid architecture works on average, but also whether it fails systematically in certain domains such as law, medicine, or formal sciences.
+
+\subsubsection{ARC-Challenge}
+
+ARC-Challenge contributes a harder science-reasoning surface in the form of multiple-choice grade-school science questions \cite{clark2018arc}. Compared with MMLU, ARC is narrower but often more compositional. In the thesis, it is particularly useful for architectures such as routing and debate because it pressures the system to distinguish between ``easy enough for the SLM'' and ``requires stronger reasoning support.'' The benchmark therefore acts as a medium-depth reasoning stress test rather than a broad knowledge test.
+
+\subsubsection{HellaSwag}
+
+HellaSwag evaluates commonsense continuation by asking the model to choose the most plausible ending to a context \cite{zellers2019hellaswag}. In the thesis setting, this benchmark is valuable because many wrong answers remain superficially plausible. This makes it a good test of whether collaboration mechanisms are genuinely improving reasoning quality or simply amplifying stylistic fluency. Architectures that depend heavily on self-confidence estimates can behave differently on HellaSwag than on factual benchmarks because the uncertainty signal is less clean when all candidate completions sound reasonable.
+
+\subsubsection{GSM8K}
+
+GSM8K provides open-ended grade-school math problems with numeric answers \cite{cobbe2021gsm8k}. This benchmark is methodologically central because it stresses long reasoning traces and numeric answer extraction. It is also closely related to one of the literature review's measurement insights: smaller models can become energy-inefficient when they compensate for limited capability by generating lengthy chain-of-thought traces \cite{energytoken2025}. For this reason, GSM8K is one of the most useful workloads for evaluating speculative verification, oracle-style support, and latency-sensitive routing strategies.
+
+\subsubsection{TruthfulQA}
+
+TruthfulQA measures whether a model reproduces common misconceptions rather than giving a truthful answer \cite{lin2022truthfulqa}. In the thesis methodology, this benchmark extends the evaluation surface beyond ``does the answer match the key?'' toward ``does the architecture help the system avoid persuasive falsehoods?'' This is especially relevant for architectures such as debate, oracle consultation, and verification, where the intended gain is not just stronger reasoning but also better self-correction under ambiguity.
+
+\subsection{Standardization Procedure}
+
+All five benchmarks are standardized into the same internal representation. Each dataset loader converts its native record into a \texttt{Query} object containing an identifier, question text, optional answer choices, the gold answer, and benchmark-specific metadata. Four of the five benchmarks (\texttt{mmlu}, \texttt{arc}, \texttt{hellaswag}, and \texttt{truthfulqa}) are mapped to the shared \texttt{mcq} task type. GSM8K is mapped to the shared \texttt{open} task type. This distinction determines both the prompt template and the parser.
+
+Sampling is reproducible. Every benchmark receives a sample budget \texttt{n\_samples} and a random seed. If the source dataset is larger than the requested sample count, the loader draws a sample without replacement using the fixed seed. This means that architectures are compared on the same benchmark slice as long as the configuration is held constant. Prompting is also standardized. MCQ tasks render the question, label the options as A/B/C/\dots, and explicitly require the final line \texttt{Answer: <LETTER>}. Open-ended arithmetic tasks instruct the model to end with \texttt{Answer: <number>}. The answer parser then normalizes common variants such as markdown formatting, final-answer wording, or numeric punctuation before comparing the prediction against the benchmark gold label.
+
+The platform also applies benchmark-specific normalization where needed. ARC answer labels are canonicalized to A/B/C/\dots\ order even if the original dataset uses mixed alphanumeric option labels. HellaSwag strips bracketed markup from its context and endings. GSM8K extracts the final numeric answer from the reference solution format. TruthfulQA keeps the original shuffled choice order instead of rotating the correct choice to position A, because that would introduce artificial position bias. These adjustments are not benchmark-specific ``optimizations'' for any architecture; they are dataset-hygiene steps required to compare architectures fairly under one shared answer parser.
+
+\subsection{Experimental Role of the Benchmark Suite}
+
+Methodologically, the benchmark suite supports two kinds of comparison. The first is \textbf{within-benchmark architecture comparison}: on a fixed workload such as MMLU or GSM8K, we compare monolithic, hybrid, and multi-SLM architectures under the same prompt, parsing, and scoring policy. The second is \textbf{cross-benchmark behavior analysis}: we ask whether an architecture that looks efficient on one workload keeps that advantage when the task shifts from broad knowledge to arithmetic or truthfulness. This distinction matters because the literature repeatedly shows that collaborative gains are task-sensitive rather than universal \cite{slrmanuscript2026, debateagents2025, sentensemble2026}. For that reason, the thesis does not treat a single benchmark as sufficient evidence for an architecture claim.
 
 \section{Scope Boundary}
 
-This report deliberately excludes training and fine-tuning from its completed-methodology claims. Even though the repository contains training-related code and configuration, the current experiment platform and this term report focus on inference-time architecture comparison, benchmark design, and measurement instrumentation. Any later training-based ablation study should be reported as a separate comparison axis rather than mixed into the core architecture analysis.
+The methodology described in this chapter is intentionally scoped to inference-time architecture evaluation. The main object of study is how different orchestration strategies behave when they receive the same benchmark query and return the same normalized response. Training and fine-tuning are not excluded from the broader thesis roadmap, but they are not part of the completed methodology described here. Likewise, although the project contains a web interface and experimental human-preference surfaces, the current methodology chapter focuses on the automated benchmark and resource-measurement pipeline, because that is the most stable and reproducible comparison surface at the present stage of the thesis.
