@@ -4,15 +4,19 @@
 
 \subsection{Research Questions}
 
-This thesis investigates a systems-level research question that differs fundamentally from standard single-model benchmarking: \textit{which orchestration architecture achieves the best balance between answer quality and resource consumption under a controlled benchmark workload?} This central question is decomposed into three targeted research questions:
+This thesis investigates a systems-level research question that differs fundamentally from standard single-model benchmarking: \textit{which orchestration architecture achieves the best balance between answer quality and resource consumption under a controlled benchmark workload?} This central question is decomposed into four empirical research questions:
 
 \begin{itemize}
-    \item[\textbf{RQ1.}] To what extent can hybrid SLM--LLM architectures match the accuracy of standalone full-LLM inference while reducing cost, latency, and energy consumption?
-    \item[\textbf{RQ2.}] How does the efficiency--accuracy trade-off vary across different collaboration patterns---routing, speculative verification, adversarial debate, oracle consultation, and ensemble voting---on the same benchmark workload?
-    \item[\textbf{RQ3.}] Can multi-SLM coordination strategies recover a meaningful fraction of the quality gap relative to standalone LLM inference without invoking any large model during the online inference path?
+    \item \textbf{RQ1 (Performance):} Can SLM--LLM collaborative architectures match standalone LLM accuracy on reasoning tasks under a shared benchmark and evaluation policy?
+
+    \item \textbf{RQ2 (Efficiency):} What are the cost, latency, and energy trade-offs across standalone, hybrid, ensemble, and multi-SLM orchestration families when evaluated on the same workload?
+
+    \item \textbf{RQ3 (Unified Metric):} Does EATS provide a stable, architecture-agnostic ranking signal for the quality--efficiency trade-off across the studied architecture families?
+
+    \item \textbf{RQ4 (Empirical Grounding):} Do platform-measured architecture comparisons corroborate the performance and efficiency trends reported across the 54 studies synthesized in the companion systematic literature review?
 \end{itemize}
 
-These questions require an architecture-comparative experimental design and mandate that accuracy and resource efficiency be treated as co-equal primary outcomes rather than relegating operational metrics to a secondary diagnostic role.
+These questions require an architecture-comparative experimental design and mandate that accuracy and resource efficiency be treated as co-equal primary outcomes rather than relegating operational metrics to a secondary diagnostic role. RQ3 additionally motivates the introduction of EATS as a unified composite signal, and RQ4 ties the platform evaluation back to the findings of the companion systematic literature review.
 
 \subsection{Architecture-as-Variable Experimental Design}
 
@@ -277,7 +281,6 @@ The project distinguishes between \textbf{wall-clock latency} and \textbf{algori
 
 \subsection{EATS: Efficiency-Accuracy Trade-off Score}
 \label{sec:eats}
-\label{sec:eats-definition}
 
 To jointly compare answer quality and resource consumption, the thesis introduces the Efficiency-Accuracy Trade-off Score (EATS). The current formulation uses an additive efficiency penalty normalised against a benchmark-specific standalone baseline:
 
