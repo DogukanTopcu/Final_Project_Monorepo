@@ -153,6 +153,7 @@ The measurement methodology was designed in direct response to the literature re
 The project distinguishes between \textbf{wall-clock latency} and \textbf{algorithmic/model latency}. Wall-clock latency is the full observed duration from the caller's perspective, including HTTP round trips, proxy work, and local orchestration overhead. Algorithmic latency, which is the primary latency used in aggregate thesis metrics, is the sum of the actual model-side inference latencies reported by the provider or by step-level instrumentation. If a model endpoint exposes a server-side latency value, that value is preferred. If not, the platform sums the latency of the recorded inference steps. Only when neither source is available does the system fall back to total wall-clock duration. This distinction is methodologically important because the thesis compares architectures, not incidental network noise. A routing architecture should not appear artificially worse than a standalone baseline merely because its measurement path includes extra proxy bookkeeping or UI-trigger overhead.
 
 \subsection{EATS Definition}
+\label{sec:eats-definition}
 
 To compare solution quality against resource consumption, the thesis uses the Efficiency-Accuracy Trade-off Score (EATS). The current version of EATS is defined by an additive efficiency penalty rather than by the earlier multiplicative form:
 

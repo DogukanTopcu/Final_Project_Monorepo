@@ -1,5 +1,6 @@
 \definecolor{routingcolor}{RGB}{42,157,143}
 \definecolor{standalonecolor}{RGB}{231,111,81}
+\definecolor{monolithiccolor}{RGB}{231,111,81}
 \newcommand{\metricbar}[2]{%
   \makebox[4.0cm][l]{\textcolor{black!12}{\rule{4.0cm}{9pt}}}%
   \hspace{-4.0cm}%
@@ -53,7 +54,7 @@ question directly with \texttt{gemma4-31b}. Since both runs evaluate the same
 isolates the effect of architecture choice rather than dataset variation.
 
 The comparison is organised across five evaluation dimensions: accuracy, EATS, latency,
-cost, and resource usage. As defined in Section~\ref{}, EATS denotes the
+cost, and resource usage. As defined in Section~\ref{sec:eats-definition}, EATS denotes the
 Efficiency-Accuracy Trade-off Score and rewards architectures that preserve
 accuracy while reducing normalised cost, latency, and energy relative to a
 full-LLM standalone baseline. A
