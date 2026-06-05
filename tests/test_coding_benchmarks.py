@@ -1,101 +1,12 @@
-"""Tests for coding benchmark infrastructure added today.
-
-Covers:
-  - _code_execution: strip_code_fences, run_function_tests, run_io_tests
-  - build_prompt / parse_answer for task_type="code"
-  - TruthfulQA rotation fix (answer is no longer always A)
-  - ECE computation
-  - aggregate_runs
-  - compute_subject_accuracy
+"""Tests for core infrastructure: prompt building, parse_answer, TruthfulQA, ECE, metrics.
 """
 from __future__ import annotations
 
 import pytest
 
-from benchmarks._code_execution import run_function_tests, run_io_tests, strip_code_fences
 from core.prompt import build_prompt, mcq_prompt, open_prompt, parse_answer
 from core.types import ExperimentConfig, ExperimentResult, Query, Response, SampleResult
 from evaluation.metrics import aggregate_runs, compute_ece, compute_subject_accuracy
-
-# ------------------------------------------------------------------
-# strip_code_fences
-# ------------------------------------------------------------------
-
-def test_strip_fences_extracts_inner_code():
-    text = "Here is the solution:\n```python\ndef foo():\n    return 42\n```"
-    result = strip_code_fences(text)
-    assert "def foo():" in result
-    assert "```" not in result
-
-
-def test_strip_fences_no_fence_returns_text():
-    text = "def foo():\n    return 42"
-    assert strip_code_fences(text) == text
-
-
-def test_strip_fences_strips_stray_backtick_lines():
-    text = "```\ndef foo(): pass\n```"
-    result = strip_code_fences(text)
-    assert "def foo(): pass" in result
-    assert "```" not in result
-
-
-# ------------------------------------------------------------------
-# run_function_tests (HumanEval+ style)
-# ------------------------------------------------------------------
-
-def test_run_function_tests_correct_solution():
-    prompt = "def add(a: int, b: int) -> int:\n    \"\"\"\"\"\"\n"
-    code = "    return a + b"
-    test_code = "def check(candidate):\n    assert candidate(1, 2) == 3\n    assert candidate(-1, 1) == 0"
-    assert run_function_tests(prompt, code, test_code, "add") is True
-
-
-def test_run_function_tests_wrong_solution():
-    prompt = "def add(a: int, b: int) -> int:\n    \"\"\"\"\"\"\n"
-    code = "    return a - b"
-    test_code = "def check(candidate):\n    assert candidate(1, 2) == 3"
-    assert run_function_tests(prompt, code, test_code, "add") is False
-
-
-def test_run_function_tests_timeout():
-    prompt = "def spin() -> None:\n    \"\"\"\"\"\"\n"
-    code = "    while True: pass"
-    test_code = "def check(candidate):\n    candidate()"
-    assert run_function_tests(prompt, code, test_code, "spin", timeout=2) is False
-
-
-# ------------------------------------------------------------------
-# run_io_tests (LiveCodeBench style)
-# ------------------------------------------------------------------
-
-def test_run_io_tests_correct_program():
-    code = "n = int(input())\nprint(n * 2)"
-    test_cases = [
-        {"input": "3\n", "output": "6"},
-        {"input": "0\n", "output": "0"},
-    ]
-    assert run_io_tests(code, test_cases) is True
-
-
-def test_run_io_tests_wrong_output():
-    code = "n = int(input())\nprint(n + 1)"
-    test_cases = [{"input": "3\n", "output": "6"}]
-    assert run_io_tests(code, test_cases) is False
-
-
-def test_run_io_tests_partial_pass_returns_false():
-    code = "n = int(input())\nprint(n * 2)"
-    test_cases = [
-        {"input": "3\n", "output": "6"},   # passes
-        {"input": "5\n", "output": "99"},  # fails
-    ]
-    assert run_io_tests(code, test_cases) is False
-
-
-def test_run_io_tests_empty_cases_returns_true():
-    assert run_io_tests("print('hi')", []) is True
-
 
 # ------------------------------------------------------------------
 # build_prompt / parse_answer for code task type

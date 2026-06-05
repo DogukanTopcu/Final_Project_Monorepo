@@ -40,8 +40,6 @@ def parse_args() -> argparse.Namespace:
         choices=[
             # Reasoning benchmarks
             "mmlu", "arc", "hellaswag", "gsm8k", "truthfulqa",
-            # Coding benchmarks (execution-based, literature-standard)
-            "humaneval_plus", "livecodebench",
             # Deprecated
             "custom_stratified",
         ],

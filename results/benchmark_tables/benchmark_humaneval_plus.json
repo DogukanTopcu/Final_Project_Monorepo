@@ -1,0 +1,89 @@
+{
+  "benchmark": "humaneval_plus",
+  "generated_at": "2026-06-05T18:04:49.567769+00:00",
+  "n_unique_configs": 3,
+  "entries": [
+    {
+      "architecture": "ensemble",
+      "model_key": "gemma4-4b+llama3.2-3b+ministral3-3b+qwen3.5-4b",
+      "slm": null,
+      "llm": null,
+      "ensemble_slms": [
+        "gemma4-4b",
+        "qwen3.5-4b",
+        "ministral3-3b",
+        "llama3.2-3b"
+      ],
+      "n_experiments": 1,
+      "experiment_ids": [
+        "exp_8c667344"
+      ],
+      "total_samples_evaluated": 100,
+      "accuracy": 0.0,
+      "llm_call_ratio": 0.0,
+      "avg_latency_ms": 7703.288,
+      "latency_p50_ms": 5927.229875,
+      "latency_p95_ms": 20305.389541,
+      "avg_slm_confidence": 0.88085,
+      "escalation_rate": 0.0,
+      "avg_cost_per_sample_usd": 0.004028,
+      "avg_api_cost_per_sample_usd": 0.0,
+      "avg_infra_cost_per_sample_usd": 0.004028,
+      "avg_energy_per_sample_kwh": 0.000387,
+      "avg_co2_per_sample_g": 0.14694,
+      "eats": 0.0
+    },
+    {
+      "architecture": "monolithic",
+      "model_key": "gpt-oss-20b",
+      "slm": null,
+      "llm": "gpt-oss-20b",
+      "ensemble_slms": [],
+      "n_experiments": 2,
+      "experiment_ids": [
+        "exp_344f280a",
+        "exp_c316cd80"
+      ],
+      "total_samples_evaluated": 30,
+      "accuracy": 0.1,
+      "llm_call_ratio": 1.0,
+      "avg_latency_ms": 3326.600363,
+      "latency_p50_ms": 3213.922354,
+      "latency_p95_ms": 7588.026792,
+      "avg_slm_confidence": 0.812316,
+      "escalation_rate": 1.0,
+      "avg_cost_per_sample_usd": 0.002745,
+      "avg_api_cost_per_sample_usd": 0.000574,
+      "avg_infra_cost_per_sample_usd": 0.002172,
+      "avg_energy_per_sample_kwh": 0.000296,
+      "avg_co2_per_sample_g": 0.112365,
+      "eats": 0.092548
+    },
+    {
+      "architecture": "monolithic",
+      "model_key": "qwen3.5-27b",
+      "slm": null,
+      "llm": "qwen3.5-27b",
+      "ensemble_slms": [],
+      "n_experiments": 2,
+      "experiment_ids": [
+        "exp_69743f8b",
+        "exp_4f0e2f7f"
+      ],
+      "total_samples_evaluated": 20,
+      "accuracy": 0.0,
+      "llm_call_ratio": 1.0,
+      "avg_latency_ms": 3889.365212,
+      "latency_p50_ms": 3922.475084,
+      "latency_p95_ms": 5558.679979,
+      "avg_slm_confidence": 0.88666,
+      "escalation_rate": 1.0,
+      "avg_cost_per_sample_usd": 0.002539,
+      "avg_api_cost_per_sample_usd": 0.0,
+      "avg_infra_cost_per_sample_usd": 0.002539,
+      "avg_energy_per_sample_kwh": 0.000346,
+      "avg_co2_per_sample_g": 0.131374,
+      "eats": 0.0
+    }
+  ]
+}

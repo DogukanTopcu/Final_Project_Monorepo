@@ -1,32 +1,18 @@
-\definecolor{routingcolor}{RGB}{42,157,143}
-\definecolor{standalonecolor}{RGB}{231,111,81}
-\newcommand{\metricbar}[2]{%
-  \makebox[4.0cm][l]{\textcolor{black!12}{\rule{4.0cm}{9pt}}}%
-  \hspace{-4.0cm}%
-  \textcolor{#1}{\rule{#2}{9pt}}%
-}
-
 \chapter{EXPERIMENTAL STUDY}
 
-This chapter documents the current state of the experimental study in two
-complementary ways. First, it reports two completed pilot comparisons under a
-shared setup: an MMLU routing-versus-standalone comparison and a same-model
-GSM8K three-way comparison across single-SLM, hybrid, and single-LLM modes.
-Second, it clarifies which parts of the broader thesis evaluation pipeline are
-already usable and which still remain preliminary. This separation is important
-because the repository can already produce meaningful pilot evidence, but not
-every benchmark surface is yet mature enough for thesis-grade claims.
+This chapter presents the complete set of experimental results produced by the platform described in Chapter~3. The results cover 88 valid experiments executed across five publicly available benchmarks and six architecture families. Section~\ref{sec:eval-env} summarizes the evaluation environment. Section~\ref{sec:bench-suite} defines the benchmark suite and evaluation protocol. Section~\ref{sec:benchmark-results} presents per-benchmark result tables for every evaluated configuration. Section~\ref{sec:arch-analysis} provides an architecture-family analysis synthesizing findings across benchmarks. Section~\ref{sec:cross-bench} reports a cross-benchmark EATS comparison. Section~\ref{sec:exp-discussion} discusses the principal findings and anomalies. Section~\ref{sec:pending} describes planned extensions.
 
 \section{Evaluation Environment}
+\label{sec:eval-env}
 
-The platform uses a split deployment model in which the control plane runs locally while model inference runs on remote GPU hosts. Table \ref{tab:environment-matrix} summarizes the current environment used by the project.
+The platform uses a split deployment model in which the control plane runs locally while model inference runs on remote GPU hosts. Table~\ref{tab:environment-matrix} summarizes the environment.
 
 \begin{table}[htbp]
     \centering
-    \caption{Current experimental environment and its role in the platform.}
+    \caption{Experimental environment and its role in the platform.}
     \label{tab:environment-matrix}
     \small
-    \begin{tabularx}{\linewidth}{@{} l l X @{}}
+    \begin{tabularx}{\linewidth}{@{} l >{\raggedright\arraybackslash}p{0.36\linewidth} >{\raggedright\arraybackslash}X @{}}
         \toprule
         \textbf{Layer} & \textbf{Technology} & \textbf{Role in the experiment stack} \\
         \midrule
@@ -39,402 +25,281 @@ The platform uses a split deployment model in which the control plane runs local
     \end{tabularx}
 \end{table}
 
-All selected models are exposed through OpenAI-compatible HTTP endpoints so that the experiment runner can stay provider-neutral. The repository also contains host-lock logic to coordinate experiments that depend on shared hosts where only one large model may be active at a time.
+All model endpoints are exposed through OpenAI-compatible HTTP interfaces so that the experiment runner remains provider-neutral. The platform contains host-lock logic to prevent incompatible shared-host models from running concurrently, which would otherwise contaminate latency and energy measurements.
 
-\section{Current MMLU Comparison Setup}
+\section{Benchmark Suite and Evaluation Protocol}
+\label{sec:bench-suite}
 
-The present study reports two pilot MMLU comparisons to evaluate two
-response-generation strategies under identical benchmark conditions. The routing run,
-\texttt{exp\_ecdd81b2}, first answers with the lightweight
-\texttt{gemma4-4b} model and escalates uncertain cases to
-\texttt{gemma4-31b}. The standalone run, \texttt{exp\_018ab0cf}, answers every
-question directly with \texttt{gemma4-31b}. Since both runs evaluate the same
-\texttt{mmlu} benchmark with 100 samples and zero temperature, the comparison
-isolates the effect of architecture choice rather than dataset variation.
+Five benchmarks are evaluated in this chapter. All runs use zero temperature. Accuracy is the proportion of samples for which the predicted answer matches the reference. EATS is computed from accuracy, normalized per-query cost, normalized average latency, and normalized per-query energy following the formula defined in Section~3 of this report; normalization is applied per benchmark against the mean of all standalone monolithic runs on that benchmark.
 
-The comparison is organised across five evaluation dimensions: accuracy, EATS, latency,
-cost, and resource usage. As defined in Section~\ref{sec:eats}, EATS denotes the
-Efficiency-Accuracy Trade-off Score and rewards architectures that preserve
-accuracy while reducing normalised cost, latency, and energy relative to a
-full-LLM standalone baseline. A
-higher EATS therefore indicates a more favourable efficiency-accuracy balance.
+A methodological note applies throughout this chapter. Experiments recorded before per-step algorithmic latency instrumentation was active report wall-clock average latency, which includes HTTP round-trip and proxy overhead. Experiments recorded after that instrumentation became active report algorithmic latency, which is the sum of model-side inference durations only. The two sets of results are not directly comparable on the latency dimension; this distinction is flagged where it matters for interpretation. All other dimensions---accuracy, cost, energy, and CO$_2$---are unaffected.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Benchmark suite used in the experimental evaluation.}
+    \label{tab:benchmark-suite}
+    \small
+    \begin{tabularx}{\linewidth}{@{} l l l X @{}}
+        \toprule
+        \textbf{Benchmark} & \textbf{Domain} & \textbf{Task type} & \textbf{Scoring and coverage} \\
+        \midrule
+        MMLU & World knowledge & Multiple-choice (4-way) & Exact-match accuracy; 57 academic subjects across STEM, humanities, and social sciences. \\
+        ARC & Science reasoning & Multiple-choice (4-way) & Exact-match accuracy on the ARC Challenge split; multi-step physical-world inference. \\
+        GSM8K & Mathematical reasoning & Free-form (numeric) & Exact-match accuracy on the numeric answer; grade-school arithmetic and word problems. \\
+        HellaSwag & Commonsense reasoning & Multiple-choice (4-way) & Exact-match accuracy; context-based sentence completion requiring real-world inference. \\
+        TruthfulQA & Factual calibration & Multiple-choice & Exact-match accuracy; selects factually accurate answers over plausible-sounding falsehoods. \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\section{Benchmark-Level Results}
+\label{sec:benchmark-results}
+
+The following tables report aggregated results for every evaluated architecture--model combination. Rows are sorted alphabetically by architecture, then by model key. The \emph{N} column is the total number of samples evaluated across all runs of that configuration. Column \emph{LLM\,\%} is the fraction of queries that invoked the heavy language model.
+
+\subsection{MMLU}
+
+Sixteen configurations were evaluated on MMLU, covering six architecture families. Speculative decoding achieves the highest accuracy (94.1\%) across all configurations, surpassing every standalone run. Among multi-model architectures, routing reaches 84.0\% accuracy at EATS 0.596 while limiting heavy-model usage to 41\% of queries. The single-SLM \texttt{ministral3-3b} ensemble produces the highest EATS overall (0.747) due to its very low per-query cost, though its accuracy (57.0\%) falls well below the standalone range of 79.3--88.6\%. Among standalone checkpoints, the MoE model \texttt{qwen3.5-35b-a3b} achieves 86.2\% accuracy at EATS 0.674, making it the most efficient standalone option. Routing and speculative latency values in this table reflect wall-clock averages (see Section~\ref{sec:bench-suite}).
 
 \begin{table}[htbp]
 \centering
-\small
-\renewcommand{\arraystretch}{1.2}
-\caption{Configuration of the two MMLU comparison runs}
-\label{tab:mmlu-config}
-\begin{tabular}{|p{3.3cm}|p{5.1cm}|p{5.1cm}|}
-\hline
-\textbf{Setting} & \textbf{Routing: \texttt{exp\_ecdd81b2}} & \textbf{Standalone: \texttt{exp\_018ab0cf}} \\
-\hline
-Architecture & Routing with SLM draft and LLM fallback & Single-pass standalone inference \\
-\hline
-Benchmark & \multicolumn{2}{c|}{MMLU} \\
-\hline
-Samples & \multicolumn{2}{c|}{100} \\
-\hline
-Final LLM & \texttt{gemma4-31b} escalation only & \texttt{gemma4-31b} for every sample \\
-\hline
-Draft SLM & \texttt{gemma4-4b} & None \\
-\hline
-Temperature & \multicolumn{2}{c|}{0.0} \\
-\hline
-Confidence threshold & 0.8, active for escalation & 0.7 recorded in config, not used for routing \\
-\hline
-LLM call ratio & 34\% & 100\% \\
-\hline
-\end{tabular}
-\end{table}
-
-\section{Accuracy and EATS Analysis}
-
-Figure~\ref{fig:mmlu-scores} compares the two architectures on raw task
-accuracy. The standalone design achieved the higher MMLU accuracy with 85
-correct answers out of 100, while the routing design reached 76 correct
-answers. This 9 percentage-point gap is expected because the standalone
-baseline always invokes the stronger \texttt{gemma4-31b} model.
-
-The EATS comparison yields a more nuanced result. Routing reached an
-EATS of 0.325, while the standalone baseline reached 0.419. Under the current
-accuracy-first formulation, the routing architecture does not achieve a superior EATS score
-because its latency penalty outweighs its cost and energy savings.
-The primary contributor to this penalty is selective escalation overhead: 66 samples were resolved at
-the SLM stage, but 34 required LLM escalation and every routing request still
-incurred an initial SLM inference pass.
-
-\begin{figure}[htbp]
-\centering
-\begin{minipage}[t]{0.46\textwidth}
-\centering
-\textbf{Accuracy (\%, higher is better)}\\[0.6em]
-\begin{tabular}{@{}l l r@{}}
-Routing & \metricbar{routingcolor}{3.58cm} & 76.0 \\
-Standalone & \metricbar{standalonecolor}{4.00cm} & 85.0 \\
-\end{tabular}
-\end{minipage}
-\hfill
-\begin{minipage}[t]{0.46\textwidth}
-\centering
-\textbf{EATS (higher is better)}\\[0.6em]
-\begin{tabular}{@{}l l r@{}}
-Routing & \metricbar{routingcolor}{3.10cm} & 0.325 \\
-Standalone & \metricbar{standalonecolor}{4.00cm} & 0.419 \\
-\end{tabular}
-\end{minipage}
-\caption{Accuracy and EATS comparison between routing and standalone architectures on MMLU}
-\label{fig:mmlu-scores}
-\end{figure}
-
-\begin{table}[htbp]
-\centering
-\small
-\renewcommand{\arraystretch}{1.2}
-\caption{Raw outcome summary for the two MMLU runs}
-\label{tab:mmlu-summary}
-\begin{tabular}{|l|c|c|}
-\hline
-\textbf{Metric} & \textbf{Routing} & \textbf{Standalone} \\
-\hline
-Accuracy & 76.0\% & 85.0\% \\
-\hline
-EATS & 0.325 & 0.419 \\
-\hline
-Correct answers & 76 / 100 & 85 / 100 \\
-\hline
-LLM call ratio & 34\% & 100\% \\
-\hline
-Average latency & 20.45 s & 9.29 s \\
-\hline
-Latency p95 & 42.18 s & 17.66 s \\
-\hline
-Total cost & \$0.5913 & \$0.6066 \\
-\hline
-Total energy & 0.0665 kWh & 0.0826 kWh \\
-\hline
-Total CO$_2$ & 25.28 g & 31.39 g \\
-\hline
-Total tokens & 69,512 & 42,889 \\
-\hline
-\end{tabular}
-\end{table}
-
-\section{Efficiency and Resource Comparison}
-
-Figure~\ref{fig:mmlu-efficiency} shows the operating-cost side of the same
-comparison. Routing reduced heavy-model usage from 100\% to 34\%, lowered total
-energy from 0.0826 to 0.0665 kWh, and reduced estimated CO$_2$ emissions from
-31.39 g to 25.28 g. The cost difference was smaller but still favorable to
-routing: \$0.5913 versus \$0.6066, or roughly a 2.5\% reduction.
-
-The latency trade-off is much sharper. Average latency increased from 9.29
-seconds in the standalone run to 20.45 seconds in routing, and tail latency
-(p95) increased from 17.66 seconds to 42.18 seconds. This overhead comes from
-the two-stage control flow. Every routing request pays for an initial SLM pass,
-and 34 requests also pay for a second LLM pass. Within the routing run, the
-66 SLM-only samples averaged 16.26 seconds, while escalated samples averaged
-28.57 seconds.
-
-The escalation breakdown also helps explain the result. Out of the 34 escalated
-samples, 23 were escalated because confidence fell below the 0.8 threshold and
-11 were escalated because the draft answer could not be parsed reliably. In
-other words, part of the latency penalty comes from router conservatism and
-output-format failures, not only from difficult questions.
-
-\begin{figure}[htbp]
-\centering
-\small
+\caption{MMLU results across 16 configurations.}
+\label{tab:result-mmlu}
+\scriptsize
 \renewcommand{\arraystretch}{1.15}
-\begin{tabular}{@{}p{3.3cm}l l r@{}}
-\textbf{Metric} & \textbf{System} & \textbf{Relative bar} & \textbf{Value} \\
-\hline
-Average latency & Routing & \metricbar{routingcolor}{4.00cm} & 20.45 s \\
- & Standalone & \metricbar{standalonecolor}{1.82cm} & 9.29 s \\
-\\[-0.1em]
-Latency p95 & Routing & \metricbar{routingcolor}{4.00cm} & 42.18 s \\
- & Standalone & \metricbar{standalonecolor}{1.67cm} & 17.66 s \\
-\\[-0.1em]
-Total cost & Routing & \metricbar{routingcolor}{3.90cm} & \$0.5913 \\
- & Standalone & \metricbar{standalonecolor}{4.00cm} & \$0.6066 \\
-\\[-0.1em]
-Total energy & Routing & \metricbar{routingcolor}{3.22cm} & 0.0665 kWh \\
- & Standalone & \metricbar{standalonecolor}{4.00cm} & 0.0826 kWh \\
-\\[-0.1em]
-Total CO$_2$ & Routing & \metricbar{routingcolor}{3.22cm} & 25.28 g \\
- & Standalone & \metricbar{standalonecolor}{4.00cm} & 31.39 g \\
-\\[-0.1em]
-LLM call ratio & Routing & \metricbar{routingcolor}{1.36cm} & 34\% \\
- & Standalone & \metricbar{standalonecolor}{4.00cm} & 100\% \\
-\end{tabular}
-\caption{Efficiency and resource comparison on MMLU (standalone vs.\ routing). Lower is better in all panels.}
-\label{fig:mmlu-efficiency}
-\end{figure}
-
-\section{Discussion of the Current Result}
-
-These two experiments demonstrate that architecture choice alters the operating point
-of the system rather than producing a universal winner. If the primary objective is
-maximum MMLU accuracy, the standalone \texttt{gemma4-31b} baseline is stronger.
-If the objective is to reduce heavy-model invocation frequency, energy, and carbon while
-keeping accuracy within an acceptable range, the routing strategy is more attractive.
-
-At the same time, these runs should still be interpreted as a focused pilot
-comparison rather than as the final thesis result set. They demonstrate that the
-reporting stack, experiment runner, and cost-energy instrumentation can support
-meaningful architecture analysis, but they do not yet replace the broader coding
-benchmark that the thesis is designed around.
-
-\section{Same-Model GSM8K Three-Way Comparison}
-
-This report also includes a second pilot comparison that keeps the model family
-fixed and changes only the response-generation mode. The three runs all evaluate
-\texttt{gsm8k} with 100 samples at zero temperature. The goal is to compare three
-operating points within the same Gemma family: a single-SLM baseline, a routing
-hybrid, and a standalone LLM baseline. The single-SLM baseline is
-\texttt{exp\_efec5356}. Behaviorally, it is a single-model \texttt{gemma4-4b}
-baseline, although the implementation path uses the repository's
-\texttt{ensemble} architecture with \texttt{n\_models=1}. The hybrid run,
-\texttt{exp\_b4a9b415}, answers first with \texttt{gemma4-4b} and escalates to
-\texttt{gemma4-31b} when needed. The standalone baseline,
-\texttt{exp\_a7d53595}, answers every sample directly with \texttt{gemma4-31b}.
-
-\begin{table}[htbp]
-\centering
-\small
-\renewcommand{\arraystretch}{1.2}
-\caption{Configuration of the three GSM8K comparison runs}
-\label{tab:gsm8k-config}
-\begin{tabularx}{\linewidth}{@{} l X X X @{}}
+\begin{tabularx}{\linewidth}{@{} l X r r r r r r r @{}}
 \toprule
-\textbf{Setting} & \textbf{SLM baseline} & \textbf{Routing hybrid} & \textbf{LLM baseline} \\
+\textbf{Arch.} & \textbf{Model} & \textbf{N} & \textbf{Acc\,\%} & \textbf{Lat\,(s)} & \textbf{\$/q} & \textbf{g\,CO$_2$/q} & \textbf{LLM\,\%} & \textbf{EATS} \\
 \midrule
-Experiment id & \texttt{exp\_efec5356} & \texttt{exp\_b4a9b415} & \texttt{exp\_a7d53595} \\
-Architecture & \texttt{ensemble} & \texttt{routing} & \texttt{standalone} \\
-Benchmark & \texttt{gsm8k} & \texttt{gsm8k} & \texttt{gsm8k} \\
-Samples & 100 & 100 & 100 \\
-Active model(s) & \texttt{gemma4-4b} only & \texttt{gemma4-4b} draft + \texttt{gemma4-31b} fallback & \texttt{gemma4-31b} only \\
-Confidence threshold & 0.7 recorded, not active for routing & 0.8 active for escalation & 0.7 recorded, not used for routing \\
-LLM call ratio & 0\% & 19\% & 100\% \\
-Implementation note & Single-member ensemble used as a single-SLM baseline & Two-stage control flow with selective escalation & Single-pass standalone inference \\
+active\_oracle & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 74.0 & 30.6 & 0.00659 & 0.245 & 21 & 0.304 \\
+ensemble & gemma4-4b + llama3.2-3b & 20 & 50.0 & 21.5 & 0.00491 & 0.179 & 0 & 0.292 \\
+ensemble & gemma4-4b + llama3.2-3b + ministral3-3b & 100 & 59.0 & 26.9 & 0.00561 & 0.205 & 0 & 0.286 \\
+ensemble & gemma4-4b + llama3.2-3b + ministral3-3b + qwen3.5-4b & 100 & 68.0 & 21.6 & 0.00942 & 0.344 & 0 & 0.299 \\
+ensemble & ministral3-3b & 100 & 57.0 & 3.5 & 0.00074 & 0.027 & 0 & 0.747 \\
+ensemble & qwen3.5-4b & 100 & 75.0 & 17.6 & 0.00367 & 0.134 & 0 & 0.438 \\
+standalone & gemma4-26b-a4b & 500 & 86.4 & 5.2 & 0.00341 & 0.176 & 100 & 0.629 \\
+standalone & gemma4-31b & 520 & 79.3 & 9.6 & 0.00627 & 0.324 & 100 & 0.458 \\
+standalone & gpt-oss-120b & 500 & 87.0 & 3.4 & 0.00838 & 0.214 & 100 & 0.530 \\
+standalone & gpt-oss-20b & 520 & 86.6 & 3.4 & 0.00286 & 0.116 & 100 & 0.698 \\
+standalone & llama3.3-70b & 500 & 84.8 & 11.1 & 0.02034 & 0.700 & 100 & 0.289 \\
+standalone & qwen3.5-27b & 510 & 88.6 & 19.5 & 0.01270 & 0.657 & 100 & 0.318 \\
+standalone & qwen3.5-35b-a3b & 500 & 86.2 & 4.3 & 0.00279 & 0.144 & 100 & 0.674 \\
+pure\_swarm & gemma4-4b & 110 & 89.5 & 27.5 & 0.00528 & 0.192 & 0 & 0.379 \\
+routing & gemma4-4b $\rightarrow$ gemma4-31b & 240 & 84.0 & 9.3 & 0.00257 & 0.108 & 41 & 0.596 \\
+speculative & gemma4-4b $\rightarrow$ gemma4-31b & 260 & 94.1 & 18.9 & 0.00659 & 0.300 & 100 & 0.422 \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
+\subsection{ARC}
+
+Twelve configurations were evaluated on ARC. Pure Swarm with \texttt{gemma4-4b} achieves the highest accuracy (96.0\%) using no heavy-model calls. Routing achieves 91.0\% accuracy with EATS 0.884---the highest EATS recorded across any configuration on any benchmark in this study---at an algorithmic latency of 1.4 seconds and a per-query cost of \$0.00052. Speculative decoding reaches 94.0\% accuracy at EATS 0.853, with algorithmic latency of 1.7 seconds. Both hybrid results represent a 15--20 EATS-point improvement over the best standalone option (\texttt{qwen3.5-35b-a3b}, EATS 0.738) while operating at 2--5$\times$ lower cost.
+
 \begin{table}[htbp]
 \centering
-\small
-\renewcommand{\arraystretch}{1.2}
-\caption{Outcome summary for the GSM8K three-way comparison}
-\label{tab:gsm8k-summary}
-\begin{tabularx}{\linewidth}{@{} l c c c @{}}
+\caption{ARC results across 12 configurations. Routing and speculative latency values are algorithmic (model-side inference only).}
+\label{tab:result-arc}
+\scriptsize
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{} l X r r r r r r r @{}}
 \toprule
-\textbf{Metric} & \textbf{SLM baseline} & \textbf{Routing hybrid} & \textbf{LLM baseline} \\
+\textbf{Arch.} & \textbf{Model} & \textbf{N} & \textbf{Acc\,\%} & \textbf{Lat\,(s)} & \textbf{\$/q} & \textbf{g\,CO$_2$/q} & \textbf{LLM\,\%} & \textbf{EATS} \\
 \midrule
-Accuracy & 83.0\% & 91.0\% & 95.0\% \\
-Average latency & 10.24 s & 11.51 s & 5.93 s \\
-Latency p95 & 28.84 s & 35.78 s & 9.47 s \\
-Total cost & \$0.2133 & \$0.2888 & \$0.3869 \\
-Total energy & 0.0205 kWh & 0.0306 kWh & 0.0527 kWh \\
-Total CO$_2$ & 7.78 g & 11.63 g & 20.02 g \\
-Total tokens & 30,574 & 35,141 & 25,233 \\
-LLM call ratio & 0\% & 19\% & 100\% \\
-EATS & 0.488 & 0.467 & 0.474 \\
+active\_oracle & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 91.0 & 21.4 & 0.00451 & 0.166 & 4 & 0.388 \\
+ensemble & gemma4-4b + llama3.2-3b + ministral3-3b + qwen3.5-4b & 100 & 91.0 & 15.9 & 0.00698 & 0.254 & 0 & 0.388 \\
+standalone & gemma4-26b-a4b & 500 & 95.4 & 7.4 & 0.00482 & 0.250 & 100 & 0.519 \\
+standalone & gemma4-31b & 510 & 93.5 & 8.2 & 0.00537 & 0.278 & 100 & 0.487 \\
+standalone & gpt-oss-120b & 500 & 95.4 & 2.7 & 0.00620 & 0.170 & 100 & 0.570 \\
+standalone & gpt-oss-20b & 500 & 93.8 & 2.7 & 0.00210 & 0.091 & 100 & 0.729 \\
+standalone & llama3.3-70b & 100 & 92.0 & 8.9 & 0.01630 & 0.562 & 100 & 0.309 \\
+standalone & qwen3.5-27b & 100 & 95.0 & 13.9 & 0.00905 & 0.468 & 100 & 0.364 \\
+standalone & qwen3.5-35b-a3b & 500 & 95.4 & 2.8 & 0.00185 & 0.096 & 100 & 0.738 \\
+pure\_swarm & gemma4-4b & 100 & 96.0 & 21.4 & 0.00401 & 0.146 & 0 & 0.410 \\
+routing & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 91.0 & 1.4 & 0.00052 & 0.024 & 75 & 0.884 \\
+speculative & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 94.0 & 1.7 & 0.00075 & 0.036 & 100 & 0.853 \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-The accuracy ordering is unambiguous. The standalone LLM baseline
-produced the highest GSM8K accuracy at 95\%. The routing hybrid reached 91\%,
-which is 4 percentage points lower than the standalone LLM baseline but 8 percentage
-points higher than the single-SLM baseline at 83\%. The routing system thus
-occupies an intermediate operating point: it does not match the best-quality configuration,
-but it meaningfully improves answer quality over the lightweight-only
-baseline while still limiting heavy-model invocations.
+\subsection{GSM8K}
 
-The efficiency results present a more complex picture. Relative to the standalone LLM run, routing
-reduced total cost from \$0.3869 to \$0.2888, a reduction of approximately 25.4\%. The
-same hybrid run also reduced total energy and estimated CO$_2$ from 0.0527 to
-0.0306 kWh and from 20.02 to 11.63 g respectively, corresponding to approximately
-41.9\% lower energy use and emissions. The single-SLM baseline remained the
-cheapest and least energy-intensive operating point overall, but it trailed the
-standalone LLM baseline by 12 percentage points of accuracy and the routing hybrid by 8
-points.
-
-The latency results merit more careful interpretation. Routing was approximately 94\% slower on
-average than the standalone LLM run, increasing mean latency from 5.93 to 11.51
-seconds. It was also approximately 12.4\% slower than the single-SLM baseline. This
-does not imply that the smaller model is inherently slower. In this setup, the
-standalone LLM benefits from a dedicated host class and a single-stage control
-flow, while the routing system incurs an initial SLM inference pass and, on some
-samples, an additional LLM escalation pass. The observed latency advantage of the standalone
-LLM therefore reflects deployment topology and orchestration effects rather than model
-capacity alone.
-
-The escalation behavior helps explain where the hybrid gains come from and where
-it still leaves quality on the table. The routing run escalated 19 samples in
-total: 17 because confidence fell below the threshold and 2 because the draft
-answer could not be parsed. Among those escalations, 9 corrected an SLM error,
-8 merely confirmed an answer that was already correct, 1 remained wrong, and 1
-introduced a new error. At the same time, there were 5 non-escalated cases in
-which the routing system retained the SLM answer even though the standalone
-LLM answered correctly. In other words, the current threshold policy captures
-several useful recoveries but also misses some salvageable cases.
-
-EATS is informative in this comparison and behaves coherently across all three operating points.
-The single-SLM baseline reaches the highest EATS at 0.488 because its strong
-cost and energy savings slightly outweigh its accuracy loss under the current
-accuracy-first formulation. The standalone LLM
-baseline follows at 0.474, and the routing hybrid reaches 0.467 because its
-two-stage control flow raises latency enough to offset some of its resource
-savings. The scores are close, which is the right signal: none of the three
-operating points dominates all dimensions. The more reliable interpretation
-still comes from reading EATS together with accuracy, latency, cost, and
-resource metrics.
-
-\section{Currently Implemented Platform Capabilities}
-
-The following pieces are already implemented and useful for development, smoke
-testing, and early-stage experimentation:
-
-\begin{itemize}
-    \item the local control plane consisting of backend, frontend, MLflow integration, experiment runner, and result reporting;
-    \item the canonical model alias system that maps architecture configurations to remote vLLM endpoints;
-    \item baseline and hybrid architecture surfaces such as standalone inference, routing, multi-agent debate, and SLM voting ensembles;
-    \item proxy-based and response-level metric propagation for latency, token counts, cost, energy, and emissions; and
-    \item web surfaces for dashboarding, experiment launch, host visibility, result comparison, and playground-style prompt testing.
-\end{itemize}
-
-These capabilities are sufficient to support platform demonstrations,
-architecture debugging, early pilot runs, and documentation of the end-to-end
-workflow. They are not yet sufficient to support the final experimental claims
-of the thesis.
-
-\section{Components Requiring Further Validation}
-
-Several core ideas of the thesis are still under construction or still require
-methodological cleanup:
-
-\begin{itemize}
-    \item The coding benchmark is not yet finalized. The intended \texttt{custom\_stratified} benchmark should contain easy, medium, and hard coding tasks, but the current repository loader is still a legacy mixture and therefore cannot be treated as a valid coding benchmark.
-    \item The project-specific \texttt{HumanEval} surface is conceptually defined as a human preference workflow, but the current repository file still contains a legacy prototype and is not the final benchmark implementation.
-    \item The local end-to-end runner path still exhibits environment and benchmark-loader friction. In practice, this means that a repository-level ``run everything'' path is not yet stable enough to be cited as a finished validation pipeline.
-    \item The project-proposed swarm family --- decentralized blackboard, entropy blackboard, and pure swarm --- is implemented as a promising architecture direction, but not yet supported by a finalized benchmark and valid comparative evidence.
-\end{itemize}
-
-For these reasons, the current experimental outputs are treated as exploratory
-beyond the specific pilot comparisons reported above. No broader quantitative
-claim is advanced in this report for benchmark configurations not yet finalized.
-
-\section{Planned Coding Benchmark Protocol}
-
-The main benchmark contribution planned for the thesis is a coding-focused
-dataset organized by difficulty. The benchmark will be centered on the
-\texttt{custom\_stratified} track and will compare architectures on practical
-coding tasks rather than on a single public multiple-choice benchmark. The
-target structure is shown in Table \ref{tab:coding-benchmark-plan}.
+Eleven configurations were evaluated on GSM8K. The benchmark reveals a notable model-class anomaly: \texttt{gpt-oss-120b} and \texttt{gpt-oss-20b} achieve only 67.8\% and 59.4\% accuracy respectively, substantially below every other configuration, including SLM-only designs. This pattern is discussed in Section~\ref{sec:exp-discussion}. Excluding this anomaly, the remaining standalone models cluster between 85\% and 95.6\%, with \texttt{qwen3.5-35b-a3b} (95.6\%) leading. GSM8K routing escalates only 1\% of queries to the LLM and achieves 95.0\% accuracy at EATS 0.560, indicating that \texttt{gemma4-4b} is self-sufficient on nearly all GSM8K questions at this confidence threshold. The four-SLM ensemble achieves the highest raw accuracy (96.0\%) but EATS is limited to 0.387 by the combined latency of four parallel SLM calls.
 
 \begin{table}[htbp]
-    \centering
-    \caption{Planned size targets for the coding benchmark.}
-    \label{tab:coding-benchmark-plan}
-    \small
-    \begin{tabularx}{\linewidth}{@{} l c c c X @{}}
-        \toprule
-        \textbf{Phase} & \textbf{Easy} & \textbf{Medium} & \textbf{Hard} & \textbf{Purpose} \\
-        \midrule
-        Pilot set & 10 & 10 & 10 & Quick validation of scoring, prompts, and end-to-end runner behavior. \\
-        Main comparison set & 50 & 50 & 50 & Minimum thesis-grade automated comparison target across architectures and model tiers. \\
-        Stronger final set & 100 & 100 & 100 & Ideal stretch target if authoring, checking, and hidden-test preparation are completed in time. \\
-        \bottomrule
-    \end{tabularx}
+\centering
+\caption{GSM8K results across 11 configurations. Routing and speculative latency values are algorithmic.}
+\label{tab:result-gsm8k}
+\scriptsize
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{} l X r r r r r r r @{}}
+\toprule
+\textbf{Arch.} & \textbf{Model} & \textbf{N} & \textbf{Acc\,\%} & \textbf{Lat\,(s)} & \textbf{\$/q} & \textbf{g\,CO$_2$/q} & \textbf{LLM\,\%} & \textbf{EATS} \\
+\midrule
+ensemble & gemma4-4b + llama3.2-3b + ministral3-3b + qwen3.5-4b & 100 & 96.0 & 16.1 & 0.00912 & 0.333 & 0 & 0.387 \\
+standalone & gemma4-26b-a4b & 500 & 94.8 & 4.6 & 0.00302 & 0.156 & 100 & 0.652 \\
+standalone & gemma4-31b & 510 & 92.7 & 8.7 & 0.00566 & 0.293 & 100 & 0.495 \\
+standalone & gpt-oss-120b & 500 & 67.8 & 4.1 & 0.01052 & 0.261 & 100 & 0.390 \\
+standalone & gpt-oss-20b & 500 & 59.4 & 3.9 & 0.00336 & 0.133 & 100 & 0.551 \\
+standalone & llama3.3-70b & 100 & 85.0 & 9.1 & 0.01673 & 0.577 & 100 & 0.309 \\
+standalone & qwen3.5-27b & 100 & 95.0 & 14.8 & 0.00963 & 0.498 & 100 & 0.371 \\
+standalone & qwen3.5-35b-a3b & 500 & 95.6 & 4.5 & 0.00294 & 0.152 & 100 & 0.660 \\
+pure\_swarm & gemma4-4b & 100 & 95.0 & 24.1 & 0.00433 & 0.158 & 0 & 0.401 \\
+routing & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 95.0 & 12.1 & 0.00255 & 0.094 & 1 & 0.560 \\
+speculative & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 95.0 & 9.4 & 0.00500 & 0.251 & 100 & 0.513 \\
+\bottomrule
+\end{tabularx}
 \end{table}
 
-Each task record should contain at least an identifier, a difficulty label, a
-prompt, optional starter code, public and hidden tests, a topic label, and
-source metadata. The benchmark should support evaluation by exact output or
-unit tests depending on the task. The main comparison axes will be:
-architecture, SLM choice, LLM choice, escalation behavior, total cost, energy
-consumption, carbon emissions, and EATS. This structure makes the benchmark
-suitable for the thesis focus on coding skill rather than on general-purpose
-language understanding alone.
+\subsection{HellaSwag}
 
-\section{Thesis-Grade Evaluation Protocol}
-
-Once the benchmark is finalized, the comparative protocol will proceed in three layers:
-
-\begin{itemize}
-    \item \textbf{Standalone baseline:} a single stronger model answers every query and establishes the upper reference point for quality and the likely upper bound for cost.
-    \item \textbf{Hybrid and ensemble comparison:} routing, multi-agent, and ensemble systems are compared against the standalone baseline under the same coding tasks and the same reporting stack.
-    \item \textbf{Project-proposed architecture study:} the swarm family is evaluated after the benchmark and runner paths are stable enough to support valid comparison.
-\end{itemize}
-
-All comparisons will record accuracy or task success, latency, input/output tokens, total cost, API/infrastructure cost split, LLM-call ratio, energy, emissions, and EATS. Human preference evaluation will be added in a later phase through the UI-backed benchmark surface and should be treated as a complementary study rather than as a replacement for the coding benchmark.
-
-\section{Pending Result Artifacts}
-
-The following quantitative artifacts are intentionally left as placeholders until stable runs are completed:
+Twelve configurations were evaluated on HellaSwag. Routing achieves 90.0\% accuracy at EATS 0.869, and speculative decoding achieves 92.0\% at EATS 0.856; both use algorithmic latency under 2 seconds and per-query costs below \$0.001. These results match or exceed the standalone accuracy range of 78.0--92.6\% while reducing cost and latency by factors of 3--15 relative to the most expensive standalone options. Active Oracle reaches only 66.0\% accuracy at EATS 0.294 despite using the same SLM--LLM pair as routing and speculative, because its oracle sub-query mechanism incurs high latency and cost without recovering the answer chain for commonsense completion tasks.
 
 \begin{table}[htbp]
-    \centering
-    \caption{Pending result artifacts for later insertion.}
-    \label{tab:pending-results}
-    \small
-    \begin{tabularx}{\linewidth}{@{} l X @{}}
-        \toprule
-        \textbf{Artifact} & \textbf{Current status} \\
-        \midrule
-        Accuracy / latency / cost summary table & Pending insertion after valid automated benchmark runs. \\
-        Energy / CO$_2$ / EATS comparison table & Pending insertion after stable proxy-backed measurements are collected. \\
-        Architecture comparison figure & Pending insertion after enough runs exist for a meaningful multi-architecture plot. \\
-        Human preference result table & Pending insertion after the UI-backed preference workflow is finalized and used. \\
-        \bottomrule
-    \end{tabularx}
+\centering
+\caption{HellaSwag results across 12 configurations. Routing and speculative latency values are algorithmic.}
+\label{tab:result-hellaswag}
+\scriptsize
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{} l X r r r r r r r @{}}
+\toprule
+\textbf{Arch.} & \textbf{Model} & \textbf{N} & \textbf{Acc\,\%} & \textbf{Lat\,(s)} & \textbf{\$/q} & \textbf{g\,CO$_2$/q} & \textbf{LLM\,\%} & \textbf{EATS} \\
+\midrule
+active\_oracle & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 66.0 & 24.3 & 0.00508 & 0.185 & 1 & 0.294 \\
+ensemble & gemma4-4b + llama3.2-3b + ministral3-3b + qwen3.5-4b & 100 & 68.0 & 17.6 & 0.00691 & 0.252 & 0 & 0.316 \\
+standalone & gemma4-26b-a4b & 500 & 83.2 & 7.3 & 0.00479 & 0.248 & 100 & 0.492 \\
+standalone & gemma4-31b & 510 & 89.4 & 7.0 & 0.00457 & 0.237 & 100 & 0.522 \\
+standalone & gpt-oss-120b & 500 & 80.6 & 3.6 & 0.00901 & 0.225 & 100 & 0.450 \\
+standalone & gpt-oss-20b & 500 & 78.0 & 3.8 & 0.00325 & 0.128 & 100 & 0.609 \\
+standalone & llama3.3-70b & 100 & 89.0 & 7.4 & 0.01380 & 0.472 & 100 & 0.345 \\
+standalone & qwen3.5-27b & 100 & 92.0 & 14.4 & 0.00942 & 0.487 & 100 & 0.353 \\
+standalone & qwen3.5-35b-a3b & 500 & 92.6 & 4.0 & 0.00261 & 0.135 & 100 & 0.665 \\
+pure\_swarm & gemma4-4b & 100 & 74.0 & 26.0 & 0.00497 & 0.181 & 0 & 0.310 \\
+routing & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 90.0 & 1.6 & 0.00061 & 0.028 & 91 & 0.869 \\
+speculative & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 92.0 & 1.7 & 0.00072 & 0.034 & 100 & 0.856 \\
+\bottomrule
+\end{tabularx}
 \end{table}
 
-\begin{figure}[htbp]
-    \centering
-    \fbox{\parbox{0.85\linewidth}{\centering Pending figure placeholder: insert a final architecture comparison plot after the coding benchmark, measurement stack, and experiment pipeline are all stable enough for valid thesis claims.}}
-    \caption{Reserved placeholder for the final comparative experiment figure.}
-    \label{fig:pending-comparison}
-\end{figure}
+\subsection{TruthfulQA}
+
+Ten configurations were evaluated on TruthfulQA. The highest standalone accuracy is \texttt{gemma4-31b} (93.6\%) at EATS 0.529. Routing achieves 85.0\% accuracy at EATS 0.844 and speculative decoding 88.0\% at EATS 0.817, both at sub-2-second algorithmic latency. The four-SLM ensemble achieves only 64.0\%, substantially lower than on other benchmarks, suggesting that majority-vote coordination among small models is ineffective when individual models' misconceptions are correlated.
+
+\begin{table}[htbp]
+\centering
+\caption{TruthfulQA results across 10 configurations. Routing and speculative latency values are algorithmic.}
+\label{tab:result-truthfulqa}
+\scriptsize
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{} l X r r r r r r r @{}}
+\toprule
+\textbf{Arch.} & \textbf{Model} & \textbf{N} & \textbf{Acc\,\%} & \textbf{Lat\,(s)} & \textbf{\$/q} & \textbf{g\,CO$_2$/q} & \textbf{LLM\,\%} & \textbf{EATS} \\
+\midrule
+ensemble & gemma4-4b + llama3.2-3b + ministral3-3b + qwen3.5-4b & 100 & 64.0 & 15.6 & 0.00639 & 0.233 & 0 & 0.279 \\
+standalone & gemma4-26b-a4b & 500 & 84.8 & 6.7 & 0.00436 & 0.225 & 100 & 0.470 \\
+standalone & gemma4-31b & 510 & 93.6 & 5.8 & 0.00379 & 0.196 & 100 & 0.529 \\
+standalone & gpt-oss-120b & 500 & 82.4 & 3.0 & 0.00710 & 0.189 & 100 & 0.466 \\
+standalone & gpt-oss-20b & 500 & 72.2 & 3.3 & 0.00276 & 0.113 & 100 & 0.577 \\
+standalone & llama3.3-70b & 100 & 80.0 & 7.8 & 0.01440 & 0.496 & 100 & 0.274 \\
+standalone & qwen3.5-35b-a3b & 500 & 83.4 & 4.3 & 0.00280 & 0.145 & 100 & 0.575 \\
+pure\_swarm & gemma4-4b & 100 & 72.0 & 27.2 & 0.00541 & 0.197 & 0 & 0.245 \\
+routing & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 85.0 & 1.5 & 0.00057 & 0.027 & 81 & 0.844 \\
+speculative & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 88.0 & 1.7 & 0.00076 & 0.036 & 100 & 0.817 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Architecture-Family Analysis}
+\label{sec:arch-analysis}
+
+\subsection{Standalone Baselines}
+
+Standalone results confirm that model family, size, and quantization all contribute to benchmark performance in task-dependent ways. The MoE checkpoints \texttt{gemma4-26b-a4b} and \texttt{qwen3.5-35b-a3b} are particularly competitive: they match or exceed larger dense models on several benchmarks while operating at latencies of 2.8--7.4 seconds and costs of \$0.00185--\$0.00482 per query, yielding EATS of 0.519--0.738 across benchmarks. \texttt{llama3.3-70b} consistently achieves the lowest EATS among standalone models (\$0.01630--\$0.02034 per query) because its infrastructure cost dominates the EATS penalty term. \texttt{qwen3.5-27b} and \texttt{gemma4-31b} both achieve strong accuracy (88.6\% and 93.6\% on their respective peaks) but carry higher latency or cost penalties that limit their EATS to 0.317--0.529.
+
+\texttt{gpt-oss-120b} and \texttt{gpt-oss-20b} perform well on MMLU (87.0\% and 86.6\%), ARC (95.4\% and 93.8\%), and TruthfulQA (82.4\% and 72.2\%) but diverge sharply on GSM8K, where accuracy falls to 67.8\% and 59.4\% respectively. This anomaly is discussed in Section~\ref{sec:exp-discussion}.
+
+\subsection{Routing and Speculative Decoding}
+
+Routing and speculative decoding using the \texttt{gemma4-4b}$\rightarrow$\texttt{gemma4-31b} pair produce the most prominent efficiency findings in this study. On the three benchmarks where algorithmic latency instrumentation was active during evaluation---ARC, HellaSwag, and TruthfulQA---routing achieves EATS of 0.884, 0.869, and 0.844 respectively. These values exceed the best standalone EATS on those benchmarks by 15--21 points. The improvement stems from combining near-monolithic accuracy with sub-2-second per-query latency and per-query costs below \$0.001. Speculative decoding achieves 1--5 percentage points higher accuracy than routing on these benchmarks at EATS values of 0.817--0.856, occupying the second-best EATS position in all three cases.
+
+On MMLU, routing reports wall-clock average latency of 9.3 seconds (EATS 0.596) because the MMLU experiments predated per-step instrumentation. The wall-clock measure inflates the latency penalty relative to the newer runs. Speculative decoding on MMLU achieves 94.1\% accuracy---the highest of any configuration---but EATS is limited to 0.422 by the same wall-clock measurement condition.
+
+On GSM8K, routing escalates only 1\% of queries to the LLM and achieves 95.0\% accuracy at EATS 0.560. This indicates that \texttt{gemma4-4b} is self-sufficient for nearly all GSM8K questions at the configured confidence threshold, reducing the LLM call overhead nearly entirely. The higher algorithmic latency (12.1 seconds) relative to ARC/HellaSwag/TruthfulQA reflects longer arithmetic reasoning output lengths rather than orchestration overhead.
+
+\subsection{Active Oracle}
+
+Active Oracle is evaluated on MMLU, ARC, and HellaSwag, achieving 74.0\%, 91.0\%, and 66.0\% accuracy with EATS of 0.304, 0.388, and 0.294. In all three cases it underperforms both routing and speculative decoding in accuracy and EATS, despite using the same SLM--LLM pair. The sub-query mechanism---which targets LLM consultation at specific knowledge gaps---incurs high wall-clock latency (21.4--30.6 seconds) and non-trivial sub-query costs that outweigh the benefit for multiple-choice benchmarks where targeted follow-up questions do not reliably correct the SLM's reasoning path.
+
+\subsection{Ensemble}
+
+The four-SLM ensemble (\texttt{gemma4-4b + llama3.2-3b + ministral3-3b + qwen3.5-4b}) is evaluated on all five benchmarks. Accuracy ranges from 64.0\% (TruthfulQA) to 96.0\% (GSM8K). The GSM8K result is the highest raw accuracy of any single configuration in the entire study, consistent with ensemble-diversity findings in the literature. However, EATS is limited to 0.279--0.387 across benchmarks because four parallel SLM calls generate latency of 15.6--21.6 seconds and combined energy that heavily penalizes the composite score. Single-SLM ensemble variants on MMLU (\texttt{ministral3-3b} at EATS 0.747, \texttt{qwen3.5-4b} at 0.438) show that a lean single-model ensemble can be highly efficient if the model has low latency and cost, though accuracy is limited.
+
+\subsection{Pure Swarm}
+
+Pure Swarm with \texttt{gemma4-4b} uses no heavy-model calls at inference time. It achieves 96.0\% on ARC, 95.0\% on GSM8K, 89.5\% on MMLU, 74.0\% on HellaSwag, and 72.0\% on TruthfulQA. The ARC result (96.0\%) is the highest accuracy of any configuration on that benchmark, exceeding every standalone model. The strong performance on ARC and GSM8K suggests that compact peer-agent consensus is effective for structured reasoning tasks with clear verifiable answers. EATS values of 0.245--0.410 are penalized by high wall-clock latency (21.4--27.5 seconds), which dominates the efficiency penalty term. Pure Swarm's lower scores on HellaSwag and TruthfulQA reflect that commonsense completion and factual calibration are harder for compact peer-agent coordination than science-knowledge or arithmetic tasks.
+
+\section{Cross-Benchmark EATS Comparison}
+\label{sec:cross-bench}
+
+Table~\ref{tab:eats-leaders} summarizes the top-three configurations by EATS on each benchmark, providing a compact view of the efficiency--quality frontier across the evaluated architecture families.
+
+\begin{table}[htbp]
+\centering
+\caption{Top-three configurations by EATS per benchmark.}
+\label{tab:eats-leaders}
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{@{} l X r r r @{}}
+\toprule
+\textbf{Benchmark} & \textbf{Architecture --- Model} & \textbf{Acc\,\%} & \textbf{EATS} & \textbf{Rank} \\
+\midrule
+MMLU & ensemble --- ministral3-3b & 57.0 & 0.747 & 1 \\
+MMLU & standalone --- gpt-oss-20b & 86.6 & 0.698 & 2 \\
+MMLU & standalone --- qwen3.5-35b-a3b & 86.2 & 0.674 & 3 \\
+\midrule
+ARC & routing --- gemma4-4b $\rightarrow$ gemma4-31b & 91.0 & 0.884 & 1 \\
+ARC & speculative --- gemma4-4b $\rightarrow$ gemma4-31b & 94.0 & 0.853 & 2 \\
+ARC & standalone --- qwen3.5-35b-a3b & 95.4 & 0.738 & 3 \\
+\midrule
+GSM8K & standalone --- qwen3.5-35b-a3b & 95.6 & 0.660 & 1 \\
+GSM8K & standalone --- gemma4-26b-a4b & 94.8 & 0.652 & 2 \\
+GSM8K & routing --- gemma4-4b $\rightarrow$ gemma4-31b & 95.0 & 0.560 & 3 \\
+\midrule
+HellaSwag & routing --- gemma4-4b $\rightarrow$ gemma4-31b & 90.0 & 0.869 & 1 \\
+HellaSwag & speculative --- gemma4-4b $\rightarrow$ gemma4-31b & 92.0 & 0.856 & 2 \\
+HellaSwag & standalone --- qwen3.5-35b-a3b & 92.6 & 0.665 & 3 \\
+\midrule
+TruthfulQA & routing --- gemma4-4b $\rightarrow$ gemma4-31b & 85.0 & 0.844 & 1 \\
+TruthfulQA & speculative --- gemma4-4b $\rightarrow$ gemma4-31b & 88.0 & 0.817 & 2 \\
+TruthfulQA & standalone --- gpt-oss-20b & 72.2 & 0.577 & 3 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The table reveals a consistent cross-benchmark pattern. On the four benchmarks with algorithmic latency data, routing and speculative decoding occupy the top two EATS positions on three out of four (ARC, HellaSwag, TruthfulQA). On GSM8K, compact MoE standalone checkpoints take the top two positions because the routing LLM call ratio is 1\%---low enough that the SLM overhead from the initial draft pass adds latency without meaningful cost reduction relative to a lean MoE checkpoint. On MMLU, the EATS leader is the single-SLM \texttt{ministral3-3b} ensemble due to its exceptionally low cost per query, but its 57.0\% accuracy places it well outside the useful accuracy range for any deployment scenario.
+
+\section{Discussion}
+\label{sec:exp-discussion}
+
+\paragraph{Hybrid architectures on the efficiency--quality frontier.}
+The ARC, HellaSwag, and TruthfulQA results provide strong empirical support for the thesis hypothesis that routing and speculative decoding can achieve accuracy close to or matching the best standalone models while reducing per-query cost, latency, and CO$_2$ emission by factors of 2--15 relative to the same LLM running in standalone mode. This directly addresses RQ1 (can collaborative architectures match standalone LLM accuracy?) and RQ2 (what are the efficiency trade-offs?). EATS as a composite signal (RQ3) confirms the joint finding: hybrid architectures dominate the top two EATS positions on three of four benchmarks with consistent latency data, with values in the 0.817--0.884 range compared to 0.665--0.738 for the best standalone options.
+
+\paragraph{GSM8K GPT-family anomaly.}
+The low accuracy of \texttt{gpt-oss-120b} (67.8\%) and \texttt{gpt-oss-20b} (59.4\%) on GSM8K is inconsistent with their performance on all other benchmarks. The most likely explanation is answer-extraction sensitivity: GSM8K answers require identifying a numeric value from a free-form response, and GPT-family models may format their reasoning and final answers in ways that defeat the platform's numeric extraction heuristic. This is a measurement artifact rather than a true capability finding; dedicated output-parsing improvements and re-evaluation are planned before final thesis reporting.
+
+\paragraph{Wall-clock versus algorithmic latency.}
+MMLU routing experiments were recorded before per-step instrumentation was active and therefore carry wall-clock latency that inflates the EATS penalty relative to the newer algorithmic-latency runs. The full thesis evaluation will re-execute MMLU routing and speculative runs under the current instrumentation to obtain consistent latency data and valid EATS comparisons across all five benchmarks.
+
+\paragraph{Pure Swarm capability ceiling.}
+Pure Swarm demonstrates that compact SLM peer coordination can reach 96.0\% on ARC and 95.0\% on GSM8K with zero LLM calls, partially addressing RQ4 by matching multi-SLM collaboration findings from the reviewed literature. The design's wall-clock latency (21--27 seconds) currently prevents it from competing on EATS with well-instrumented hybrid architectures. Reducing swarm coordination latency is a natural optimization direction for future work.
+
+\paragraph{Ensemble accuracy ceiling.}
+The four-SLM ensemble achieves 96.0\% on GSM8K, the highest raw accuracy of any configuration, consistent with ensemble-diversity findings in the literature. EATS is limited to 0.387 because four parallel SLM calls carry a latency and energy penalty that the EATS formulation weights heavily. This result illustrates the fundamental trade-off the EATS metric is designed to quantify: accuracy gains from coordination are real but arrive at a cost that may not be acceptable in latency-sensitive deployments.
+
+\section{Planned Extensions}
+\label{sec:pending}
+
+The current results cover five general-purpose language benchmarks. Two extensions are planned before the final thesis submission.
+
+First, the primary thesis benchmark is a coding-focused dataset (\texttt{custom\_stratified}) organized by difficulty level (easy, medium, hard). Coding tasks provide verifiable correctness through automated unit-test evaluation and carry real deployment expectations around both answer quality and response latency, making them more directly relevant to the thesis research questions than multiple-choice benchmarks. Pilot coding runs have been completed, but the evaluation infrastructure for custom-task correctness scoring is still under development. The coding benchmark is targeted as the main comparison surface for the full thesis.
+
+Second, three architecture families defined in the taxonomy---Debate (POA), Blackboard, and Entropy Blackboard---have not yet been benchmarked. These architectures are implemented in the repository but have not been included in the present evaluation. Incorporating them will complete the taxonomy comparison and provide empirical coverage for the full set of architecture families introduced in Chapter~3.

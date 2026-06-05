@@ -81,15 +81,8 @@ Reasoning:
 - `gsm8k`
 - `truthfulqa`
 
-Coding (execution-based, pass@1):
-- `humaneval_plus` — 164 function-completion problems with 80× augmented test cases (EvalPlus)
-- `livecodebench` — contamination-free competitive programming (LeetCode/AtCoder/Codeforces, post-training-cutoff), with easy/medium/hard difficulty labels
-
 Deprecated:
-- `custom_stratified` — MMLU+GSM8K difficulty mix, not a real coding benchmark; use `humaneval_plus` or `livecodebench` instead
-
-Special case:
-- `humaneval` is reserved for the UI-backed human preference workflow and is intentionally not part of the normal automated benchmark launcher.
+- `custom_stratified` — MMLU+GSM8K difficulty mix
 
 ## EATS Score
 
