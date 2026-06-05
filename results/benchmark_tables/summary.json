@@ -1,33 +1,39 @@
 {
-  "generated_at": "2026-06-05T17:54:54.961828+00:00",
+  "generated_at": "2026-06-05T18:04:49.568776+00:00",
   "cutoff": "2026-05-27T23:59:59+00:00",
   "benchmarks": {
     "arc": {
-      "n_configs": 10,
+      "n_configs": 12,
       "architectures": [
         "active_oracle",
         "ensemble",
         "monolithic",
-        "pure_swarm"
+        "pure_swarm",
+        "routing",
+        "speculative"
       ],
       "output": "/Users/bakiceltik/Documents/GitHub/Final_Project_Monorepo/scripts/../results/benchmark_tables/benchmark_arc.json"
     },
     "gsm8k": {
-      "n_configs": 9,
+      "n_configs": 11,
       "architectures": [
         "ensemble",
         "monolithic",
-        "pure_swarm"
+        "pure_swarm",
+        "routing",
+        "speculative"
       ],
       "output": "/Users/bakiceltik/Documents/GitHub/Final_Project_Monorepo/scripts/../results/benchmark_tables/benchmark_gsm8k.json"
     },
     "hellaswag": {
-      "n_configs": 10,
+      "n_configs": 12,
       "architectures": [
         "active_oracle",
         "ensemble",
         "monolithic",
-        "pure_swarm"
+        "pure_swarm",
+        "routing",
+        "speculative"
       ],
       "output": "/Users/bakiceltik/Documents/GitHub/Final_Project_Monorepo/scripts/../results/benchmark_tables/benchmark_hellaswag.json"
     },
@@ -59,11 +65,13 @@
       "output": "/Users/bakiceltik/Documents/GitHub/Final_Project_Monorepo/scripts/../results/benchmark_tables/benchmark_mmlu.json"
     },
     "truthfulqa": {
-      "n_configs": 8,
+      "n_configs": 10,
       "architectures": [
         "ensemble",
         "monolithic",
-        "pure_swarm"
+        "pure_swarm",
+        "routing",
+        "speculative"
       ],
       "output": "/Users/bakiceltik/Documents/GitHub/Final_Project_Monorepo/scripts/../results/benchmark_tables/benchmark_truthfulqa.json"
     }

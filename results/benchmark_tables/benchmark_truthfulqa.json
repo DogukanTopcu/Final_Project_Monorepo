@@ -1,7 +1,7 @@
 {
   "benchmark": "truthfulqa",
-  "generated_at": "2026-06-05T17:54:54.961591+00:00",
-  "n_unique_configs": 8,
+  "generated_at": "2026-06-05T18:04:49.568520+00:00",
+  "n_unique_configs": 10,
   "entries": [
     {
       "architecture": "ensemble",
@@ -208,6 +208,56 @@
       "avg_energy_per_sample_kwh": 0.00052,
       "avg_co2_per_sample_g": 0.197494,
       "eats": 0.245179
+    },
+    {
+      "architecture": "routing",
+      "model_key": "gemma4-4b \u2192 gemma4-31b",
+      "slm": "gemma4-4b",
+      "llm": "gemma4-31b",
+      "ensemble_slms": [],
+      "n_experiments": 1,
+      "experiment_ids": [
+        "exp_51426888"
+      ],
+      "total_samples_evaluated": 100,
+      "accuracy": 0.85,
+      "llm_call_ratio": 0.81,
+      "avg_latency_ms": 1452.6573,
+      "latency_p50_ms": 1423.83,
+      "latency_p95_ms": 2361.28,
+      "avg_slm_confidence": 0.690243,
+      "escalation_rate": 0.81,
+      "avg_cost_per_sample_usd": 0.000572,
+      "avg_api_cost_per_sample_usd": 0.0,
+      "avg_infra_cost_per_sample_usd": 0.000572,
+      "avg_energy_per_sample_kwh": 7.1e-05,
+      "avg_co2_per_sample_g": 0.02688,
+      "eats": 0.844124
+    },
+    {
+      "architecture": "speculative",
+      "model_key": "gemma4-4b \u2192 gemma4-31b",
+      "slm": "gemma4-4b",
+      "llm": "gemma4-31b",
+      "ensemble_slms": [],
+      "n_experiments": 1,
+      "experiment_ids": [
+        "exp_0759858a"
+      ],
+      "total_samples_evaluated": 100,
+      "accuracy": 0.88,
+      "llm_call_ratio": 1.0,
+      "avg_latency_ms": 1733.4028,
+      "latency_p50_ms": 1699.62,
+      "latency_p95_ms": 2296.98,
+      "avg_slm_confidence": 0.797533,
+      "escalation_rate": 0.98,
+      "avg_cost_per_sample_usd": 0.000756,
+      "avg_api_cost_per_sample_usd": 0.0,
+      "avg_infra_cost_per_sample_usd": 0.000756,
+      "avg_energy_per_sample_kwh": 9.6e-05,
+      "avg_co2_per_sample_g": 0.036428,
+      "eats": 0.816841
     }
   ]
 }
