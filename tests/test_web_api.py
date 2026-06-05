@@ -55,7 +55,6 @@ def test_benchmarks_endpoint_matches_active_benchmarks(client: TestClient):
     benchmark_ids = {item["id"] for item in response.json()}
     assert benchmark_ids == {
         "mmlu", "arc", "hellaswag", "gsm8k", "truthfulqa",
-        "humaneval_plus", "livecodebench",
         "custom_stratified",
     }
 
@@ -111,23 +110,6 @@ def test_launch_accepts_ensemble_architecture(client: TestClient):
         json={
             "architecture": "ensemble",
             "benchmark": "mmlu",
-            "n_samples": 5,
-            "slm": "qwen3.5-4b",
-            "llm": "gpt-oss-20b",
-            "config_overrides": {"dry_run": True},
-        },
-    )
-
-    assert response.status_code == 200
-
-
-@pytest.mark.parametrize("benchmark", ["humaneval_plus", "livecodebench"])
-def test_launch_accepts_coding_benchmarks(client: TestClient, benchmark: str):
-    response = client.post(
-        "/api/experiments",
-        json={
-            "architecture": "routing",
-            "benchmark": benchmark,
             "n_samples": 5,
             "slm": "qwen3.5-4b",
             "llm": "gpt-oss-20b",

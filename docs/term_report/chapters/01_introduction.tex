@@ -2,18 +2,18 @@
 
 \section{Motivation}
 
-Large language models have achieved state-of-the-art performance across reasoning, coding, and multimodal tasks, but their computational requirements remain substantial~\cite{egi2025,wang2024slmsurvey,chen2025collabmech}. Serving a frontier model demands high-end GPU infrastructure, creates dependence on cloud providers, and carries non-trivial energy, cost, and latency overhead~\cite{energytoken2025,qwqrouting2025,tigani2025cpu}. Small language models offer an appealing alternative for latency-sensitive or resource-constrained settings, yet they consistently trail frontier models on broad reasoning tasks~\cite{egi2025,dorfner2024comparing}. Recent research therefore asks not which model is best, but which \emph{architecture} provides the best capability--efficiency trade-off under real deployment conditions: the central question is one of systems design, not model selection~\cite{hao2024hybrid,shao2025dot,multiagent2025}.
+Large language models have achieved state-of-the-art performance across reasoning and multimodal tasks, but their computational requirements remain substantial~\cite{egi2025,wang2024slmsurvey,chen2025collabmech}. Serving a frontier model demands high-end GPU infrastructure, creates dependence on cloud providers, and carries non-trivial energy, cost, and latency overhead~\cite{energytoken2025,qwqrouting2025,tigani2025cpu}. Small language models offer an appealing alternative for latency-sensitive or resource-constrained settings, yet they consistently trail frontier models on broad reasoning tasks~\cite{egi2025,dorfner2024comparing}. Recent research therefore asks not which model is best, but which \emph{architecture} provides the best capability--efficiency trade-off under real deployment conditions: the central question is one of systems design, not model selection~\cite{hao2024hybrid,shao2025dot,multiagent2025}.
 
 A systematic literature review conducted as part of this project synthesized 54 primary studies on collaborative SLM--LLM architectures under a PRISMA 2020-guided protocol~\cite{slrmanuscript2026}. That review confirmed a strong and ongoing shift toward hybrid and multi-agent designs in which small models handle routine sub-tasks while large models are invoked selectively for escalation, verification, or arbitration. It also identified a clear reporting asymmetry: accuracy is quantified in nearly every study, while cost, latency, and energy are treated as secondary observations and are frequently omitted altogether. No included study provided a unified comparison of multiple architecture families under a shared measurement policy. This asymmetry---and the absence of a shared evaluation framework---directly motivates the platform design described in this report.
 
-The thesis project described in this term report responds to that gap with a measurement-first experiment platform. Every architecture receives the same \texttt{Query} object and returns the same \texttt{Response} object, ensuring that monolithic, hybrid, ensemble, and swarm-style strategies are evaluated on identical inputs under identical reporting conditions. Accuracy, latency, token usage, cost, energy, and carbon are all treated as first-class outcomes rather than secondary diagnostics. To rank architectures across all these dimensions simultaneously, the platform introduces EATS (Efficiency-Adjusted Task Score; a composite of accuracy, cost, latency, and energy), a unified quality--efficiency signal. Coding tasks serve as the primary benchmark domain because they provide verifiable correctness through automated evaluation and carry real deployment expectations around both answer quality and response latency.
+The thesis project described in this term report responds to that gap with a measurement-first experiment platform. Every architecture receives the same \texttt{Query} object and returns the same \texttt{Response} object, ensuring that monolithic, hybrid, ensemble, and swarm-style strategies are evaluated on identical inputs under identical reporting conditions. Accuracy, latency, token usage, cost, energy, and carbon are all treated as first-class outcomes rather than secondary diagnostics. To rank architectures across all these dimensions simultaneously, the platform introduces EATS (Efficiency-Adjusted Task Score; a composite of accuracy, cost, latency, and energy), a unified quality--efficiency signal.
 
 \section{Research Questions}
 
 The platform is designed to address four empirical research questions:
 
 \begin{itemize}
-    \item \textbf{RQ1 (Performance):} Can SLM--LLM collaborative architectures match monolithic LLM accuracy on coding tasks under a shared benchmark and evaluation policy?
+    \item \textbf{RQ1 (Performance):} Can SLM--LLM collaborative architectures match monolithic LLM accuracy on reasoning tasks under a shared benchmark and evaluation policy?
 
     \item \textbf{RQ2 (Efficiency):} What are the cost, latency, and energy trade-offs across monolithic, hybrid, ensemble, and multi-SLM orchestration families when evaluated on the same workload?
 
@@ -33,7 +33,7 @@ The current report focuses on four tightly connected goals:
 \begin{itemize}
     \item building a reproducible experiment platform for SLM--LLM architecture comparison, providing the shared infrastructure needed to address RQ1 and RQ2;
     \item grounding the platform design in the findings of the completed systematic literature review;
-    \item defining a coding-focused benchmark and evaluation protocol, including the EATS metric, as the primary instrument for addressing RQ3; and
+    \item defining a benchmark and evaluation protocol, including the EATS metric, as the primary instrument for addressing RQ3; and
     \item evaluating monolithic, hybrid, ensemble, and swarm-style orchestration families under the shared benchmark and measurement policy.
 \end{itemize}
 
@@ -46,10 +46,9 @@ This report makes the following contributions:
 \begin{itemize}
     \item a documented experiment platform that integrates remote model serving, a local control plane, experiment execution, reporting, and a web-based management interface;
     \item a measurement methodology that treats latency, token usage, cost, energy, and carbon as first-class outcomes, directly addressing the cost-energy reporting asymmetry identified in the companion systematic literature review~\cite{slrmanuscript2026};
-    \item a coding-benchmark evaluation centered on a project-specific \texttt{custom\_stratified} dataset with easy, medium, and hard difficulty levels; and
     \item a comparative evaluation of monolithic, hybrid, ensemble, and swarm-style architectures under a unified measurement policy, with EATS as the primary ranking instrument.
 \end{itemize}
 
 \section{Structure of the Report}
 
-Chapter~2 summarizes the relevant literature and synthesizes the findings of the systematic literature review into a term-report-friendly narrative; it precedes the methodology chapter because the platform design is derived from those findings rather than developed independently. Chapter~3 presents the methodology, including the software stack, the hardware topology, the architecture taxonomy, the benchmark semantics, and the measurement design. Chapter~4 presents the experimental study, covering the benchmark design, evaluation protocol, and results for the studied architecture families. Chapter~5 concludes with findings, limitations, and directions for future work.
+Chapter~2 summarizes the relevant literature and synthesizes the findings of the systematic literature review into a term-report-friendly narrative; it precedes the methodology chapter because the platform design is derived from those findings rather than developed independently. Chapter~3 presents the methodology, including the software stack, the hardware topology, the architecture taxonomy, and the measurement design. Chapter~4 presents the experimental study, covering the evaluation protocol and results for the studied architecture families. Chapter~5 concludes with findings, limitations, and directions for future work.

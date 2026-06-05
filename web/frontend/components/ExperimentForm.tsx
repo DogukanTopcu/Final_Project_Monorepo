@@ -269,8 +269,6 @@ export function ExperimentForm() {
                   <option value="hellaswag">HellaSwag</option>
                   <option value="gsm8k">GSM8K</option>
                   <option value="truthfulqa">TruthfulQA</option>
-                  <option value="humaneval_plus">HumanEval+</option>
-                  <option value="livecodebench">LiveCodeBench</option>
                   <option value="custom_stratified">Custom stratified coding</option>
                 </>
               )}
