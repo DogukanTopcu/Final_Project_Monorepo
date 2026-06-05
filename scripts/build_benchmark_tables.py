@@ -133,6 +133,59 @@ def aggregate_group(exps: list) -> dict:
     return result
 
 
+def compute_eats(
+    accuracy: float,
+    normalized_cost: float = 1.0,
+    normalized_latency: float = 1.0,
+    normalized_energy: float = 1.0,
+    w_cost: float = 0.5,
+    w_latency: float = 0.3,
+    w_energy: float = 0.2,
+) -> float:
+    acc = max(accuracy, 0.0)
+    penalty = (
+        w_cost * max(normalized_cost, 0.0)
+        + w_latency * max(normalized_latency, 0.0)
+        + w_energy * max(normalized_energy, 0.0)
+    )
+    denom = acc + penalty
+    return round(acc / denom, 6) if denom > 0 else 0.0
+
+
+def add_eats(entries: list) -> None:
+    """Compute EATS in-place. Reference = mean of monolithic entries per benchmark."""
+    mono = [e for e in entries if e["architecture"] == "monolithic"]
+    if not mono:
+        for e in entries:
+            e["eats"] = None
+        return
+
+    def _mean(field):
+        vals = [e[field] for e in mono if e.get(field) is not None]
+        return sum(vals) / len(vals) if vals else None
+
+    ref_cost = _mean("avg_cost_per_sample_usd")
+    ref_latency = _mean("avg_latency_ms")
+    ref_energy = _mean("avg_energy_per_sample_kwh")
+
+    for e in entries:
+        acc = e.get("accuracy")
+        cost = e.get("avg_cost_per_sample_usd")
+        latency = e.get("avg_latency_ms")
+        energy = e.get("avg_energy_per_sample_kwh")
+
+        if any(v is None for v in [acc, cost, latency, energy, ref_cost, ref_latency, ref_energy]):
+            e["eats"] = None
+            continue
+
+        e["eats"] = compute_eats(
+            accuracy=acc,
+            normalized_cost=cost / ref_cost if ref_cost else 1.0,
+            normalized_latency=latency / ref_latency if ref_latency else 1.0,
+            normalized_energy=energy / ref_energy if ref_energy else 1.0,
+        )
+
+
 def build_tables(experiments: list):
     # Group: benchmark → (architecture, model_key) → [experiments]
     by_bench = defaultdict(lambda: defaultdict(list))
@@ -150,6 +203,7 @@ def build_tables(experiments: list):
 
         # Sort: by architecture then model_key
         entries.sort(key=lambda x: (x["architecture"], x["model_key"]))
+        add_eats(entries)
 
         table = {
             "benchmark": benchmark,

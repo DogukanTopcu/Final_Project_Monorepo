@@ -346,6 +346,152 @@ the latency proxy, so the normalized latency values include orchestration
 overhead that will be separated in later runs with per-step algorithmic latency
 instrumentation.
 
+\section{Aggregate Benchmark Results}
+\label{sec:aggregate-benchmarks}
+
+Tables~\ref{tab:bench-mmlu} through \ref{tab:bench-coding} consolidate all evaluated configurations from the experiment registry. Each row is one unique architecture--model combination. \emph{Acc\,\%} is the fraction of samples answered correctly; \emph{Lat\,(s)} is the mean wall-clock latency per query in seconds; \emph{\$/q} and \emph{g\,CO$_{2}$/q} are the mean cost and estimated CO$_{2}$ emission per query; \emph{LLM\,\%} is the percentage of queries that invoked the heavy language model.
+
+\begin{table}[htbp]
+\centering
+\caption{MMLU results across 16 configurations.}
+\label{tab:bench-mmlu}
+\scriptsize
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{} l X r r r r r r r @{}}
+\toprule
+\textbf{Arch.} & \textbf{Model} & \textbf{N} & \textbf{Acc\,\%} & \textbf{Lat\,(s)} & \textbf{\$/q} & \textbf{g\,CO$_2$/q} & \textbf{LLM\,\%} & \textbf{EATS} \\
+\midrule
+active\_oracle & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 74.0 & 30.6 & 0.00659 & 0.245 & 21 & 0.304 \\
+ensemble & gemma4-4b + llama3.2-3b & 20 & 50.0 & 21.5 & 0.00491 & 0.179 & 0 & 0.292 \\
+ensemble & gemma4-4b + llama3.2-3b + ministral3-3b & 100 & 59.0 & 26.9 & 0.00561 & 0.205 & 0 & 0.286 \\
+ensemble & gemma4-4b + llama3.2-3b + ministral3-3b + qwen3.5-4b & 100 & 68.0 & 21.6 & 0.00942 & 0.344 & 0 & 0.299 \\
+ensemble & ministral3-3b & 100 & 57.0 & 3.5 & 0.00074 & 0.027 & 0 & 0.747 \\
+ensemble & qwen3.5-4b & 100 & 75.0 & 17.6 & 0.00367 & 0.134 & 0 & 0.438 \\
+monolithic & gemma4-26b-a4b & 500 & 86.4 & 5.2 & 0.00341 & 0.176 & 100 & 0.629 \\
+monolithic & gemma4-31b & 520 & 79.3 & 9.6 & 0.00627 & 0.324 & 100 & 0.458 \\
+monolithic & gpt-oss-120b & 500 & 87.0 & 3.4 & 0.00838 & 0.214 & 100 & 0.530 \\
+monolithic & gpt-oss-20b & 520 & 86.6 & 3.4 & 0.00286 & 0.116 & 100 & 0.698 \\
+monolithic & llama3.3-70b & 500 & 84.8 & 11.1 & 0.02034 & 0.700 & 100 & 0.289 \\
+monolithic & qwen3.5-27b & 510 & 88.6 & 19.5 & 0.01270 & 0.657 & 100 & 0.318 \\
+monolithic & qwen3.5-35b-a3b & 500 & 86.2 & 4.3 & 0.00279 & 0.144 & 100 & 0.674 \\
+pure\_swarm & gemma4-4b & 110 & 89.5 & 27.5 & 0.00528 & 0.192 & 0 & 0.379 \\
+routing & gemma4-4b $\rightarrow$ gemma4-31b & 240 & 84.0 & 9.3 & 0.00257 & 0.108 & 41 & 0.596 \\
+speculative & gemma4-4b $\rightarrow$ gemma4-31b & 260 & 94.1 & 18.9 & 0.00659 & 0.300 & 100 & 0.422 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{ARC results across 10 configurations.}
+\label{tab:bench-arc}
+\scriptsize
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{} l X r r r r r r r @{}}
+\toprule
+\textbf{Arch.} & \textbf{Model} & \textbf{N} & \textbf{Acc\,\%} & \textbf{Lat\,(s)} & \textbf{\$/q} & \textbf{g\,CO$_2$/q} & \textbf{LLM\,\%} & \textbf{EATS} \\
+\midrule
+active\_oracle & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 91.0 & 21.4 & 0.00451 & 0.166 & 4 & 0.388 \\
+ensemble & gemma4-4b + llama3.2-3b + ministral3-3b + qwen3.5-4b & 100 & 91.0 & 15.9 & 0.00698 & 0.254 & 0 & 0.388 \\
+monolithic & gemma4-26b-a4b & 500 & 95.4 & 7.4 & 0.00482 & 0.250 & 100 & 0.519 \\
+monolithic & gemma4-31b & 510 & 93.5 & 8.2 & 0.00537 & 0.278 & 100 & 0.487 \\
+monolithic & gpt-oss-120b & 500 & 95.4 & 2.7 & 0.00620 & 0.170 & 100 & 0.570 \\
+monolithic & gpt-oss-20b & 500 & 93.8 & 2.7 & 0.00210 & 0.091 & 100 & 0.729 \\
+monolithic & llama3.3-70b & 100 & 92.0 & 8.9 & 0.01630 & 0.562 & 100 & 0.309 \\
+monolithic & qwen3.5-27b & 100 & 95.0 & 13.9 & 0.00905 & 0.468 & 100 & 0.364 \\
+monolithic & qwen3.5-35b-a3b & 500 & 95.4 & 2.8 & 0.00185 & 0.096 & 100 & 0.738 \\
+pure\_swarm & gemma4-4b & 100 & 96.0 & 21.4 & 0.00401 & 0.146 & 0 & 0.410 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{GSM8K results across 9 configurations.}
+\label{tab:bench-gsm8k-full}
+\scriptsize
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{} l X r r r r r r r @{}}
+\toprule
+\textbf{Arch.} & \textbf{Model} & \textbf{N} & \textbf{Acc\,\%} & \textbf{Lat\,(s)} & \textbf{\$/q} & \textbf{g\,CO$_2$/q} & \textbf{LLM\,\%} & \textbf{EATS} \\
+\midrule
+ensemble & gemma4-4b + llama3.2-3b + ministral3-3b + qwen3.5-4b & 100 & 96.0 & 16.1 & 0.00912 & 0.333 & 0 & 0.387 \\
+monolithic & gemma4-26b-a4b & 500 & 94.8 & 4.6 & 0.00302 & 0.156 & 100 & 0.652 \\
+monolithic & gemma4-31b & 510 & 92.7 & 8.7 & 0.00566 & 0.293 & 100 & 0.495 \\
+monolithic & gpt-oss-120b & 500 & 67.8 & 4.1 & 0.01052 & 0.261 & 100 & 0.390 \\
+monolithic & gpt-oss-20b & 500 & 59.4 & 3.9 & 0.00336 & 0.133 & 100 & 0.551 \\
+monolithic & llama3.3-70b & 100 & 85.0 & 9.1 & 0.01673 & 0.577 & 100 & 0.309 \\
+monolithic & qwen3.5-27b & 100 & 95.0 & 14.8 & 0.00963 & 0.498 & 100 & 0.371 \\
+monolithic & qwen3.5-35b-a3b & 500 & 95.6 & 4.5 & 0.00294 & 0.152 & 100 & 0.660 \\
+pure\_swarm & gemma4-4b & 100 & 95.0 & 24.1 & 0.00433 & 0.158 & 0 & 0.401 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{HellaSwag results across 10 configurations.}
+\label{tab:bench-hellaswag}
+\scriptsize
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{} l X r r r r r r r @{}}
+\toprule
+\textbf{Arch.} & \textbf{Model} & \textbf{N} & \textbf{Acc\,\%} & \textbf{Lat\,(s)} & \textbf{\$/q} & \textbf{g\,CO$_2$/q} & \textbf{LLM\,\%} & \textbf{EATS} \\
+\midrule
+active\_oracle & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 66.0 & 24.3 & 0.00508 & 0.185 & 1 & 0.294 \\
+ensemble & gemma4-4b + llama3.2-3b + ministral3-3b + qwen3.5-4b & 100 & 68.0 & 17.6 & 0.00691 & 0.252 & 0 & 0.316 \\
+monolithic & gemma4-26b-a4b & 500 & 83.2 & 7.3 & 0.00480 & 0.248 & 100 & 0.492 \\
+monolithic & gemma4-31b & 510 & 89.4 & 7.0 & 0.00457 & 0.237 & 100 & 0.522 \\
+monolithic & gpt-oss-120b & 500 & 80.6 & 3.6 & 0.00901 & 0.225 & 100 & 0.450 \\
+monolithic & gpt-oss-20b & 500 & 78.0 & 3.8 & 0.00325 & 0.128 & 100 & 0.609 \\
+monolithic & llama3.3-70b & 100 & 89.0 & 7.4 & 0.01380 & 0.472 & 100 & 0.345 \\
+monolithic & qwen3.5-27b & 100 & 92.0 & 14.4 & 0.00942 & 0.487 & 100 & 0.353 \\
+monolithic & qwen3.5-35b-a3b & 500 & 92.6 & 4.0 & 0.00261 & 0.135 & 100 & 0.665 \\
+pure\_swarm & gemma4-4b & 100 & 74.0 & 26.0 & 0.00497 & 0.181 & 0 & 0.310 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{TruthfulQA results across 8 configurations.}
+\label{tab:bench-truthfulqa}
+\scriptsize
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{} l X r r r r r r r @{}}
+\toprule
+\textbf{Arch.} & \textbf{Model} & \textbf{N} & \textbf{Acc\,\%} & \textbf{Lat\,(s)} & \textbf{\$/q} & \textbf{g\,CO$_2$/q} & \textbf{LLM\,\%} & \textbf{EATS} \\
+\midrule
+ensemble & gemma4-4b + llama3.2-3b + ministral3-3b + qwen3.5-4b & 100 & 64.0 & 15.6 & 0.00639 & 0.233 & 0 & 0.279 \\
+monolithic & gemma4-26b-a4b & 500 & 84.8 & 6.7 & 0.00436 & 0.225 & 100 & 0.470 \\
+monolithic & gemma4-31b & 510 & 93.6 & 5.8 & 0.00379 & 0.196 & 100 & 0.529 \\
+monolithic & gpt-oss-120b & 500 & 82.4 & 3.0 & 0.00710 & 0.189 & 100 & 0.466 \\
+monolithic & gpt-oss-20b & 500 & 72.2 & 3.3 & 0.00276 & 0.113 & 100 & 0.577 \\
+monolithic & llama3.3-70b & 100 & 80.0 & 7.8 & 0.01440 & 0.496 & 100 & 0.274 \\
+monolithic & qwen3.5-35b-a3b & 500 & 83.4 & 4.3 & 0.00280 & 0.145 & 100 & 0.575 \\
+pure\_swarm & gemma4-4b & 100 & 72.0 & 27.2 & 0.00541 & 0.197 & 0 & 0.245 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{HumanEval+ and LiveCodeBench --- preliminary coding runs. Accuracy values are near zero and reflect the benchmark loader limitations described in the following section rather than model capability.}
+\label{tab:bench-coding}
+\scriptsize
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{} l l X r r r r r r r @{}}
+\toprule
+\textbf{Benchmark} & \textbf{Arch.} & \textbf{Model} & \textbf{N} & \textbf{Acc\,\%} & \textbf{Lat\,(s)} & \textbf{\$/q} & \textbf{g\,CO$_2$/q} & \textbf{LLM\,\%} & \textbf{EATS} \\
+\midrule
+HumanEval+ & ensemble & gemma4-4b + llama3.2-3b + ministral3-3b + qwen3.5-4b & 100 & 0.0 & 7.7 & 0.00403 & 0.147 & 0 & 0.000 \\
+HumanEval+ & monolithic & gpt-oss-20b & 30 & 10.0 & 3.3 & 0.00275 & 0.112 & 100 & 0.093 \\
+HumanEval+ & monolithic & qwen3.5-27b & 20 & 0.0 & 3.9 & 0.00254 & 0.131 & 100 & 0.000 \\
+LiveCodeBench & monolithic & gpt-oss-120b & 100 & 9.0 & 10.7 & 0.03155 & 0.676 & 100 & 0.083 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
 \section{Implemented and Usable Today}
 
 The following pieces are already implemented and useful for development, smoke
@@ -440,8 +586,8 @@ The following quantitative artifacts are intentionally left as placeholders unti
         \toprule
         \textbf{Artifact} & \textbf{Current status} \\
         \midrule
-        Accuracy / latency / cost summary table & Pending insertion after valid automated benchmark runs. \\
-        Energy / CO$_2$ / EATS comparison table & Pending insertion after stable proxy-backed measurements are collected. \\
+        Accuracy / latency / cost summary table & Inserted in Section~\ref{sec:aggregate-benchmarks} (Tables~\ref{tab:bench-mmlu}--\ref{tab:bench-coding}). \\
+        Energy / CO$_2$ / EATS comparison table & Per-query CO$_2$ and cost inserted in Section~\ref{sec:aggregate-benchmarks}; EATS pending after stable full-benchmark runs. \\
         Architecture comparison figure & Pending insertion after enough runs exist for a meaningful multi-architecture plot. \\
         Human preference result table & Pending insertion after the UI-backed preference workflow is finalized and used. \\
         \bottomrule

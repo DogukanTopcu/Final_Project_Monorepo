@@ -1,6 +1,6 @@
 {
   "benchmark": "truthfulqa",
-  "generated_at": "2026-06-05T17:36:01.515660+00:00",
+  "generated_at": "2026-06-05T17:54:54.961591+00:00",
   "n_unique_configs": 8,
   "entries": [
     {
@@ -30,7 +30,8 @@
       "avg_api_cost_per_sample_usd": 0.0,
       "avg_infra_cost_per_sample_usd": 0.006392,
       "avg_energy_per_sample_kwh": 0.000614,
-      "avg_co2_per_sample_g": 0.233168
+      "avg_co2_per_sample_g": 0.233168,
+      "eats": 0.278533
     },
     {
       "architecture": "monolithic",
@@ -54,7 +55,8 @@
       "avg_api_cost_per_sample_usd": 0.0,
       "avg_infra_cost_per_sample_usd": 0.004355,
       "avg_energy_per_sample_kwh": 0.000593,
-      "avg_co2_per_sample_g": 0.225362
+      "avg_co2_per_sample_g": 0.225362,
+      "eats": 0.469737
     },
     {
       "architecture": "monolithic",
@@ -79,7 +81,8 @@
       "avg_api_cost_per_sample_usd": 0.0,
       "avg_infra_cost_per_sample_usd": 0.003794,
       "avg_energy_per_sample_kwh": 0.000517,
-      "avg_co2_per_sample_g": 0.196298
+      "avg_co2_per_sample_g": 0.196298,
+      "eats": 0.528806
     },
     {
       "architecture": "monolithic",
@@ -103,7 +106,8 @@
       "avg_api_cost_per_sample_usd": 0.001699,
       "avg_infra_cost_per_sample_usd": 0.005401,
       "avg_energy_per_sample_kwh": 0.000499,
-      "avg_co2_per_sample_g": 0.189443
+      "avg_co2_per_sample_g": 0.189443,
+      "eats": 0.465673
     },
     {
       "architecture": "monolithic",
@@ -127,7 +131,8 @@
       "avg_api_cost_per_sample_usd": 0.000578,
       "avg_infra_cost_per_sample_usd": 0.002183,
       "avg_energy_per_sample_kwh": 0.000297,
-      "avg_co2_per_sample_g": 0.112984
+      "avg_co2_per_sample_g": 0.112984,
+      "eats": 0.577085
     },
     {
       "architecture": "monolithic",
@@ -151,7 +156,8 @@
       "avg_api_cost_per_sample_usd": 0.000272,
       "avg_infra_cost_per_sample_usd": 0.014131,
       "avg_energy_per_sample_kwh": 0.001304,
-      "avg_co2_per_sample_g": 0.49568
+      "avg_co2_per_sample_g": 0.49568,
+      "eats": 0.274166
     },
     {
       "architecture": "monolithic",
@@ -175,7 +181,8 @@
       "avg_api_cost_per_sample_usd": 0.0,
       "avg_infra_cost_per_sample_usd": 0.002803,
       "avg_energy_per_sample_kwh": 0.000382,
-      "avg_co2_per_sample_g": 0.145015
+      "avg_co2_per_sample_g": 0.145015,
+      "eats": 0.575104
     },
     {
       "architecture": "pure_swarm",
@@ -199,7 +206,8 @@
       "avg_api_cost_per_sample_usd": 0.0,
       "avg_infra_cost_per_sample_usd": 0.005414,
       "avg_energy_per_sample_kwh": 0.00052,
-      "avg_co2_per_sample_g": 0.197494
+      "avg_co2_per_sample_g": 0.197494,
+      "eats": 0.245179
     }
   ]
 }

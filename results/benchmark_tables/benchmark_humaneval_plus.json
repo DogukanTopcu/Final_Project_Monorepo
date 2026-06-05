@@ -1,6 +1,6 @@
 {
   "benchmark": "humaneval_plus",
-  "generated_at": "2026-06-05T17:36:01.515072+00:00",
+  "generated_at": "2026-06-05T17:54:54.960712+00:00",
   "n_unique_configs": 3,
   "entries": [
     {
@@ -30,7 +30,8 @@
       "avg_api_cost_per_sample_usd": 0.0,
       "avg_infra_cost_per_sample_usd": 0.004028,
       "avg_energy_per_sample_kwh": 0.000387,
-      "avg_co2_per_sample_g": 0.14694
+      "avg_co2_per_sample_g": 0.14694,
+      "eats": 0.0
     },
     {
       "architecture": "monolithic",
@@ -55,7 +56,8 @@
       "avg_api_cost_per_sample_usd": 0.000574,
       "avg_infra_cost_per_sample_usd": 0.002172,
       "avg_energy_per_sample_kwh": 0.000296,
-      "avg_co2_per_sample_g": 0.112365
+      "avg_co2_per_sample_g": 0.112365,
+      "eats": 0.092548
     },
     {
       "architecture": "monolithic",
@@ -80,7 +82,8 @@
       "avg_api_cost_per_sample_usd": 0.0,
       "avg_infra_cost_per_sample_usd": 0.002539,
       "avg_energy_per_sample_kwh": 0.000346,
-      "avg_co2_per_sample_g": 0.131374
+      "avg_co2_per_sample_g": 0.131374,
+      "eats": 0.0
     }
   ]
 }

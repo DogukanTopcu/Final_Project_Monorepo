@@ -1,6 +1,6 @@
 {
   "benchmark": "livecodebench",
-  "generated_at": "2026-06-05T17:36:01.515197+00:00",
+  "generated_at": "2026-06-05T17:54:54.961009+00:00",
   "n_unique_configs": 1,
   "entries": [
     {
@@ -25,7 +25,8 @@
       "avg_api_cost_per_sample_usd": 0.01227,
       "avg_infra_cost_per_sample_usd": 0.019278,
       "avg_energy_per_sample_kwh": 0.001779,
-      "avg_co2_per_sample_g": 0.676202
+      "avg_co2_per_sample_g": 0.676202,
+      "eats": 0.082569
     }
   ]
 }
