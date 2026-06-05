@@ -1,5 +1,5 @@
 \definecolor{routingcolor}{RGB}{42,157,143}
-\definecolor{monolithiccolor}{RGB}{231,111,81}
+\definecolor{standalonecolor}{RGB}{231,111,81}
 \newcommand{\metricbar}[2]{%
   \makebox[4.0cm][l]{\textcolor{black!12}{\rule{4.0cm}{9pt}}}%
   \hspace{-4.0cm}%
@@ -10,7 +10,7 @@
 
 This chapter documents the current state of the experimental study in two
 complementary ways. First, it reports two completed pilot comparisons under a
-shared setup: an MMLU routing-versus-monolithic comparison and a same-model
+shared setup: an MMLU routing-versus-standalone comparison and a same-model
 GSM8K three-way comparison across single-SLM, hybrid, and single-LLM modes.
 Second, it clarifies which parts of the broader thesis evaluation pipeline are
 already usable and which still remain preliminary. This separation is important
@@ -43,21 +43,21 @@ All selected models are exposed through OpenAI-compatible HTTP endpoints so that
 
 \section{Current MMLU Comparison Setup}
 
-This report includes two new MMLU experiments and uses them to compare two
-response-generation strategies under the same benchmark. The routing run,
+The present study reports two pilot MMLU comparisons to evaluate two
+response-generation strategies under identical benchmark conditions. The routing run,
 \texttt{exp\_ecdd81b2}, first answers with the lightweight
 \texttt{gemma4-4b} model and escalates uncertain cases to
-\texttt{gemma4-31b}. The monolithic run, \texttt{exp\_018ab0cf}, answers every
+\texttt{gemma4-31b}. The standalone run, \texttt{exp\_018ab0cf}, answers every
 question directly with \texttt{gemma4-31b}. Since both runs evaluate the same
 \texttt{mmlu} benchmark with 100 samples and zero temperature, the comparison
 isolates the effect of architecture choice rather than dataset variation.
 
-The comparison focuses on five outcome families: accuracy, EATS, latency,
-cost, and resource usage. In this repository, EATS is the
-``Efficiency-Accuracy Trade-off Score'' and rewards architectures that preserve
-accuracy while reducing normalized cost, latency, and energy relative to a
-full-LLM baseline. Therefore, a
-higher EATS indicates a better efficiency-quality balance.
+The comparison is organised across five evaluation dimensions: accuracy, EATS, latency,
+cost, and resource usage. As defined in Section~\ref{}, EATS denotes the
+Efficiency-Accuracy Trade-off Score and rewards architectures that preserve
+accuracy while reducing normalised cost, latency, and energy relative to a
+full-LLM standalone baseline. A
+higher EATS therefore indicates a more favourable efficiency-accuracy balance.
 
 \begin{table}[htbp]
 \centering
@@ -67,15 +67,15 @@ higher EATS indicates a better efficiency-quality balance.
 \label{tab:mmlu-config}
 \begin{tabular}{|p{3.3cm}|p{5.1cm}|p{5.1cm}|}
 \hline
-\textbf{Setting} & \textbf{Routing: \texttt{exp\_ecdd81b2}} & \textbf{Monolithic: \texttt{exp\_018ab0cf}} \\
+\textbf{Setting} & \textbf{Routing: \texttt{exp\_ecdd81b2}} & \textbf{Standalone: \texttt{exp\_018ab0cf}} \\
 \hline
-Architecture & Routing with SLM draft and LLM fallback & Single-pass monolithic inference \\
+Architecture & Routing with SLM draft and LLM fallback & Single-pass standalone inference \\
 \hline
 Benchmark & \multicolumn{2}{c|}{MMLU} \\
 \hline
 Samples & \multicolumn{2}{c|}{100} \\
 \hline
-Final LLM & \texttt{gemma4-31b} fallback only & \texttt{gemma4-31b} for every sample \\
+Final LLM & \texttt{gemma4-31b} escalation only & \texttt{gemma4-31b} for every sample \\
 \hline
 Draft SLM & \texttt{gemma4-4b} & None \\
 \hline
@@ -88,21 +88,27 @@ LLM call ratio & 34\% & 100\% \\
 \end{tabular}
 \end{table}
 
-\section{Score Comparison}
+\section{Accuracy and EATS Analysis}
 
 Figure~\ref{fig:mmlu-scores} compares the two architectures on raw task
-quality. The monolithic design achieved the higher MMLU accuracy with 85
+accuracy. The standalone design achieved the higher MMLU accuracy with 85
 correct answers out of 100, while the routing design reached 76 correct
-answers. This 9 percentage point gap is expected because the monolithic
-baseline always uses the stronger \texttt{gemma4-31b} model.
+answers. This 9 percentage-point gap is expected because the standalone
+baseline always invokes the stronger \texttt{gemma4-31b} model.
 
 The EATS comparison now tells a more conservative story. Routing reached an
-EATS of 0.325, while the monolithic baseline reached 0.419. Under the current
-bounded accuracy-first formulation, routing no longer wins the primary score
-because its large latency penalty outweighs its small cost and energy savings.
-The main driver is selective escalation overhead: 66 samples were accepted at
+EATS of 0.373, while the monolithic baseline reached 0.483. Under the current
+additive efficiency-penalty formulation---normalized against the average of all
+MMLU monolithic baselines in the platform registry---routing does not win the
+primary score because its latency penalty (normalized latency 2.54$\times$ the
+reference) outweighs its modest cost and energy savings. The main driver is
+selective escalation overhead: 66 samples were accepted at
 the SLM stage, but 34 required the heavy LLM and every routing request still
-paid for an initial SLM pass.
+paid for an initial SLM pass. Note that these pilots use wall-clock
+\texttt{avg\_latency\_ms} as the latency proxy because per-step algorithmic
+latency annotation was not yet active at the time these runs were recorded;
+the normalized latency values therefore include HTTP and proxy overhead in
+addition to model-side inference time.
 
 \begin{figure}[htbp]
 \centering
@@ -111,7 +117,7 @@ paid for an initial SLM pass.
 \textbf{Accuracy (\%, higher is better)}\\[0.6em]
 \begin{tabular}{@{}l l r@{}}
 Routing & \metricbar{routingcolor}{3.58cm} & 76.0 \\
-Monolithic & \metricbar{monolithiccolor}{4.00cm} & 85.0 \\
+Standalone & \metricbar{standalonecolor}{4.00cm} & 85.0 \\
 \end{tabular}
 \end{minipage}
 \hfill
@@ -119,11 +125,11 @@ Monolithic & \metricbar{monolithiccolor}{4.00cm} & 85.0 \\
 \centering
 \textbf{EATS (higher is better)}\\[0.6em]
 \begin{tabular}{@{}l l r@{}}
-Routing & \metricbar{routingcolor}{3.10cm} & 0.325 \\
-Monolithic & \metricbar{monolithiccolor}{4.00cm} & 0.419 \\
+Routing & \metricbar{routingcolor}{3.09cm} & 0.373 \\
+Monolithic & \metricbar{monolithiccolor}{4.00cm} & 0.483 \\
 \end{tabular}
 \end{minipage}
-\caption{Score comparison between routing and monolithic architectures on MMLU}
+\caption{Accuracy and EATS comparison between routing and standalone architectures on MMLU}
 \label{fig:mmlu-scores}
 \end{figure}
 
@@ -135,11 +141,11 @@ Monolithic & \metricbar{monolithiccolor}{4.00cm} & 0.419 \\
 \label{tab:mmlu-summary}
 \begin{tabular}{|l|c|c|}
 \hline
-\textbf{Metric} & \textbf{Routing} & \textbf{Monolithic} \\
+\textbf{Metric} & \textbf{Routing} & \textbf{Standalone} \\
 \hline
 Accuracy & 76.0\% & 85.0\% \\
 \hline
-EATS & 0.325 & 0.419 \\
+EATS & 0.373 & 0.483 \\
 \hline
 Correct answers & 76 / 100 & 85 / 100 \\
 \hline
@@ -169,7 +175,7 @@ energy from 0.0826 to 0.0665 kWh, and reduced estimated CO$_2$ emissions from
 routing: \$0.5913 versus \$0.6066, or roughly a 2.5\% reduction.
 
 The latency trade-off is much sharper. Average latency increased from 9.29
-seconds in the monolithic run to 20.45 seconds in routing, and tail latency
+seconds in the standalone run to 20.45 seconds in routing, and tail latency
 (p95) increased from 17.66 seconds to 42.18 seconds. This overhead comes from
 the two-stage control flow. Every routing request pays for an initial SLM pass,
 and 34 requests also pay for a second LLM pass. Within the routing run, the
@@ -190,34 +196,34 @@ output-format failures, not only from difficult questions.
 \textbf{Metric} & \textbf{System} & \textbf{Relative bar} & \textbf{Value} \\
 \hline
 Average latency & Routing & \metricbar{routingcolor}{4.00cm} & 20.45 s \\
- & Monolithic & \metricbar{monolithiccolor}{1.82cm} & 9.29 s \\
+ & Standalone & \metricbar{standalonecolor}{1.82cm} & 9.29 s \\
 \\[-0.1em]
 Latency p95 & Routing & \metricbar{routingcolor}{4.00cm} & 42.18 s \\
- & Monolithic & \metricbar{monolithiccolor}{1.67cm} & 17.66 s \\
+ & Standalone & \metricbar{standalonecolor}{1.67cm} & 17.66 s \\
 \\[-0.1em]
 Total cost & Routing & \metricbar{routingcolor}{3.90cm} & \$0.5913 \\
- & Monolithic & \metricbar{monolithiccolor}{4.00cm} & \$0.6066 \\
+ & Standalone & \metricbar{standalonecolor}{4.00cm} & \$0.6066 \\
 \\[-0.1em]
 Total energy & Routing & \metricbar{routingcolor}{3.22cm} & 0.0665 kWh \\
- & Monolithic & \metricbar{monolithiccolor}{4.00cm} & 0.0826 kWh \\
+ & Standalone & \metricbar{standalonecolor}{4.00cm} & 0.0826 kWh \\
 \\[-0.1em]
 Total CO$_2$ & Routing & \metricbar{routingcolor}{3.22cm} & 25.28 g \\
- & Monolithic & \metricbar{monolithiccolor}{4.00cm} & 31.39 g \\
+ & Standalone & \metricbar{standalonecolor}{4.00cm} & 31.39 g \\
 \\[-0.1em]
 LLM call ratio & Routing & \metricbar{routingcolor}{1.36cm} & 34\% \\
- & Monolithic & \metricbar{monolithiccolor}{4.00cm} & 100\% \\
+ & Standalone & \metricbar{standalonecolor}{4.00cm} & 100\% \\
 \end{tabular}
-\caption{Efficiency and resource comparison on MMLU. Lower is better in all panels.}
+\caption{Efficiency and resource comparison on MMLU (standalone vs.\ routing). Lower is better in all panels.}
 \label{fig:mmlu-efficiency}
 \end{figure}
 
 \section{Discussion of the Current Result}
 
-These two experiments show that architecture choice changes the operating point
-of the system rather than producing a universal winner. If the main objective is
-maximum MMLU accuracy, the monolithic \texttt{gemma4-31b} baseline is stronger.
-If the objective is to reduce heavy-model usage, energy, and carbon while
-keeping accuracy within a usable range, the routing strategy is more attractive.
+These two experiments demonstrate that architecture choice alters the operating point
+of the system rather than producing a universal winner. If the primary objective is
+maximum MMLU accuracy, the standalone \texttt{gemma4-31b} baseline is stronger.
+If the objective is to reduce heavy-model invocation frequency, energy, and carbon while
+keeping accuracy within an acceptable range, the routing strategy is more attractive.
 
 At the same time, these runs should still be interpreted as a focused pilot
 comparison rather than as the final thesis result set. They demonstrate that the
@@ -231,12 +237,12 @@ This report also includes a second pilot comparison that keeps the model family
 fixed and changes only the response-generation mode. The three runs all evaluate
 \texttt{gsm8k} with 100 samples at zero temperature. The goal is to compare three
 operating points within the same Gemma family: a single-SLM baseline, a routing
-hybrid, and a monolithic LLM baseline. The single-SLM baseline is
+hybrid, and a standalone LLM baseline. The single-SLM baseline is
 \texttt{exp\_efec5356}. Behaviorally, it is a single-model \texttt{gemma4-4b}
 baseline, although the implementation path uses the repository's
 \texttt{ensemble} architecture with \texttt{n\_models=1}. The hybrid run,
 \texttt{exp\_b4a9b415}, answers first with \texttt{gemma4-4b} and escalates to
-\texttt{gemma4-31b} when needed. The monolithic baseline,
+\texttt{gemma4-31b} when needed. The standalone baseline,
 \texttt{exp\_a7d53595}, answers every sample directly with \texttt{gemma4-31b}.
 
 \begin{table}[htbp]
@@ -250,13 +256,13 @@ baseline, although the implementation path uses the repository's
 \textbf{Setting} & \textbf{SLM baseline} & \textbf{Routing hybrid} & \textbf{LLM baseline} \\
 \midrule
 Experiment id & \texttt{exp\_efec5356} & \texttt{exp\_b4a9b415} & \texttt{exp\_a7d53595} \\
-Architecture & \texttt{ensemble} & \texttt{routing} & \texttt{monolithic} \\
+Architecture & \texttt{ensemble} & \texttt{routing} & \texttt{standalone} \\
 Benchmark & \texttt{gsm8k} & \texttt{gsm8k} & \texttt{gsm8k} \\
 Samples & 100 & 100 & 100 \\
 Active model(s) & \texttt{gemma4-4b} only & \texttt{gemma4-4b} draft + \texttt{gemma4-31b} fallback & \texttt{gemma4-31b} only \\
 Confidence threshold & 0.7 recorded, not active for routing & 0.8 active for escalation & 0.7 recorded, not used for routing \\
 LLM call ratio & 0\% & 19\% & 100\% \\
-Implementation note & Single-member ensemble used as a single-SLM baseline & Two-stage control flow with selective escalation & Single-pass monolithic inference \\
+Implementation note & Single-member ensemble used as a single-SLM baseline & Two-stage control flow with selective escalation & Single-pass standalone inference \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -279,37 +285,37 @@ Total energy & 0.0205 kWh & 0.0306 kWh & 0.0527 kWh \\
 Total CO$_2$ & 7.78 g & 11.63 g & 20.02 g \\
 Total tokens & 30,574 & 35,141 & 25,233 \\
 LLM call ratio & 0\% & 19\% & 100\% \\
-EATS & 0.488 & 0.467 & 0.474 \\
+EATS & 0.570 & 0.546 & 0.596 \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-The raw-quality ordering is straightforward. The monolithic LLM baseline
+The accuracy ordering is unambiguous. The standalone LLM baseline
 produced the highest GSM8K accuracy at 95\%. The routing hybrid reached 91\%,
-which is 4 percentage points lower than the monolithic LLM but 8 percentage
-points higher than the single-SLM baseline at 83\%. This places the routing
-system between the two extremes: it does not match the best-quality operating
-point, but it meaningfully improves answer quality over the lightweight-only
-baseline while still limiting heavy-model usage.
+which is 4 percentage points lower than the standalone LLM baseline but 8 percentage
+points higher than the single-SLM baseline at 83\%. The routing system thus
+occupies an intermediate operating point: it does not match the best-quality configuration,
+but it meaningfully improves answer quality over the lightweight-only
+baseline while still limiting heavy-model invocations.
 
-The efficiency side is more mixed. Relative to the monolithic LLM run, routing
-reduced total cost from \$0.3869 to \$0.2888, a savings of about 25.4\%. The
+The efficiency results present a more complex picture. Relative to the standalone LLM run, routing
+reduced total cost from \$0.3869 to \$0.2888, a reduction of approximately 25.4\%. The
 same hybrid run also reduced total energy and estimated CO$_2$ from 0.0527 to
-0.0306 kWh and from 20.02 to 11.63 g respectively, which corresponds to about
+0.0306 kWh and from 20.02 to 11.63 g respectively, corresponding to approximately
 41.9\% lower energy use and emissions. The single-SLM baseline remained the
 cheapest and least energy-intensive operating point overall, but it trailed the
-LLM baseline by 12 percentage points of accuracy and the routing hybrid by 8
+standalone LLM baseline by 12 percentage points of accuracy and the routing hybrid by 8
 points.
 
-Latency requires more careful interpretation. Routing was about 94\% slower on
-average than the monolithic LLM run, increasing mean latency from 5.93 to 11.51
-seconds. It was also about 12.4\% slower than the single-SLM baseline. This
-does not mean that the smaller model is inherently slower. In this setup, the
-monolithic LLM benefits from a different host class and a single-stage control
-flow, while the routing system pays for an initial SLM pass and, on some
-samples, an additional LLM pass. The apparent speed advantage of the monolithic
-LLM therefore reflects deployment and orchestration effects rather than model
-size alone.
+The latency results merit more careful interpretation. Routing was approximately 94\% slower on
+average than the standalone LLM run, increasing mean latency from 5.93 to 11.51
+seconds. It was also approximately 12.4\% slower than the single-SLM baseline. This
+does not imply that the smaller model is inherently slower. In this setup, the
+standalone LLM benefits from a dedicated host class and a single-stage control
+flow, while the routing system incurs an initial SLM inference pass and, on some
+samples, an additional LLM escalation pass. The observed latency advantage of the standalone
+LLM therefore reflects deployment topology and orchestration effects rather than model
+capacity alone.
 
 The escalation behavior helps explain where the hybrid gains come from and where
 it still leaves quality on the table. The routing run escalated 19 samples in
@@ -317,22 +323,176 @@ total: 17 because confidence fell below the threshold and 2 because the draft
 answer could not be parsed. Among those escalations, 9 corrected an SLM error,
 8 merely confirmed an answer that was already correct, 1 remained wrong, and 1
 introduced a new error. At the same time, there were 5 non-escalated cases in
-which the routing system stayed with the SLM answer even though the monolithic
-LLM answered correctly. In other words, the current threshold policy clearly
-captures several useful recoveries, but it also misses some salvageable cases.
+which the routing system retained the SLM answer even though the standalone
+LLM answered correctly. In other words, the current threshold policy captures
+several useful recoveries but also misses some salvageable cases.
 
-EATS is still useful in this table, but it now behaves much more reasonably.
-The single-SLM baseline reaches the highest EATS at 0.488 because its strong
-cost and energy savings slightly outweigh its accuracy loss under the current
-accuracy-squared versus efficiency-penalty formulation. The monolithic LLM
-baseline follows at 0.474, and the routing hybrid reaches 0.467 because its
-two-stage control flow raises latency enough to offset some of its resource
-savings. The scores are close, which is the right signal: none of the three
-operating points dominates all dimensions. The more reliable interpretation
-still comes from reading EATS together with accuracy, latency, cost, and
-resource metrics.
+EATS is still useful in this table and its behavior is consistent with the
+additive penalty formulation. Under normalization against the average GSM8K
+monolithic baseline in the platform registry, the monolithic LLM baseline
+reaches the highest EATS at 0.596 because its strong accuracy (95\%) keeps the
+accuracy term large while its latency and cost are both below the multi-model
+reference average. The single-SLM baseline follows at 0.570: its lower cost
+and energy offset its accuracy shortfall (83\%), but its normalized latency
+(1.43$\times$ the reference) partially erodes that advantage. The routing
+hybrid reaches the lowest EATS at 0.546 because the two-stage control flow
+raises its normalized latency (1.61$\times$ the reference) enough to offset the
+resource savings it achieves by limiting heavy-model usage to 19\% of queries.
+The spread across all three operating points is narrow (0.546--0.596), which
+is the right signal: no single configuration dominates all dimensions, and EATS
+is most informative when read alongside raw accuracy, cost, and energy. As
+with the MMLU pilots, these runs use wall-clock \texttt{avg\_latency\_ms} as
+the latency proxy, so the normalized latency values include orchestration
+overhead that will be separated in later runs with per-step algorithmic latency
+instrumentation.
 
-\section{Implemented and Usable Today}
+\section{Aggregate Benchmark Results}
+\label{sec:aggregate-benchmarks}
+
+Tables~\ref{tab:bench-mmlu} through \ref{tab:bench-coding} consolidate all evaluated configurations from the experiment registry. Each row is one unique architecture--model combination. \emph{Acc\,\%} is the fraction of samples answered correctly; \emph{Lat\,(s)} is the mean wall-clock latency per query in seconds; \emph{\$/q} and \emph{g\,CO$_{2}$/q} are the mean cost and estimated CO$_{2}$ emission per query; \emph{LLM\,\%} is the percentage of queries that invoked the heavy language model.
+
+\begin{table}[htbp]
+\centering
+\caption{MMLU results across 16 configurations.}
+\label{tab:bench-mmlu}
+\scriptsize
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{} l X r r r r r r r @{}}
+\toprule
+\textbf{Arch.} & \textbf{Model} & \textbf{N} & \textbf{Acc\,\%} & \textbf{Lat\,(s)} & \textbf{\$/q} & \textbf{g\,CO$_2$/q} & \textbf{LLM\,\%} & \textbf{EATS} \\
+\midrule
+active\_oracle & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 74.0 & 30.6 & 0.00659 & 0.245 & 21 & 0.304 \\
+ensemble & gemma4-4b + llama3.2-3b & 20 & 50.0 & 21.5 & 0.00491 & 0.179 & 0 & 0.292 \\
+ensemble & gemma4-4b + llama3.2-3b + ministral3-3b & 100 & 59.0 & 26.9 & 0.00561 & 0.205 & 0 & 0.286 \\
+ensemble & gemma4-4b + llama3.2-3b + ministral3-3b + qwen3.5-4b & 100 & 68.0 & 21.6 & 0.00942 & 0.344 & 0 & 0.299 \\
+ensemble & ministral3-3b & 100 & 57.0 & 3.5 & 0.00074 & 0.027 & 0 & 0.747 \\
+ensemble & qwen3.5-4b & 100 & 75.0 & 17.6 & 0.00367 & 0.134 & 0 & 0.438 \\
+monolithic & gemma4-26b-a4b & 500 & 86.4 & 5.2 & 0.00341 & 0.176 & 100 & 0.629 \\
+monolithic & gemma4-31b & 520 & 79.3 & 9.6 & 0.00627 & 0.324 & 100 & 0.458 \\
+monolithic & gpt-oss-120b & 500 & 87.0 & 3.4 & 0.00838 & 0.214 & 100 & 0.530 \\
+monolithic & gpt-oss-20b & 520 & 86.6 & 3.4 & 0.00286 & 0.116 & 100 & 0.698 \\
+monolithic & llama3.3-70b & 500 & 84.8 & 11.1 & 0.02034 & 0.700 & 100 & 0.289 \\
+monolithic & qwen3.5-27b & 510 & 88.6 & 19.5 & 0.01270 & 0.657 & 100 & 0.318 \\
+monolithic & qwen3.5-35b-a3b & 500 & 86.2 & 4.3 & 0.00279 & 0.144 & 100 & 0.674 \\
+pure\_swarm & gemma4-4b & 110 & 89.5 & 27.5 & 0.00528 & 0.192 & 0 & 0.379 \\
+routing & gemma4-4b $\rightarrow$ gemma4-31b & 240 & 84.0 & 9.3 & 0.00257 & 0.108 & 41 & 0.596 \\
+speculative & gemma4-4b $\rightarrow$ gemma4-31b & 260 & 94.1 & 18.9 & 0.00659 & 0.300 & 100 & 0.422 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{ARC results across 10 configurations.}
+\label{tab:bench-arc}
+\scriptsize
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{} l X r r r r r r r @{}}
+\toprule
+\textbf{Arch.} & \textbf{Model} & \textbf{N} & \textbf{Acc\,\%} & \textbf{Lat\,(s)} & \textbf{\$/q} & \textbf{g\,CO$_2$/q} & \textbf{LLM\,\%} & \textbf{EATS} \\
+\midrule
+active\_oracle & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 91.0 & 21.4 & 0.00451 & 0.166 & 4 & 0.388 \\
+ensemble & gemma4-4b + llama3.2-3b + ministral3-3b + qwen3.5-4b & 100 & 91.0 & 15.9 & 0.00698 & 0.254 & 0 & 0.388 \\
+monolithic & gemma4-26b-a4b & 500 & 95.4 & 7.4 & 0.00482 & 0.250 & 100 & 0.519 \\
+monolithic & gemma4-31b & 510 & 93.5 & 8.2 & 0.00537 & 0.278 & 100 & 0.487 \\
+monolithic & gpt-oss-120b & 500 & 95.4 & 2.7 & 0.00620 & 0.170 & 100 & 0.570 \\
+monolithic & gpt-oss-20b & 500 & 93.8 & 2.7 & 0.00210 & 0.091 & 100 & 0.729 \\
+monolithic & llama3.3-70b & 100 & 92.0 & 8.9 & 0.01630 & 0.562 & 100 & 0.309 \\
+monolithic & qwen3.5-27b & 100 & 95.0 & 13.9 & 0.00905 & 0.468 & 100 & 0.364 \\
+monolithic & qwen3.5-35b-a3b & 500 & 95.4 & 2.8 & 0.00185 & 0.096 & 100 & 0.738 \\
+pure\_swarm & gemma4-4b & 100 & 96.0 & 21.4 & 0.00401 & 0.146 & 0 & 0.410 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{GSM8K results across 9 configurations.}
+\label{tab:bench-gsm8k-full}
+\scriptsize
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{} l X r r r r r r r @{}}
+\toprule
+\textbf{Arch.} & \textbf{Model} & \textbf{N} & \textbf{Acc\,\%} & \textbf{Lat\,(s)} & \textbf{\$/q} & \textbf{g\,CO$_2$/q} & \textbf{LLM\,\%} & \textbf{EATS} \\
+\midrule
+ensemble & gemma4-4b + llama3.2-3b + ministral3-3b + qwen3.5-4b & 100 & 96.0 & 16.1 & 0.00912 & 0.333 & 0 & 0.387 \\
+monolithic & gemma4-26b-a4b & 500 & 94.8 & 4.6 & 0.00302 & 0.156 & 100 & 0.652 \\
+monolithic & gemma4-31b & 510 & 92.7 & 8.7 & 0.00566 & 0.293 & 100 & 0.495 \\
+monolithic & gpt-oss-120b & 500 & 67.8 & 4.1 & 0.01052 & 0.261 & 100 & 0.390 \\
+monolithic & gpt-oss-20b & 500 & 59.4 & 3.9 & 0.00336 & 0.133 & 100 & 0.551 \\
+monolithic & llama3.3-70b & 100 & 85.0 & 9.1 & 0.01673 & 0.577 & 100 & 0.309 \\
+monolithic & qwen3.5-27b & 100 & 95.0 & 14.8 & 0.00963 & 0.498 & 100 & 0.371 \\
+monolithic & qwen3.5-35b-a3b & 500 & 95.6 & 4.5 & 0.00294 & 0.152 & 100 & 0.660 \\
+pure\_swarm & gemma4-4b & 100 & 95.0 & 24.1 & 0.00433 & 0.158 & 0 & 0.401 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{HellaSwag results across 10 configurations.}
+\label{tab:bench-hellaswag}
+\scriptsize
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{} l X r r r r r r r @{}}
+\toprule
+\textbf{Arch.} & \textbf{Model} & \textbf{N} & \textbf{Acc\,\%} & \textbf{Lat\,(s)} & \textbf{\$/q} & \textbf{g\,CO$_2$/q} & \textbf{LLM\,\%} & \textbf{EATS} \\
+\midrule
+active\_oracle & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 66.0 & 24.3 & 0.00508 & 0.185 & 1 & 0.294 \\
+ensemble & gemma4-4b + llama3.2-3b + ministral3-3b + qwen3.5-4b & 100 & 68.0 & 17.6 & 0.00691 & 0.252 & 0 & 0.316 \\
+monolithic & gemma4-26b-a4b & 500 & 83.2 & 7.3 & 0.00480 & 0.248 & 100 & 0.492 \\
+monolithic & gemma4-31b & 510 & 89.4 & 7.0 & 0.00457 & 0.237 & 100 & 0.522 \\
+monolithic & gpt-oss-120b & 500 & 80.6 & 3.6 & 0.00901 & 0.225 & 100 & 0.450 \\
+monolithic & gpt-oss-20b & 500 & 78.0 & 3.8 & 0.00325 & 0.128 & 100 & 0.609 \\
+monolithic & llama3.3-70b & 100 & 89.0 & 7.4 & 0.01380 & 0.472 & 100 & 0.345 \\
+monolithic & qwen3.5-27b & 100 & 92.0 & 14.4 & 0.00942 & 0.487 & 100 & 0.353 \\
+monolithic & qwen3.5-35b-a3b & 500 & 92.6 & 4.0 & 0.00261 & 0.135 & 100 & 0.665 \\
+pure\_swarm & gemma4-4b & 100 & 74.0 & 26.0 & 0.00497 & 0.181 & 0 & 0.310 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{TruthfulQA results across 8 configurations.}
+\label{tab:bench-truthfulqa}
+\scriptsize
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{} l X r r r r r r r @{}}
+\toprule
+\textbf{Arch.} & \textbf{Model} & \textbf{N} & \textbf{Acc\,\%} & \textbf{Lat\,(s)} & \textbf{\$/q} & \textbf{g\,CO$_2$/q} & \textbf{LLM\,\%} & \textbf{EATS} \\
+\midrule
+ensemble & gemma4-4b + llama3.2-3b + ministral3-3b + qwen3.5-4b & 100 & 64.0 & 15.6 & 0.00639 & 0.233 & 0 & 0.279 \\
+monolithic & gemma4-26b-a4b & 500 & 84.8 & 6.7 & 0.00436 & 0.225 & 100 & 0.470 \\
+monolithic & gemma4-31b & 510 & 93.6 & 5.8 & 0.00379 & 0.196 & 100 & 0.529 \\
+monolithic & gpt-oss-120b & 500 & 82.4 & 3.0 & 0.00710 & 0.189 & 100 & 0.466 \\
+monolithic & gpt-oss-20b & 500 & 72.2 & 3.3 & 0.00276 & 0.113 & 100 & 0.577 \\
+monolithic & llama3.3-70b & 100 & 80.0 & 7.8 & 0.01440 & 0.496 & 100 & 0.274 \\
+monolithic & qwen3.5-35b-a3b & 500 & 83.4 & 4.3 & 0.00280 & 0.145 & 100 & 0.575 \\
+pure\_swarm & gemma4-4b & 100 & 72.0 & 27.2 & 0.00541 & 0.197 & 0 & 0.245 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{HumanEval+ and LiveCodeBench --- preliminary coding runs. Accuracy values are near zero and reflect the benchmark loader limitations described in the following section rather than model capability.}
+\label{tab:bench-coding}
+\scriptsize
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{} l l X r r r r r r r @{}}
+\toprule
+\textbf{Benchmark} & \textbf{Arch.} & \textbf{Model} & \textbf{N} & \textbf{Acc\,\%} & \textbf{Lat\,(s)} & \textbf{\$/q} & \textbf{g\,CO$_2$/q} & \textbf{LLM\,\%} & \textbf{EATS} \\
+\midrule
+HumanEval+ & ensemble & gemma4-4b + llama3.2-3b + ministral3-3b + qwen3.5-4b & 100 & 0.0 & 7.7 & 0.00403 & 0.147 & 0 & 0.000 \\
+HumanEval+ & monolithic & gpt-oss-20b & 30 & 10.0 & 3.3 & 0.00275 & 0.112 & 100 & 0.093 \\
+HumanEval+ & monolithic & qwen3.5-27b & 20 & 0.0 & 3.9 & 0.00254 & 0.131 & 100 & 0.000 \\
+LiveCodeBench & monolithic & gpt-oss-120b & 100 & 9.0 & 10.7 & 0.03155 & 0.676 & 100 & 0.083 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Currently Implemented Platform Capabilities}
 
 The following pieces are already implemented and useful for development, smoke
 testing, and early-stage experimentation:
@@ -340,7 +500,7 @@ testing, and early-stage experimentation:
 \begin{itemize}
     \item the local control plane consisting of backend, frontend, MLflow integration, experiment runner, and result reporting;
     \item the canonical model alias system that maps architecture configurations to remote vLLM endpoints;
-    \item baseline and hybrid architecture surfaces such as monolithic inference, routing, multi-agent debate, and SLM voting ensembles;
+    \item baseline and hybrid architecture surfaces such as standalone inference, routing, multi-agent debate, and SLM voting ensembles;
     \item proxy-based and response-level metric propagation for latency, token counts, cost, energy, and emissions; and
     \item web surfaces for dashboarding, experiment launch, host visibility, result comparison, and playground-style prompt testing.
 \end{itemize}
@@ -350,7 +510,7 @@ architecture debugging, early pilot runs, and documentation of the end-to-end
 workflow. They are not yet sufficient to support the final experimental claims
 of the thesis.
 
-\section{Preliminary Components Not Yet Valid for Thesis Claims}
+\section{Components Requiring Further Validation}
 
 Several core ideas of the thesis are still under construction or still require
 methodological cleanup:
@@ -363,10 +523,8 @@ methodological cleanup:
 \end{itemize}
 
 For these reasons, the current experimental outputs are treated as exploratory
-outside the specific pilot comparisons reported above. No broader quantitative
-claim is made in this term report for the unfinished benchmark surfaces. This is
-intentional: fabricated or unstable numbers would weaken the thesis rather than
-strengthen it.
+beyond the specific pilot comparisons reported above. No broader quantitative
+claim is advanced in this report for benchmark configurations not yet finalized.
 
 \section{Planned Coding Benchmark Protocol}
 
@@ -406,8 +564,8 @@ language understanding alone.
 Once the benchmark is finalized, the comparative protocol will proceed in three layers:
 
 \begin{itemize}
-    \item \textbf{Monolithic baseline:} a single stronger model answers every query and provides the upper baseline for quality and the likely upper bound for cost.
-    \item \textbf{Hybrid and ensemble comparison:} routing, multi-agent, and ensemble systems are compared against the monolithic baseline under the same coding tasks and the same reporting stack.
+    \item \textbf{Standalone baseline:} a single stronger model answers every query and establishes the upper reference point for quality and the likely upper bound for cost.
+    \item \textbf{Hybrid and ensemble comparison:} routing, multi-agent, and ensemble systems are compared against the standalone baseline under the same coding tasks and the same reporting stack.
     \item \textbf{Project-proposed architecture study:} the swarm family is evaluated after the benchmark and runner paths are stable enough to support valid comparison.
 \end{itemize}
 
@@ -426,8 +584,8 @@ The following quantitative artifacts are intentionally left as placeholders unti
         \toprule
         \textbf{Artifact} & \textbf{Current status} \\
         \midrule
-        Accuracy / latency / cost summary table & Pending insertion after valid automated benchmark runs. \\
-        Energy / CO$_2$ / EATS comparison table & Pending insertion after stable proxy-backed measurements are collected. \\
+        Accuracy / latency / cost summary table & Inserted in Section~\ref{sec:aggregate-benchmarks} (Tables~\ref{tab:bench-mmlu}--\ref{tab:bench-coding}). \\
+        Energy / CO$_2$ / EATS comparison table & Per-query CO$_2$ and cost inserted in Section~\ref{sec:aggregate-benchmarks}; EATS pending after stable full-benchmark runs. \\
         Architecture comparison figure & Pending insertion after enough runs exist for a meaningful multi-architecture plot. \\
         Human preference result table & Pending insertion after the UI-backed preference workflow is finalized and used. \\
         \bottomrule
