@@ -1,7 +1,9 @@
 {
   "benchmark": "gsm8k",
-  "generated_at": "2026-06-05T18:04:49.567209+00:00",
+  "generated_at": "2026-06-05T19:38:32.843573+00:00",
+  "min_total_samples_required": 100,
   "n_unique_configs": 11,
+  "skipped_configs_below_min_samples": [],
   "entries": [
     {
       "architecture": "ensemble",

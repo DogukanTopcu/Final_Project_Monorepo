@@ -1,7 +1,9 @@
 {
   "benchmark": "arc",
-  "generated_at": "2026-06-05T18:04:49.566423+00:00",
+  "generated_at": "2026-06-05T19:38:32.843088+00:00",
+  "min_total_samples_required": 100,
   "n_unique_configs": 12,
+  "skipped_configs_below_min_samples": [],
   "entries": [
     {
       "architecture": "active_oracle",
@@ -9,24 +11,25 @@
       "slm": "gemma4-4b",
       "llm": "gemma4-31b",
       "ensemble_slms": [],
-      "n_experiments": 1,
+      "n_experiments": 2,
       "experiment_ids": [
+        "exp_0fcbc737",
         "exp_f49f827d"
       ],
-      "total_samples_evaluated": 100,
+      "total_samples_evaluated": 200,
       "accuracy": 0.91,
-      "llm_call_ratio": 0.04,
-      "avg_latency_ms": 21428.979343,
-      "latency_p50_ms": 18225.38285,
-      "latency_p95_ms": 35397.873212,
-      "avg_slm_confidence": 0.964537,
-      "escalation_rate": 0.03,
-      "avg_cost_per_sample_usd": 0.004512,
+      "llm_call_ratio": 0.05,
+      "avg_latency_ms": 12124.679722,
+      "latency_p50_ms": 10122.931425,
+      "latency_p95_ms": 21889.296606,
+      "avg_slm_confidence": 0.910225,
+      "escalation_rate": 0.045,
+      "avg_cost_per_sample_usd": 0.002558,
       "avg_api_cost_per_sample_usd": 0.0,
-      "avg_infra_cost_per_sample_usd": 0.004512,
-      "avg_energy_per_sample_kwh": 0.000436,
-      "avg_co2_per_sample_g": 0.165641,
-      "eats": 0.388299
+      "avg_infra_cost_per_sample_usd": 0.002558,
+      "avg_energy_per_sample_kwh": 0.000247,
+      "avg_co2_per_sample_g": 0.094036,
+      "eats": 0.52858
     },
     {
       "architecture": "ensemble",

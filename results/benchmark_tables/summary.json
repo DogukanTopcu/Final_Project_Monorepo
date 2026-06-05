@@ -1,6 +1,7 @@
 {
-  "generated_at": "2026-06-05T18:04:49.568776+00:00",
+  "generated_at": "2026-06-05T19:38:32.845189+00:00",
   "cutoff": "2026-05-27T23:59:59+00:00",
+  "min_total_samples_required": 100,
   "benchmarks": {
     "arc": {
       "n_configs": 12,
@@ -12,6 +13,8 @@
         "routing",
         "speculative"
       ],
+      "min_total_samples_required": 100,
+      "n_skipped_configs_below_min_samples": 0,
       "output": "/Users/bakiceltik/Documents/GitHub/Final_Project_Monorepo/scripts/../results/benchmark_tables/benchmark_arc.json"
     },
     "gsm8k": {
@@ -23,6 +26,8 @@
         "routing",
         "speculative"
       ],
+      "min_total_samples_required": 100,
+      "n_skipped_configs_below_min_samples": 0,
       "output": "/Users/bakiceltik/Documents/GitHub/Final_Project_Monorepo/scripts/../results/benchmark_tables/benchmark_gsm8k.json"
     },
     "hellaswag": {
@@ -35,14 +40,17 @@
         "routing",
         "speculative"
       ],
+      "min_total_samples_required": 100,
+      "n_skipped_configs_below_min_samples": 0,
       "output": "/Users/bakiceltik/Documents/GitHub/Final_Project_Monorepo/scripts/../results/benchmark_tables/benchmark_hellaswag.json"
     },
     "humaneval_plus": {
-      "n_configs": 3,
+      "n_configs": 1,
       "architectures": [
-        "ensemble",
-        "monolithic"
+        "ensemble"
       ],
+      "min_total_samples_required": 100,
+      "n_skipped_configs_below_min_samples": 2,
       "output": "/Users/bakiceltik/Documents/GitHub/Final_Project_Monorepo/scripts/../results/benchmark_tables/benchmark_humaneval_plus.json"
     },
     "livecodebench": {
@@ -50,10 +58,12 @@
       "architectures": [
         "monolithic"
       ],
+      "min_total_samples_required": 100,
+      "n_skipped_configs_below_min_samples": 0,
       "output": "/Users/bakiceltik/Documents/GitHub/Final_Project_Monorepo/scripts/../results/benchmark_tables/benchmark_livecodebench.json"
     },
     "mmlu": {
-      "n_configs": 16,
+      "n_configs": 15,
       "architectures": [
         "active_oracle",
         "ensemble",
@@ -62,6 +72,8 @@
         "routing",
         "speculative"
       ],
+      "min_total_samples_required": 100,
+      "n_skipped_configs_below_min_samples": 1,
       "output": "/Users/bakiceltik/Documents/GitHub/Final_Project_Monorepo/scripts/../results/benchmark_tables/benchmark_mmlu.json"
     },
     "truthfulqa": {
@@ -73,6 +85,8 @@
         "routing",
         "speculative"
       ],
+      "min_total_samples_required": 100,
+      "n_skipped_configs_below_min_samples": 0,
       "output": "/Users/bakiceltik/Documents/GitHub/Final_Project_Monorepo/scripts/../results/benchmark_tables/benchmark_truthfulqa.json"
     }
   }

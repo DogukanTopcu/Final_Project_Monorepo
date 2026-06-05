@@ -1,7 +1,19 @@
 {
   "benchmark": "mmlu",
-  "generated_at": "2026-06-05T18:04:49.568183+00:00",
-  "n_unique_configs": 16,
+  "generated_at": "2026-06-05T19:38:32.844543+00:00",
+  "min_total_samples_required": 100,
+  "n_unique_configs": 15,
+  "skipped_configs_below_min_samples": [
+    {
+      "architecture": "ensemble",
+      "model_key": "gemma4-4b+llama3.2-3b",
+      "total_samples_evaluated": 20,
+      "experiment_ids": [
+        "exp_d8b601ed",
+        "exp_2f4b3002"
+      ]
+    }
+  ],
   "entries": [
     {
       "architecture": "active_oracle",
@@ -27,35 +39,6 @@
       "avg_energy_per_sample_kwh": 0.000645,
       "avg_co2_per_sample_g": 0.245289,
       "eats": 0.303981
-    },
-    {
-      "architecture": "ensemble",
-      "model_key": "gemma4-4b+llama3.2-3b",
-      "slm": null,
-      "llm": null,
-      "ensemble_slms": [
-        "gemma4-4b",
-        "llama3.2-3b"
-      ],
-      "n_experiments": 2,
-      "experiment_ids": [
-        "exp_d8b601ed",
-        "exp_2f4b3002"
-      ],
-      "total_samples_evaluated": 20,
-      "accuracy": 0.5,
-      "llm_call_ratio": 0.0,
-      "avg_latency_ms": 21487.190064,
-      "latency_p50_ms": 20938.194416,
-      "latency_p95_ms": 35065.005583,
-      "avg_slm_confidence": 0.825328,
-      "escalation_rate": 0.0,
-      "avg_cost_per_sample_usd": 0.004914,
-      "avg_api_cost_per_sample_usd": 0.0,
-      "avg_infra_cost_per_sample_usd": 0.004914,
-      "avg_energy_per_sample_kwh": 0.000472,
-      "avg_co2_per_sample_g": 0.179261,
-      "eats": 0.292281
     },
     {
       "architecture": "ensemble",
@@ -382,28 +365,26 @@
       "slm": "gemma4-4b",
       "llm": "gemma4-31b",
       "ensemble_slms": [],
-      "n_experiments": 5,
+      "n_experiments": 3,
       "experiment_ids": [
         "exp_5214ebc3",
-        "exp_26e6a433",
         "exp_6d35e6d9",
-        "exp_9244ca16",
         "exp_06cb6a22"
       ],
-      "total_samples_evaluated": 240,
-      "accuracy": 0.84,
-      "llm_call_ratio": 0.412,
-      "avg_latency_ms": 9319.837638,
-      "latency_p50_ms": 7962.329208,
-      "latency_p95_ms": 21274.720883,
-      "avg_slm_confidence": 0.791629,
-      "escalation_rate": 0.412,
-      "avg_cost_per_sample_usd": 0.002568,
+      "total_samples_evaluated": 220,
+      "accuracy": 0.766667,
+      "llm_call_ratio": 0.486667,
+      "avg_latency_ms": 2332.0544,
+      "latency_p50_ms": 1536.37,
+      "latency_p95_ms": 7812.006667,
+      "avg_slm_confidence": 0.767671,
+      "escalation_rate": 0.486667,
+      "avg_cost_per_sample_usd": 0.000736,
       "avg_api_cost_per_sample_usd": 0.0,
-      "avg_infra_cost_per_sample_usd": 0.002568,
-      "avg_energy_per_sample_kwh": 0.000283,
-      "avg_co2_per_sample_g": 0.107714,
-      "eats": 0.595786
+      "avg_infra_cost_per_sample_usd": 0.000736,
+      "avg_energy_per_sample_kwh": 8.5e-05,
+      "avg_co2_per_sample_g": 0.032456,
+      "eats": 0.834905
     },
     {
       "architecture": "speculative",
@@ -411,30 +392,25 @@
       "slm": "gemma4-4b",
       "llm": "gemma4-31b",
       "ensemble_slms": [],
-      "n_experiments": 7,
+      "n_experiments": 2,
       "experiment_ids": [
-        "exp_0970d3d0",
-        "exp_4839b80d",
         "exp_94251988",
-        "exp_7cc622f4",
-        "exp_82112a58",
-        "exp_61cab72b",
         "exp_509abf4c"
       ],
-      "total_samples_evaluated": 260,
-      "accuracy": 0.941429,
+      "total_samples_evaluated": 120,
+      "accuracy": 0.86,
       "llm_call_ratio": 1.0,
-      "avg_latency_ms": 18943.584982,
-      "latency_p50_ms": 18263.806357,
-      "latency_p95_ms": 40481.301714,
-      "avg_slm_confidence": 0.847312,
+      "avg_latency_ms": 2516.59375,
+      "latency_p50_ms": 2134.9,
+      "latency_p95_ms": 5606.61,
+      "avg_slm_confidence": 0.828905,
       "escalation_rate": 1.0,
-      "avg_cost_per_sample_usd": 0.006594,
+      "avg_cost_per_sample_usd": 0.001081,
       "avg_api_cost_per_sample_usd": 0.0,
-      "avg_infra_cost_per_sample_usd": 0.006594,
-      "avg_energy_per_sample_kwh": 0.000789,
-      "avg_co2_per_sample_g": 0.299941,
-      "eats": 0.421535
+      "avg_infra_cost_per_sample_usd": 0.001081,
+      "avg_energy_per_sample_kwh": 0.000137,
+      "avg_co2_per_sample_g": 0.051922,
+      "eats": 0.817794
     }
   ]
 }

@@ -13,6 +13,7 @@ from collections import defaultdict
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "..", "results")
 OUTPUT_DIR = os.path.join(RESULTS_DIR, "benchmark_tables")
 CUTOFF = datetime.fromisoformat("2026-05-27T23:59:59+00:00")
+MIN_TOTAL_SAMPLES = 100
 
 METRICS_TO_AVG = [
     "accuracy",
@@ -198,8 +199,20 @@ def build_tables(experiments: list):
     summary = {}
     for benchmark, groups in sorted(by_bench.items()):
         entries = []
+        skipped_configs = []
         for (arch, model_key), exps in sorted(groups.items()):
-            entries.append(aggregate_group(exps))
+            aggregated = aggregate_group(exps)
+            if aggregated["total_samples_evaluated"] < MIN_TOTAL_SAMPLES:
+                skipped_configs.append(
+                    {
+                        "architecture": arch,
+                        "model_key": model_key,
+                        "total_samples_evaluated": aggregated["total_samples_evaluated"],
+                        "experiment_ids": aggregated["experiment_ids"],
+                    }
+                )
+                continue
+            entries.append(aggregated)
 
         # Sort: by architecture then model_key
         entries.sort(key=lambda x: (x["architecture"], x["model_key"]))
@@ -208,7 +221,9 @@ def build_tables(experiments: list):
         table = {
             "benchmark": benchmark,
             "generated_at": datetime.now(timezone.utc).isoformat(),
+            "min_total_samples_required": MIN_TOTAL_SAMPLES,
             "n_unique_configs": len(entries),
+            "skipped_configs_below_min_samples": skipped_configs,
             "entries": entries,
         }
 
@@ -219,9 +234,14 @@ def build_tables(experiments: list):
         summary[benchmark] = {
             "n_configs": len(entries),
             "architectures": sorted(set(e["architecture"] for e in entries)),
+            "min_total_samples_required": MIN_TOTAL_SAMPLES,
+            "n_skipped_configs_below_min_samples": len(skipped_configs),
             "output": out_path,
         }
-        print(f"  [{benchmark}] {len(entries)} configs → {out_path}")
+        print(
+            f"  [{benchmark}] {len(entries)} configs "
+            f"(skipped {len(skipped_configs)} below N={MIN_TOTAL_SAMPLES}) → {out_path}"
+        )
 
     # Write summary
     summary_path = os.path.join(OUTPUT_DIR, "summary.json")
@@ -230,6 +250,7 @@ def build_tables(experiments: list):
             {
                 "generated_at": datetime.now(timezone.utc).isoformat(),
                 "cutoff": CUTOFF.isoformat(),
+                "min_total_samples_required": MIN_TOTAL_SAMPLES,
                 "benchmarks": summary,
             },
             f,

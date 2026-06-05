@@ -30,7 +30,7 @@ All model endpoints are exposed through OpenAI-compatible HTTP interfaces so tha
 \section{Benchmark Suite and Evaluation Protocol}
 \label{sec:bench-suite}
 
-Five benchmarks are evaluated in this chapter. All runs use zero temperature. Accuracy is the proportion of samples for which the predicted answer matches the reference. EATS is computed from accuracy, normalized per-query cost, normalized average latency, and normalized per-query energy following the formula defined in Section~3 of this report; normalization is applied per benchmark against the mean of all standalone monolithic runs on that benchmark.
+Five benchmarks are evaluated in this chapter. All runs use zero temperature. Accuracy is the proportion of samples for which the predicted answer matches the reference. Individual experiment artefacts use the registry-based full-LLM baseline described in Section~3. For the aggregated benchmark tables in this chapter, EATS is recomputed from accuracy, normalized per-query cost, normalized average latency, and normalized per-query energy using a common benchmark-local reference: the mean of all standalone monolithic runs on that benchmark. This post-hoc re-normalization places heterogeneous standalone, hybrid, ensemble, and swarm configurations on the same per-benchmark comparison scale.
 
 \begin{table}[htbp]
     \centering
@@ -53,15 +53,15 @@ Five benchmarks are evaluated in this chapter. All runs use zero temperature. Ac
 \section{Benchmark-Level Results}
 \label{sec:benchmark-results}
 
-The following tables report aggregated results for every evaluated architecture--model combination. Rows are sorted alphabetically by architecture, then by model key. The \emph{N} column is the total number of samples evaluated across all runs of that configuration. Column \emph{LLM\,\%} is the fraction of queries that invoked the heavy language model.
+The following tables report aggregated results for every evaluated architecture--model combination that meets the reporting threshold of at least 100 total evaluated samples. Rows are sorted alphabetically by architecture, then by model key. The \emph{N} column is the total number of samples evaluated across all runs of that configuration. Column \emph{LLM\,\%} is the fraction of queries that invoked the heavy language model.
 
 \subsection{MMLU}
 
-Sixteen configurations were evaluated on MMLU, covering six architecture families. Speculative decoding achieves the highest accuracy (94.1\%) across all configurations, surpassing every standalone run. Among multi-model architectures, routing reaches 84.0\% accuracy at EATS 0.596 while limiting heavy-model usage to 41\% of queries. The single-SLM \texttt{ministral3-3b} ensemble produces the highest EATS overall (0.747) due to its very low per-query cost, though its accuracy (57.0\%) falls well below the standalone range of 79.3--88.6\%. Among standalone checkpoints, the MoE model \texttt{qwen3.5-35b-a3b} achieves 86.2\% accuracy at EATS 0.674, making it the most efficient standalone option.
+Fifteen configurations meet the reporting threshold on MMLU, covering six architecture families. Pure Swarm achieves the highest reported accuracy (89.5\%), narrowly surpassing the best standalone checkpoint \texttt{qwen3.5-27b} at 88.6\%. Among hybrid architectures, speculative decoding reaches 86.0\% accuracy, while routing reaches 76.7\% accuracy at EATS 0.835 while limiting heavy-model usage to 48.7\% of queries. Under the reporting threshold, routing becomes the highest-EATS configuration on MMLU. Among standalone checkpoints, \texttt{gpt-oss-20b} achieves the highest standalone EATS (0.698), while \texttt{qwen3.5-35b-a3b} remains close behind at 0.674.
 
 \begin{table}[htbp]
 \centering
-\caption{MMLU results across 16 configurations.}
+\caption{MMLU results across 15 configurations meeting the reporting threshold.}
 \label{tab:result-mmlu}
 \scriptsize
 \renewcommand{\arraystretch}{1.15}
@@ -70,7 +70,6 @@ Sixteen configurations were evaluated on MMLU, covering six architecture familie
 \textbf{Arch.} & \textbf{Model} & \textbf{N} & \textbf{Acc\,\%} & \textbf{Lat\,(s)} & \textbf{\$/q} & \textbf{g\,CO$_2$/q} & \textbf{LLM\,\%} & \textbf{EATS} \\
 \midrule
 active\_oracle & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 74.0 & 30.6 & 0.00659 & 0.245 & 21 & 0.304 \\
-ensemble & gemma4-4b + llama3.2-3b & 20 & 50.0 & 21.5 & 0.00491 & 0.179 & 0 & 0.292 \\
 ensemble & gemma4-4b + llama3.2-3b + ministral3-3b & 100 & 59.0 & 26.9 & 0.00561 & 0.205 & 0 & 0.286 \\
 ensemble & gemma4-4b + llama3.2-3b + ministral3-3b + qwen3.5-4b & 100 & 68.0 & 21.6 & 0.00942 & 0.344 & 0 & 0.299 \\
 ensemble & ministral3-3b & 100 & 57.0 & 3.5 & 0.00074 & 0.027 & 0 & 0.747 \\
@@ -83,8 +82,8 @@ standalone & llama3.3-70b & 500 & 84.8 & 11.1 & 0.02034 & 0.700 & 100 & 0.289 \\
 standalone & qwen3.5-27b & 510 & 88.6 & 19.5 & 0.01270 & 0.657 & 100 & 0.318 \\
 standalone & qwen3.5-35b-a3b & 500 & 86.2 & 4.3 & 0.00279 & 0.144 & 100 & 0.674 \\
 pure\_swarm & gemma4-4b & 110 & 89.5 & 27.5 & 0.00528 & 0.192 & 0 & 0.379 \\
-routing & gemma4-4b $\rightarrow$ gemma4-31b & 240 & 84.0 & 9.3 & 0.00257 & 0.108 & 41 & 0.596 \\
-speculative & gemma4-4b $\rightarrow$ gemma4-31b & 260 & 94.1 & 18.9 & 0.00659 & 0.300 & 100 & 0.422 \\
+routing & gemma4-4b $\rightarrow$ gemma4-31b & 220 & 76.7 & 2.3 & 0.00074 & 0.032 & 49 & 0.835 \\
+speculative & gemma4-4b $\rightarrow$ gemma4-31b & 120 & 86.0 & 2.5 & 0.00108 & 0.052 & 100 & 0.818 \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -219,7 +218,7 @@ Standalone results confirm that model family, size, and quantization all contrib
 
 Routing and speculative decoding using the \texttt{gemma4-4b}$\rightarrow$\texttt{gemma4-31b} pair produce the most prominent efficiency findings in this study. On ARC, HellaSwag, and TruthfulQA, routing achieves EATS of 0.884, 0.869, and 0.844 respectively. These values exceed the best standalone EATS on those benchmarks by 15--21 points. The improvement stems from combining near-monolithic accuracy with sub-2-second per-query latency and per-query costs below \$0.001. Speculative decoding achieves 1--5 percentage points higher accuracy than routing on these benchmarks at EATS values of 0.817--0.856, occupying the second-best EATS position in all three cases.
 
-On MMLU, routing reaches 84.0\% accuracy while speculative decoding reaches 94.1\%, the highest of any configuration on that benchmark. These results show that the hybrid pair remains competitive even on the broadest world-knowledge workload in the study.
+On MMLU, routing reaches the highest EATS (0.835) at 76.7\% accuracy while speculative decoding reaches 86.0\%. These results show that the hybrid pair remains efficiency-competitive even on the broadest world-knowledge workload in the study, though it no longer sets the top raw-accuracy point under the current filtered aggregate.
 
 On GSM8K, routing escalates only 1\% of queries to the LLM and achieves 95.0\% accuracy at EATS 0.560. This indicates that \texttt{gemma4-4b} is self-sufficient for nearly all GSM8K questions at the configured confidence threshold, reducing the LLM call overhead nearly entirely. The higher algorithmic latency (12.1 seconds) relative to ARC/HellaSwag/TruthfulQA reflects longer arithmetic reasoning output lengths rather than orchestration overhead.
 
@@ -250,9 +249,9 @@ Table~\ref{tab:eats-leaders} summarizes the top-three configurations by EATS on 
 \toprule
 \textbf{Benchmark} & \textbf{Architecture --- Model} & \textbf{Acc\,\%} & \textbf{EATS} & \textbf{Rank} \\
 \midrule
-MMLU & ensemble --- ministral3-3b & 57.0 & 0.747 & 1 \\
-MMLU & standalone --- gpt-oss-20b & 86.6 & 0.698 & 2 \\
-MMLU & standalone --- qwen3.5-35b-a3b & 86.2 & 0.674 & 3 \\
+MMLU & routing --- gemma4-4b $\rightarrow$ gemma4-31b & 76.7 & 0.835 & 1 \\
+MMLU & speculative --- gemma4-4b $\rightarrow$ gemma4-31b & 86.0 & 0.818 & 2 \\
+MMLU & ensemble --- ministral3-3b & 57.0 & 0.747 & 3 \\
 \midrule
 ARC & routing --- gemma4-4b $\rightarrow$ gemma4-31b & 91.0 & 0.884 & 1 \\
 ARC & speculative --- gemma4-4b $\rightarrow$ gemma4-31b & 94.0 & 0.853 & 2 \\
@@ -273,7 +272,7 @@ TruthfulQA & standalone --- gpt-oss-20b & 72.2 & 0.577 & 3 \\
 \end{tabularx}
 \end{table}
 
-The table reveals a consistent cross-benchmark pattern. Routing and speculative decoding occupy the top two EATS positions on ARC, HellaSwag, and TruthfulQA. On GSM8K, compact MoE standalone checkpoints take the top two positions because the routing LLM call ratio is 1\%---low enough that the SLM overhead from the initial draft pass adds latency without meaningful cost reduction relative to a lean MoE checkpoint. On MMLU, the EATS leader is the single-SLM \texttt{ministral3-3b} ensemble due to its exceptionally low cost per query, but its 57.0\% accuracy places it well outside the useful accuracy range for any deployment scenario.
+The table reveals a consistent cross-benchmark pattern. Routing and speculative decoding occupy the top two EATS positions on ARC, HellaSwag, and TruthfulQA. On GSM8K, compact MoE standalone checkpoints take the top two positions because the routing LLM call ratio is 1\%---low enough that the SLM overhead from the initial draft pass adds latency without meaningful cost reduction relative to a lean MoE checkpoint. On MMLU, routing and speculative decoding also take the top two EATS positions under the reporting threshold, indicating that the filtered benchmark-local normalization favors the lower-cost hybrid pair even though Pure Swarm and the best standalone checkpoints retain higher raw accuracy.
 
 \section{Discussion}
 \label{sec:exp-discussion}
