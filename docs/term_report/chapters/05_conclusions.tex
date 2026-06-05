@@ -24,7 +24,7 @@ One methodological issue is carried into the full thesis evaluation. The GSM8K a
 
 \section{Research Questions Revisited}
 
-\textbf{RQ1 (Performance):} Routing and speculative decoding match or approach the accuracy of the best standalone models on ARC, HellaSwag, and TruthfulQA. Pure Swarm exceeds every standalone model on ARC. The answer to RQ1 is affirmative for these benchmarks: collaborative architectures can match standalone LLM accuracy. On MMLU, Pure Swarm reaches the highest reported accuracy, while the filtered routing and speculative aggregates remain competitive but do not exceed the top standalone or swarm configurations. The coding-benchmark evaluation---the primary thesis surface---is still in progress.
+\textbf{RQ1 (Performance):} Routing and speculative decoding match or approach the accuracy of the best standalone models on ARC, HellaSwag, and TruthfulQA. Pure Swarm exceeds every standalone model on ARC. The answer to RQ1 is affirmative for these benchmarks: collaborative architectures can match standalone LLM accuracy. On MMLU, Pure Swarm reaches the highest reported accuracy, while routing and speculative decoding remain competitive but do not exceed the top standalone or swarm configurations.
 
 \textbf{RQ2 (Efficiency):} On ARC, HellaSwag, and TruthfulQA, routing reduces per-query cost by factors of 3--12 and latency by factors of 2--7 relative to the same LLM running in standalone mode, while maintaining near-monolithic accuracy. The MoE standalone checkpoints represent the most efficient non-collaborative alternative. Ensemble and Pure Swarm architectures achieve competitive accuracy at the cost of elevated latency. The efficiency picture is therefore architecture- and workload-dependent rather than universal.
 
@@ -36,7 +36,7 @@ One methodological issue is carried into the full thesis evaluation. The GSM8K a
 
 The current evaluation has three principal limitations.
 
-First, the five benchmarks are all multiple-choice or numeric-answer tasks. The thesis is centered on coding tasks, where verifiable unit-test correctness is the primary quality signal. The multiple-choice results provide useful evidence for the research questions but do not constitute the primary thesis comparison.
+First, all five benchmarks use multiple-choice or fixed numeric-answer formats with deterministic gold labels. This makes evaluation straightforward and reproducible but limits coverage of open-ended generation quality, which requires different scoring approaches. The five benchmarks span knowledge breadth, structured reasoning, commonsense inference, arithmetic, and adversarial truthfulness, but they do not yet cover domain-specific or instruction-following tasks.
 
 Second, all routing and speculative experiments use a single SLM--LLM pair (\texttt{gemma4-4b}$\rightarrow$\texttt{gemma4-31b}). It is unknown whether the efficiency gains generalize to other pair configurations or whether the specific confidence-threshold setting contributes substantially to the observed results.
 
@@ -45,19 +45,15 @@ Third, three architecture families from the Chapter~3 taxonomy---Debate (POA), B
 \section{Future Work}
 
 \begin{enumerate}
-    \item \textbf{Coding benchmark completion.} The \texttt{custom\_stratified} coding benchmark should be finalized with validated easy, medium, and hard tasks and a unit-test-based correctness scorer. This is the primary missing component for the thesis evaluation and the most important near-term priority.
+    \item \textbf{GSM8K output-parsing fix.} The numeric answer extraction heuristic should be audited and corrected for GPT-family output formats. The GPT-family GSM8K runs should then be re-executed to verify whether the 67.8\%/59.4\% anomaly was a parsing artefact.
 
-    \item \textbf{GSM8K output-parsing fix.} The numeric answer extraction heuristic should be audited and corrected for GPT-family output formats. The GPT-family GSM8K runs should then be re-executed to verify whether the 67.8\%/59.4\% anomaly was a parsing artifact.
-
-    \item \textbf{Remaining architecture benchmarking.} Debate (POA), Blackboard, and Entropy Blackboard architectures are implemented in the repository but have not been evaluated. Benchmarking these families on the same five tasks---and on the coding benchmark once stable---will complete the taxonomy coverage promised in Chapter~3.
+    \item \textbf{Remaining architecture benchmarking.} Debate (POA), Blackboard, and Entropy Blackboard architectures are implemented in the repository but have not been evaluated. Benchmarking these families on the same five benchmarks (MMLU, ARC-Challenge, GSM8K, HellaSwag, and TruthfulQA) will complete the taxonomy coverage and provide empirical data for the full set of architecture families introduced in Chapter~3.
 
     \item \textbf{Routing-threshold and pair ablations.} The confidence threshold used for routing (\texttt{gemma4-4b}$\rightarrow$\texttt{gemma4-31b}) has not been systematically varied. Ablations across threshold values and across alternative SLM--LLM pairs will clarify whether the observed EATS gains are robust to configuration choice or specific to the current setting.
 
-    \item \textbf{Human preference evaluation.} For open-ended and coding tasks where correctness alone does not capture response quality, a UI-backed human preference workflow is planned as a complementary evaluation surface. This component is defined in the repository but not yet operational.
+    \item \textbf{Human preference evaluation.} For open-ended tasks where exact-match correctness does not fully capture response quality, a UI-backed human preference workflow is planned as a complementary evaluation surface. This component is defined in the repository but not yet operational.
 
-    \item \textbf{Standardized coding benchmark integration.} Beyond the internal \texttt{custom\_stratified} dataset, established coding benchmarks such as LiveCodeBench should be incorporated once the platform's code-execution scorer is stable. LiveCodeBench is regularly updated with contest-sourced problems and tracks newly released models, making it a durable long-term reference point that prevents benchmark saturation and enables comparison against published state-of-the-art results.
-
-    \item \textbf{Expanded sample counts and experiment diversity.} Reported per-configuration sample counts in the current public-benchmark suite range from 100 to 520. Increasing sample counts to a consistent minimum of 500 per configuration across all benchmarks would reduce variance in accuracy and EATS estimates and strengthen the statistical reliability of architecture comparisons. Experiment diversity should also be extended to cover a broader set of SLM candidates, additional routing-threshold values, and larger model-tier combinations not yet represented in the registry.
+    \item \textbf{Expanded sample counts and experiment diversity.} Reported per-configuration sample counts in the current benchmark suite range from 100 to 520. Increasing sample counts to a consistent minimum of 500 per configuration across all benchmarks would reduce variance in accuracy and EATS estimates and strengthen the statistical reliability of architecture comparisons. Experiment diversity should also be extended to cover a broader set of SLM candidates, additional routing-threshold values, and larger model-tier combinations not yet represented in the registry.
 
     \item \textbf{Edge device deployment study.} If a collaborative architecture demonstrates a strong EATS profile---specifically, high accuracy at low per-query cost and latency---its feasibility on resource-constrained edge hardware should be investigated. Running a quantized SLM locally on an edge device for the draft stage, with selective escalation to a remote LLM only when the SLM confidence is insufficient, would extend the platform's deployment surface beyond cloud GPU hosts and open a new efficiency dimension not captured by the current cost model.
 \end{enumerate}

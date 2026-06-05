@@ -4,17 +4,7 @@
 
 \subsection{Research Questions}
 
-This thesis investigates a systems-level research question that differs fundamentally from standard single-model benchmarking: \textit{which orchestration architecture achieves the best balance between answer quality and resource consumption under a controlled benchmark workload?} This central question is decomposed into four empirical research questions:
-
-\begin{itemize}
-    \item \textbf{RQ1 (Performance):} Can SLM--LLM collaborative architectures match standalone LLM accuracy on reasoning tasks under a shared benchmark and evaluation policy?
-
-    \item \textbf{RQ2 (Efficiency):} What are the cost, latency, and energy trade-offs across standalone, hybrid, ensemble, and multi-SLM orchestration families when evaluated on the same workload?
-
-    \item \textbf{RQ3 (Unified Metric):} Does EATS provide a stable, architecture-agnostic ranking signal for the quality--efficiency trade-off across the studied architecture families?
-
-    \item \textbf{RQ4 (Empirical Grounding):} Do platform-measured architecture comparisons corroborate the performance and efficiency trends reported across the 54 studies synthesized in the companion systematic literature review?
-\end{itemize}
+This thesis investigates a systems-level research question that differs fundamentally from standard single-model benchmarking: \textit{which orchestration architecture achieves the best balance between answer quality and resource consumption under a controlled benchmark workload?} This central question is decomposed into the four empirical research questions stated in full in Section~\ref{sec:rqs} (RQ1--RQ4).
 
 These questions require an architecture-comparative experimental design and mandate that accuracy and resource efficiency be treated as co-equal primary outcomes rather than relegating operational metrics to a secondary diagnostic role. RQ3 additionally motivates the introduction of EATS as a unified composite signal, and RQ4 ties the platform evaluation back to the findings of the companion systematic literature review.
 
@@ -148,13 +138,13 @@ A FastAPI-based metrics proxy is deployed on each host, interposed between the p
 
 \subsection{Tier-Based Stratification Rationale}
 
-The model pool was assembled through a principled tier-based stratification strategy rather than through arbitrary model availability. The literature review demonstrated that collaborative SLM--LLM systems derive their efficiency gains from the interaction between tiers; a meaningful architecture comparison therefore requires distinct tiers with clearly differentiated capability and cost profiles \cite{slrmanuscript2026, hao2024hybrid, oh2025uncertainty}.
+The model pool was assembled through a principled tier-based stratification strategy rather than through availability constraints alone. The literature review demonstrated that collaborative SLM--LLM systems derive their efficiency gains from the interaction between tiers; a meaningful architecture comparison therefore requires distinct tiers with clearly differentiated capability and cost profiles \cite{slrmanuscript2026, hao2024hybrid, oh2025uncertainty}.
 
 Three additional criteria governed model selection within each tier. First, \textbf{model family diversity}: multiple families (Gemma, Qwen, LLaMA, Mistral, Phi) are represented so that architecture comparisons are not confounded by idiosyncrasies of a single model family's instruction-following or confidence calibration behaviour. Second, \textbf{conditional computation coverage}: two Mixture-of-Experts checkpoints (\texttt{gemma4-26b-a4b} and \texttt{qwen3.5-35b-a3b}) are included as standalone MoE baselines, enabling the thesis to directly compare efficiency gains from internal expert sparsity with those arising from external orchestration---one of the principal conceptual boundaries identified in the literature review \cite{slrmanuscript2026}. Third, \textbf{reproducibility}: all selected models are open-weight checkpoints available through Hugging Face, ensuring that serving configurations are fully reproducible and independent of proprietary API agreements or access constraints.
 
 \begin{table}[htbp]
 \centering
-\caption{Language-model pool. Rows are grouped by capability tier; horizontal rules mark tier boundaries. \emph{Params} gives the total parameter count (dense models) or total / active count (MoE models). Hugging Face checkpoint URLs are listed in the Appendix.}
+\caption{Language-model pool. Rows are grouped by capability tier; horizontal rules mark tier boundaries. \emph{Params} gives the total parameter count (dense models) or total / active count (MoE models). All models are open-weight checkpoints available on Hugging Face. ${}^{a}$phi4-mini is part of the model pool but was not used in any reported experiment.}
 \label{tab:model-pool}
 \small
 \begin{tabular}{@{} l l l r l r @{}}
@@ -165,13 +155,13 @@ Three additional criteria governed model selection within each tier. First, \tex
 \texttt{qwen3.5-4b}      & SLM           & Qwen 3.5      & $\approx$4B        & GCP L4          & 24  \\
 \texttt{llama3.2-3b}     & SLM           & LLaMA 3.2     & 3B                 & GCP L4          & 24  \\
 \texttt{ministral3-3b}   & SLM           & Mistral 3     & $\approx$3B        & GCP L4          & 24  \\
-\texttt{phi4-mini}       & SLM           & Phi 4         & $\approx$4B        & GCP L4          & 24  \\
+\texttt{phi4-mini}${}^{a}$ & SLM         & Phi 4         & $\approx$4B        & GCP L4          & 24  \\
 \midrule
-\texttt{gpt-oss-20b}     & Mid-tier      & OpenAI OSS    & 20B                & GCP RTX 6000    & 96  \\
-\texttt{qwen3.5-27b}     & Mid-tier      & Qwen 3.5      & 27B                & GCP RTX 6000    & 96  \\
-\texttt{gemma4-31b}      & Mid-tier      & Gemma 4       & 31B                & GCP RTX 6000    & 96  \\
-\texttt{gemma4-26b-a4b}  & Mid-tier MoE  & Gemma 4       & 26B\,/\,4B act.    & GCP RTX 6000    & 96  \\
-\texttt{qwen3.5-35b-a3b} & Mid-tier MoE  & Qwen 3.5      & 35B\,/\,3B act.    & GCP RTX 6000    & 96  \\
+\texttt{gpt-oss-20b}     & Mid-tier      & OpenAI OSS    & 20B                & GCP RTX PRO6000    & 96  \\
+\texttt{qwen3.5-27b}     & Mid-tier      & Qwen 3.5      & 27B                & GCP RTX PRO6000    & 96  \\
+\texttt{gemma4-31b}      & Mid-tier      & Gemma 4       & 31B                & GCP RTX PRO6000    & 96  \\
+\texttt{gemma4-26b-a4b}  & Mid-tier MoE  & Gemma 4       & 26B\,/\,4B act.    & GCP RTX PRO6000    & 96  \\
+\texttt{qwen3.5-35b-a3b} & Mid-tier MoE  & Qwen 3.5      & 35B\,/\,3B act.    & GCP RTX PRO6000    & 96  \\
 \midrule
 \texttt{llama3.3-70b}    & Heavy         & LLaMA 3.3     & 70B                & Nebius H200     & 141 \\
 \texttt{gpt-oss-120b}    & Heavy         & OpenAI OSS    & 120B               & Nebius H200     & 141 \\
@@ -386,7 +376,7 @@ Second, \textbf{monotonicity}: $\partial\,\text{EATS}/\partial\alpha = P/(\alpha
 
 Third, \textbf{domain}: the formula is undefined when $\alpha = P = 0$ simultaneously; this edge case is excluded by design because every experiment records at least one inference step, which guarantees $C, L, E > 0$ and therefore $P > 0$.
 
-The structure $\alpha/(\alpha + P)$ is deliberately analogous to the F-score harmonic mean, where $P$ acts as a resource-consumption counterpart to accuracy. Unlike a multiplicative penalty, the additive form degrades gracefully when one efficiency dimension is only approximately measured---a multiplicative structure would collapse EATS toward zero if any single component were unmeasured or near zero.
+The structure $\alpha/(\alpha + P)$ is structurally reminiscent of the F-score formulation, where $P$ acts as a resource-consumption counterpart to accuracy; the analogy is motivational rather than exact, since $P$ is a weighted sum of normalised ratios that need not lie in $[0,1]$. Unlike a multiplicative penalty, the additive form degrades gracefully when one efficiency dimension is only approximately measured---a multiplicative structure would collapse EATS toward zero if any single component were unmeasured or near zero.
 
 The weights (0.5 for cost, 0.3 for latency, 0.2 for energy) reflect the relative prioritisation of efficiency dimensions in production deployment contexts, as informed by the literature \cite{slrmanuscript2026, energytoken2025}: monetary cost is weighted highest as the most immediately actionable constraint for practitioners; latency ranks second because it directly governs interactive responsiveness; energy is lowest because it is currently the dimension most subject to measurement approximation in the present platform. These weights are held fixed throughout this term report. To verify that architecture rankings are robust to this choice, the full thesis evaluation will include a sensitivity analysis varying each weight by $\pm 0.1$ under the constraint $w_C + w_L + w_E = 1$.
 
@@ -412,14 +402,16 @@ A resource-profile fallback layer handles multi-step architectures and endpoints
 \subsection{Baseline Normalisation}
 \label{sec:normalisation}
 
-EATS normalisation is tied to benchmark-specific standalone baselines. The platform maintains a registry of baseline runs that record full-LLM cost, model-side latency, and total energy for a given benchmark, sample size, seed, and model alias. Architecture-level runs are normalised against these values rather than against handwritten constants. This is methodologically important because a benchmark such as GSM8K has a very different latency and token profile from HellaSwag or ARC. Using benchmark-local standalone references ensures that the efficiency penalty component of EATS reflects the actual difficulty and output characteristics of the workload under evaluation.
+EATS normalisation is tied to benchmark-specific standalone baselines. The platform maintains a registry of baseline runs that record full-LLM cost, model-side latency, and total energy for a given benchmark, sample size, seed, and model alias. Architecture-level runs are normalised against these values rather than against handwritten constants. This is methodologically important because a benchmark such as GSM8K has a very different latency and token profile from HellaSwag or ARC-Challenge. Using benchmark-local standalone references ensures that the efficiency penalty component of EATS reflects the actual difficulty and output characteristics of the workload under evaluation.
+
+Two normalisation modes are formally defined. The \emph{per-experiment mode} normalises each architecture run against the registered full-LLM baseline for the exact same benchmark, sample count, and seed; this is the default mode used by the experiment runner and the MLflow tracking layer for live experiment comparison. The \emph{aggregate mode}, used for the cross-architecture result tables in Chapter~4, re-normalises using the mean of all standalone monolithic runs on a given benchmark as the common reference point; this ensures that heterogeneous standalone, hybrid, ensemble, and swarm configurations can be placed on the same per-benchmark comparison scale when multiple standalone configurations are available. Both modes use the same EATS formula (Eq.~\eqref{eq:eats}); they differ only in which standalone reference values are substituted for $C_0$, $L_0$, and $E_0$ in Eq.~\eqref{eq:norm-components}.
 
 \section{Benchmark Selection}
 \label{sec:benchmarks}
 
-The benchmark suite was selected to cover the capability dimensions emphasised by the systematic literature review: broad knowledge, structured reasoning, commonsense continuation, arithmetic reasoning, and truthfulness \cite{slrmanuscript2026}. The final benchmark set consists of \texttt{mmlu}, \texttt{arc}, \texttt{hellaswag}, \texttt{gsm8k}, and \texttt{truthfulqa}. Together they constitute a diverse evaluation suite on which routing, verification, debate, and multi-SLM coordination can be tested under one shared measurement policy.
+The benchmark suite was selected to cover the capability dimensions emphasised by the systematic literature review: broad knowledge, structured reasoning, commonsense continuation, arithmetic reasoning, and truthfulness \cite{slrmanuscript2026}. The final benchmark set consists of \texttt{mmlu}, \texttt{arc\_challenge}, \texttt{hellaswag}, \texttt{gsm8k}, and \texttt{truthfulqa}. Together they constitute a multi-dimensional evaluation suite spanning knowledge breadth, structured reasoning, commonsense inference, arithmetic reasoning, and adversarial truthfulness, on which routing, verification, debate, and multi-SLM coordination can be tested under one shared measurement policy.
 
-\textbf{MMLU} \cite{hendrycks2021mmlu} serves as the main general-reasoning benchmark, covering 57 academic and professional subject areas in zero-shot multiple-choice form. Its \texttt{subject} field additionally enables domain-level disaggregation of accuracy, making it possible to ask whether a hybrid architecture fails systematically in specific disciplines. \textbf{ARC-Challenge} \cite{clark2018arc} contributes a harder science-reasoning surface and is particularly useful for architectures such as routing and debate because it pressures the system to distinguish between cases that are resolvable by an SLM and those that require stronger reasoning support. \textbf{HellaSwag} \cite{zellers2019hellaswag} evaluates commonsense continuation and tests whether collaboration mechanisms genuinely improve reasoning or merely amplify stylistic fluency, since all candidate completions remain superficially plausible. \textbf{GSM8K} \cite{cobbe2021gsm8k} provides open-ended arithmetic reasoning problems, which are central to the thesis's energy measurement interest: smaller models can become energy-inefficient when they compensate for limited capability by generating lengthy chain-of-thought traces \cite{energytoken2025}. \textbf{TruthfulQA} \cite{lin2022truthfulqa} extends the evaluation surface toward adversarial self-correction, asking whether architectures such as debate and oracle consultation help the system avoid persuasive falsehoods rather than merely improving answer matching.
+\textbf{MMLU} \cite{hendrycks2021mmlu} serves as the main general-reasoning benchmark, covering 57 academic and professional subject areas in zero-shot multiple-choice form. Its \texttt{subject} field additionally enables domain-level disaggregation of accuracy, making it possible to ask whether a hybrid architecture fails systematically in specific disciplines. \textbf{ARC-Challenge} \cite{clark2018arc} (referred to as ARC in tables) contributes a harder science-reasoning surface and is particularly useful for architectures such as routing and debate because it pressures the system to distinguish between cases that are resolvable by an SLM and those that require stronger reasoning support. \textbf{HellaSwag} \cite{zellers2019hellaswag} evaluates commonsense continuation and tests whether collaboration mechanisms genuinely improve reasoning or merely amplify stylistic fluency, since all candidate completions remain superficially plausible. \textbf{GSM8K} \cite{cobbe2021gsm8k} provides open-ended arithmetic reasoning problems, which are central to the thesis's energy measurement interest: smaller models can become energy-inefficient when they compensate for limited capability by generating lengthy chain-of-thought traces \cite{energytoken2025}. \textbf{TruthfulQA} \cite{lin2022truthfulqa} extends the evaluation surface toward adversarial self-correction, asking whether architectures such as debate and oracle consultation help the system avoid persuasive falsehoods rather than merely improving answer matching.
 
 Methodologically, the suite supports two kinds of comparison: within-benchmark architecture comparison, where the same workload is used to compare standalone, hybrid, and multi-SLM architectures under a fixed prompt and scoring policy; and cross-benchmark behaviour analysis, where the thesis asks whether an architecture's efficiency advantage on one workload persists when the task shifts from broad knowledge to arithmetic or truthfulness. The literature consistently shows that collaborative gains are task-sensitive rather than universal \cite{slrmanuscript2026, debateagents2025, sentensemble2026}, which is why the thesis does not treat any single benchmark as sufficient evidence for an architecture claim. Full details of the benchmark standardisation procedure---prompt templates, answer parsers, and sampling protocol---are provided in Chapter~4.
 
@@ -432,7 +424,7 @@ Four threats to internal validity are acknowledged. First, \textbf{shared-host m
 
 \subsection{External Validity}
 
-Two threats to external validity are acknowledged. First, \textbf{model family generalisability}: the reported pilot experiments use models exclusively from the Gemma family (\texttt{gemma4-4b} and \texttt{gemma4-31b}). Routing effectiveness, escalation rates, and the energy efficiency of different architectures may vary substantially across model families with different instruction-following calibration or confidence expression behaviour. The full thesis evaluation will include multiple model families across all tiers. Second, \textbf{benchmark generalisability}: MMLU and GSM8K are established general-purpose benchmarks but are not the thesis's primary intended evaluation surface, which is a coding-focused benchmark. Efficiency and quality rankings observed on broad-knowledge and arithmetic tasks may not transfer directly to code generation or debugging tasks.
+Two threats to external validity are acknowledged. First, \textbf{model family generalisability}: the reported pilot experiments use models exclusively from the Gemma family (\texttt{gemma4-4b} and \texttt{gemma4-31b}). Routing effectiveness, escalation rates, and the energy efficiency of different architectures may vary substantially across model families with different instruction-following calibration or confidence expression behaviour. The full thesis evaluation will include multiple model families across all tiers. Second, \textbf{benchmark generalisability}: the five benchmarks all use multiple-choice or fixed numeric-answer formats. Efficiency and quality rankings observed on broad-knowledge, commonsense, arithmetic, and truthfulness tasks may not transfer directly to open-ended generation or domain-specific instruction-following scenarios.
 
 \subsection{Construct Validity}
 

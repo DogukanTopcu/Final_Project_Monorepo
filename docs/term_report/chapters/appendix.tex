@@ -3,7 +3,7 @@
 
 \section{Canonical Model Aliases}
 
-Table \ref{tab:appendix-aliases} lists the canonical aliases used by the control plane. These aliases are important because they decouple experiment configuration from the served model identifiers exposed by remote vLLM endpoints.
+Table~\ref{tab:appendix-aliases} lists the canonical aliases used by the control plane. These aliases are important because they decouple experiment configuration from the served model identifiers exposed by remote vLLM endpoints. All models are open-weight checkpoints available on Hugging Face. ${}^{a}$\texttt{phi4-mini} is part of the registered model pool but was not used in any experiment reported in this term report.
 
 \begin{longtable}{@{} l l l @{}}
     \caption{Canonical model aliases used by the platform.}
@@ -20,7 +20,7 @@ Table \ref{tab:appendix-aliases} lists the canonical aliases used by the control
     \texttt{qwen3.5-4b} & SLM & Dedicated GCP L4 \\
     \texttt{llama3.2-3b} & SLM & Dedicated GCP L4 \\
     \texttt{ministral3-3b} & SLM & Dedicated GCP L4 \\
-    \texttt{phi4-mini} & SLM & Dedicated GCP L4 \\
+    \texttt{phi4-mini}${}^{a}$ & SLM & Dedicated GCP L4 \\
     \texttt{gpt-oss-20b} & Mid-tier LLM & Shared RTX PRO6000 \\
     \texttt{qwen3.5-27b} & Mid-tier LLM & Shared RTX PRO6000 \\
     \texttt{gemma4-31b} & Mid-tier LLM & Shared RTX PRO6000 \\
@@ -42,23 +42,9 @@ The current host topology used by the platform can be summarized as follows:
     \item a local control plane that communicates with all remote hosts through OpenAI-compatible HTTP endpoints.
 \end{itemize}
 
-\section{Benchmark Record Sketches}
+\section{Human Preference Benchmark Record Schema}
 
-The intended record shape for the planned coding benchmark is:
-
-\begin{itemize}
-    \item \texttt{id}
-    \item \texttt{difficulty} = \texttt{easy} / \texttt{medium} / \texttt{hard}
-    \item \texttt{prompt}
-    \item \texttt{starter\_code}
-    \item \texttt{public\_tests}
-    \item \texttt{hidden\_tests}
-    \item \texttt{topic}
-    \item \texttt{source}
-    \item \texttt{metadata}
-\end{itemize}
-
-The intended record shape for the human preference benchmark is:
+The intended record shape for the human preference benchmark, planned as a complementary open-ended evaluation surface (see Section~5.4), is:
 
 \begin{itemize}
     \item \texttt{prompt\_id} and \texttt{prompt\_text}
@@ -83,7 +69,7 @@ The project-specific EATS metric is defined as:
  0.2\,\text{normalized\_energy}}
 \]
 
-Its purpose is to reward architectures that preserve useful answer quality while reducing normalized cost, algorithmic latency, and energy relative to a full-LLM baseline. The weighted additive penalty (weights summing to 1: cost 50\%, latency 30\%, energy 20\%) avoids multiplicative collapse when any single efficiency dimension is unmeasured. The form $\text{accuracy} / (\text{accuracy} + \text{penalty})$ is structurally analogous to the F-score harmonic mean, where the penalty acts as a resource-consumption counterpart to accuracy.
+Its purpose is to reward architectures that preserve useful answer quality while reducing normalized cost, algorithmic latency, and energy relative to a full-LLM baseline. The weighted additive penalty (weights summing to 1: cost 50\%, latency 30\%, energy 20\%) avoids multiplicative collapse when any single efficiency dimension is unmeasured. The form $\text{accuracy} / (\text{accuracy} + \text{penalty})$ is structurally reminiscent of the F-score formulation, where the penalty acts as a resource-consumption counterpart to accuracy. Two normalisation modes (per-experiment and aggregate) are defined in Section~3.4.5 of the main text; the result tables in Chapter~4 use aggregate mode.
 
 \section{Example Experiment Configuration Placeholder}
 
@@ -91,8 +77,8 @@ Listing \ref{lst:config-placeholder} shows a minimal experiment configuration pl
 
 \begin{lstlisting}[caption={Example experiment configuration placeholder.}, label={lst:config-placeholder}, language={}]
 architecture: routing
-benchmark: custom_stratified
-n_samples: 30
+benchmark: mmlu
+n_samples: 100
 slm: qwen3.5-4b
 llm: gpt-oss-20b
 confidence_threshold: 0.7
