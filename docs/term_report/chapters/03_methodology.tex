@@ -220,9 +220,23 @@ Multi-SLM  & Ensemble             & Literature       & Majority or confidence-we
 
 \subsubsection{Standalone (Single-Model)}
 
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\linewidth]{sources/standalone_simplified.png}
+    \caption{Data flow and component interactions for the Standalone (Single-Model) architecture.}
+    \label{fig:arch-standalone}
+\end{figure}
+
 The standalone single-model architecture is the simplest methodological baseline: the full query is submitted to a single model, which alone produces the final answer. No routing, verification, voting, or role decomposition occurs. In this thesis, both heavy LLM-only runs and single-SLM runs are treated as standalone baselines because the decisive property is not model size but the absence of inter-model collaboration. This baseline is essential because the literature repeatedly compares hybrid and multi-agent systems against single-model references rather than against each other alone \cite{slrmanuscript2026, hao2024hybrid, multiagent2025}. Without a standalone baseline, it would be impossible to determine whether a collaborative design truly adds value or merely reproduces the behaviour of the stronger model with additional overhead.
 
 \subsubsection{Standalone (MoE --- Mixture of Experts)}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\linewidth]{sources/standalone_moe_simplified.png}
+    \caption{Data flow and component interactions for the Standalone (MoE) architecture.}
+    \label{fig:arch-standalone-moe}
+\end{figure}
 
 MoE models are also treated as standalone baselines within the thesis taxonomy, even though they implement conditional computation internally through sparse expert activation. The reason is methodological: from the experiment platform's perspective, an MoE checkpoint still receives one query and returns one response through a single model endpoint. Expert selection occurs inside the model weights rather than through an external orchestration policy. This makes the standalone MoE baseline an especially useful comparison surface. If an MoE model improves efficiency, that gain originates from internal sparse activation; if a collaborative architecture improves efficiency, the gain originates from system-level orchestration. By including checkpoints such as \texttt{gemma4-26b-a4b} and \texttt{qwen3.5-35b-a3b}, the thesis can distinguish internal expert sparsity from external multi-model collaboration---one of the principal conceptual boundaries identified in the literature review \cite{slrmanuscript2026}.
 
@@ -230,25 +244,67 @@ MoE models are also treated as standalone baselines within the thesis taxonomy, 
 
 \subsubsection{Routing}
 
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\linewidth]{sources/routing_simplified.png}
+    \caption{Data flow and component interactions for the Routing architecture.}
+    \label{fig:arch-routing}
+\end{figure}
+
 Routing is the clearest query-level hybrid pattern in the thesis. The compact model answers first; the system parses its answer and confidence; and the stronger model is invoked only if the compact model appears unreliable. This design was derived from the literature on uncertainty-aware hybrid inference and selective escalation, where the central question is whether a system can preserve most of the quality of a large model while paying for it only on difficult cases \cite{hao2024hybrid, oh2025uncertainty, citer2025, rethinkllm2025}. If the answer cannot be parsed, if the confidence falls below a threshold, or if other routing conditions are triggered, the full query is escalated to the LLM. This keeps the orchestration policy transparent and makes the LLM-call ratio directly interpretable. Methodologically, routing is the baseline hybrid architecture because it captures the simplest form of SLM--LLM collaboration.
 
 \subsubsection{Speculative Decoding}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\linewidth]{sources/speculative_simplified.png}
+    \caption{Data flow and component interactions for the Speculative Decoding architecture.}
+    \label{fig:arch-speculative}
+\end{figure}
 
 Speculative Decoding was derived from token-level collaboration studies in which a smaller model proposes text and a stronger model selectively verifies or corrects it \cite{hao2024hybrid, oh2025uncertainty, citer2025}. In the platform, the architecture is implemented as a drafter--verifier system. The SLM first generates a compact draft; the verifier then checks the draft incrementally. If the verifier agrees with the current draft prefix, that prefix is accepted; on the first meaningful divergence, only the remaining suffix is rewritten by the stronger model. Because the thesis uses heterogeneous open-weight models with different tokenizers, the implementation is a text-prefix approximation of speculative decoding rather than a tokenizer-coupled identical-token verifier. Even so, it preserves the core methodological idea from the literature: the large model should not regenerate the entire answer if the small model has already solved part of the response correctly.
 
 \subsubsection{Debate (POA)}
 
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\linewidth]{sources/multiagent_simplified.png}
+    \caption{Data flow and component interactions for the Debate (POA) architecture.}
+    \label{fig:arch-debate}
+\end{figure}
+
 Debate in this thesis follows a Proponent--Opponent--Arbitrator (POA) structure. One agent proposes an answer, a second agent critiques that proposal, and an arbitrator produces the final decision. This pattern comes directly from the debate and collaborative-checking literature, which reports that role separation can improve reasoning discipline even when the participating models are individually weaker than a frontier baseline \cite{debateagents2025, resiliomate2025}. In the default configuration, the Proponent and Opponent are SLMs, while the Arbitrator can be either another SLM or a stronger LLM. The thesis classifies the default configuration as hybrid because the highest-quality setting typically uses an LLM arbitrator. Methodologically, POA matters because it tests whether accuracy gains can arise from adversarial internal critique rather than from direct fallback alone.
 
 \subsubsection{Active Oracle}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\linewidth]{sources/active_oracle_simplified.png}
+    \caption{Data flow and component interactions for the Active Oracle architecture.}
+    \label{fig:arch-active-oracle}
+\end{figure}
 
 Active Oracle is a novel architectural contribution of the present project, motivated by the gap between simple routing and full debate. In many tasks, the SLM is not globally incapable; it is blocked only by one missing fact, one sub-calculation, or one uncertain rule. Routing the entire query to an LLM is then wasteful, while multi-round debate is often unnecessary. Active Oracle therefore keeps the SLM as the primary reasoner but allows it to emit an explicit \texttt{CALL\_ORACLE: <question>} request when it reaches an impasse. The LLM responds only to that narrow sub-question, and the SLM resumes reasoning from that point. Conceptually, this architecture draws on the broader literature on task decomposition, grounded support, and specialised helper roles \cite{shao2025dot, lee2024orchestrallm, alabbasi2024teleoracle}. Its core methodological purpose is to test whether sparse, targeted LLM interventions can close the quality gap more efficiently than full-query fallback.
 
 \subsubsection{Blackboard}
 
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\linewidth]{sources/blackboard_simplified.png}
+    \caption{Data flow and component interactions for the Blackboard architecture.}
+    \label{fig:arch-blackboard}
+\end{figure}
+
 Blackboard is a further project-developed architecture and represents a major structural departure from centralised routing. Instead of relying on a single router to assign queries, the system maintains a shared task board whose items cycle through states (\texttt{OPEN}, \texttt{IN\_PROGRESS}, \texttt{BLOCKED}, \texttt{RESOLVED}). Two SLM workers continuously inspect the board, compute bids based on predicted confidence and compute cost, and claim tasks whose expected utility exceeds a threshold. If no SLM claims a task before its time-to-live expires, a heavier LLM sweeper resolves it. Workers can also emit \texttt{SUB\_TASK} requests, causing the architecture to post a dependent subtask, block the parent, and resume it once the dependency is resolved. This design synthesises ideas from decomposition, asynchronous coordination, and resilient multi-agent execution found across the literature \cite{shao2025dot, multiagent2025, resiliomate2025, bioagents2025}. Methodologically, Blackboard tests whether decentralised coordination can replace a single global router while retaining a strong safety fallback.
 
 \subsubsection{Entropy Blackboard}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\linewidth]{sources/blackboard_entropy_based_simplified.png}
+    \caption{Data flow and component interactions for the Entropy Blackboard architecture.}
+    \label{fig:arch-entropy-blackboard}
+\end{figure}
 
 Entropy Blackboard extends Blackboard by modifying only the bidding rule. In the standard Blackboard architecture, a worker's bid depends primarily on confidence minus a compute penalty. In Entropy Blackboard, the bid is additionally penalised by an entropy term derived from the worker's output token distribution, making the architecture less willing to let an apparently confident but internally uncertain SLM claim a difficult task. The design is directly motivated by uncertainty-aware hybrid inference studies that argue the real challenge is calibrating when a small model should abstain rather than merely detecting low confidence \cite{oh2025uncertainty}. Entropy Blackboard is therefore the thesis's uncertainty-sensitive decentralised architecture: it preserves the same asynchronous task board as Blackboard but imposes a more conservative claim policy under distributional ambiguity.
 
@@ -256,9 +312,23 @@ Entropy Blackboard extends Blackboard by modifying only the bidding rule. In the
 
 \subsubsection{Ensemble}
 
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\linewidth]{sources/ensemble_simplified.png}
+    \caption{Data flow and component interactions for the Ensemble architecture.}
+    \label{fig:arch-ensemble}
+\end{figure}
+
 The Ensemble architecture was derived from the literature on voting, agreement, and zero-shot SLM collectives \cite{sentensemble2026, compos2024}. Multiple SLMs receive the same query in parallel, each produces one answer, and the system selects the final prediction through majority voting or confidence-weighted voting. An LLM tiebreaker is optionally available, but the core design intent is multi-SLM collaboration rather than hybrid escalation. Methodologically, Ensemble asks a direct question: if several compact models disagree, can their aggregate decision outperform any single compact model often enough to justify the additional inference cost?
 
 \subsubsection{Pure Swarm}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\linewidth]{sources/blackboard_slms_simplified.png}
+    \caption{Data flow and component interactions for the Pure Swarm architecture.}
+    \label{fig:arch-pure-swarm}
+\end{figure}
 
 Pure Swarm is the thesis project's strictest resource-constrained coordination design. It begins from the Blackboard idea but removes the heavy-model sweeper entirely. Two SLM peers bid on tasks and subtasks, and the system reduces the claim threshold after a task's time-to-live expires so that one peer eventually takes responsibility rather than deadlocking. This design deliberately pushes multi-SLM cooperation toward a more deployment-constrained regime, motivated by the broader multi-agent literature \cite{multiagent2025, resiliomate2025}. Methodologically, Pure Swarm provides the lower-bound counterpart to the hybrid family: rather than asking how selectively the system can invoke LLMs, it asks whether LLMs can be removed from the online path altogether without unacceptable quality loss.
 
