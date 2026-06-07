@@ -414,3 +414,12 @@ class Reporter:
             if found:
                 return total
         return response.latency_ms
+
+
+def build_sample_payload(sample) -> dict:
+    """Serialize one SampleResult into the report's per-sample dict.
+
+    Shared by the final report writer and the live SSE stream so that samples
+    rendered mid-run have the exact same shape as the persisted ones.
+    """
+    return Reporter._sample_payload(sample)

@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useState, type ReactNode } from "react";
+import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EATSGauge } from "@/components/EATSGauge";
 import { LiveProgress } from "@/components/LiveProgress";
 import { useExperiment, useResult } from "@/hooks/useExperiments";
+import { useSSE } from "@/hooks/useSSE";
 import {
   formatCost,
   formatDate,
@@ -638,6 +639,7 @@ function getOverviewRows({
   architecture,
   benchmark,
   slm,
+  secondarySlm,
   llm,
   ensembleSlms,
   config,
@@ -649,6 +651,7 @@ function getOverviewRows({
   architecture: DetailArchitecture;
   benchmark: string;
   slm: string | null;
+  secondarySlm: string | null;
   llm: string | null;
   ensembleSlms: string[];
   config: Record<string, unknown>;
@@ -705,7 +708,7 @@ function getOverviewRows({
     });
     rows.push({
       label: "Secondary SLM",
-      value: (config.secondary_slm as string | undefined) ?? "—",
+      value: secondarySlm ?? "—",
     });
     rows.push({
       label: "Heavy Sweeper",
@@ -718,7 +721,7 @@ function getOverviewRows({
     });
     rows.push({
       label: "Secondary SLM",
-      value: (config.secondary_slm as string | undefined) ?? "—",
+      value: secondarySlm ?? "—",
     });
   } else {
     rows.push({
@@ -812,6 +815,20 @@ export default function ExperimentDetailPage({
   const [tab, setTab] = useState<Tab>("overview");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
+  // Stream per-sample results live while the run is active. Hooks must run
+  // before any early return, so this lives above the loading/not-found guards.
+  const isActive = experiment?.status === "running" || experiment?.status === "queued";
+  const { events: sseEvents } = useSSE({ experimentId: id, enabled: isActive });
+  const liveSamples = useMemo(() => {
+    const byQuery = new Map<string, ResultSample>();
+    for (const ev of sseEvents) {
+      if (ev.type === "sample" && ev.sample?.query_id) {
+        byQuery.set(ev.sample.query_id, ev.sample);
+      }
+    }
+    return Array.from(byQuery.values());
+  }, [sseEvents]);
+
   if (experimentLoading && resultLoading) {
     return <p className="text-zinc-500">Loading experiment…</p>;
   }
@@ -827,13 +844,19 @@ export default function ExperimentDetailPage({
   const benchmark = String(experiment?.benchmark ?? resultDetail?.benchmark ?? "—");
   const slm = experiment?.slm ?? (resultDetail?.config?.slm as string | undefined) ?? null;
   const llm = experiment?.llm ?? (resultDetail?.config?.llm as string | undefined) ?? null;
+  // secondary_slm lives at the experiment top level, not in config_overrides, so
+  // prefer it; the saved report's config is the mid-run fallback.
+  const secondarySlm =
+    experiment?.secondary_slm ??
+    (resultDetail?.config?.secondary_slm as string | undefined) ??
+    null;
   const ensembleSlms =
     experiment?.ensemble_slms ??
     ((resultDetail?.config?.ensemble_slms as string[] | undefined) ?? []);
 
-  const isActive = experiment?.status === "running" || experiment?.status === "queued";
   const metrics = resultDetail?.metrics ?? experiment?.metrics ?? null;
-  const samples = resultDetail?.samples ?? [];
+  // Saved report wins once it exists; until then show samples streaming in live.
+  const samples = resultDetail?.samples?.length ? resultDetail.samples : liveSamples;
   const config = resultDetail?.config ?? experiment?.config_overrides ?? {};
   const confidenceThreshold = Number(config.confidence_threshold ?? 0.7);
   const nEscalated = Math.round(metrics?.n_escalated ?? 0);
@@ -879,6 +902,7 @@ export default function ExperimentDetailPage({
     architecture,
     benchmark,
     slm,
+    secondarySlm,
     llm,
     ensembleSlms,
     config,
@@ -956,7 +980,6 @@ export default function ExperimentDetailPage({
       );
     }
     if (architecture === "blackboard") {
-      const secondarySlm = config.secondary_slm as string | undefined;
       return (
         <p>
           Bossless swarm: <strong>{slm}</strong> and <strong>{secondarySlm ?? "secondary SLM"}</strong>{" "}
@@ -966,7 +989,6 @@ export default function ExperimentDetailPage({
       );
     }
     if (architecture === "entropy_blackboard") {
-      const secondarySlm = config.secondary_slm as string | undefined;
       return (
         <p>
           Entropy swarm: <strong>{slm}</strong> and <strong>{secondarySlm ?? "secondary SLM"}</strong>{" "}
@@ -976,7 +998,6 @@ export default function ExperimentDetailPage({
       );
     }
     if (architecture === "pure_swarm") {
-      const secondarySlm = config.secondary_slm as string | undefined;
       return (
         <p>
           Pure swarm: <strong>{slm}</strong> and <strong>{secondarySlm ?? "secondary SLM"}</strong>{" "}
@@ -1248,12 +1269,21 @@ export default function ExperimentDetailPage({
       {tab === "samples" && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Sample audit trail</CardTitle>
+            <CardTitle className="text-base">
+              Sample audit trail
+              {isActive && !resultDetail?.samples?.length && samples.length > 0 && (
+                <span className="ml-2 text-xs font-normal text-emerald-600">
+                  ● streaming live · {samples.length} received
+                </span>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {!samples.length ? (
               <p className="text-sm text-zinc-500">
-                Sample-level details are not available for this run yet.
+                {isActive
+                  ? "Waiting for the first sample… results stream in live as the run progresses."
+                  : "Sample-level details are not available for this run yet."}
               </p>
             ) : (
               <div className="space-y-3">
@@ -1625,7 +1655,9 @@ export default function ExperimentDetailPage({
           <CardContent>
             {inferenceSteps.length === 0 ? (
               <p className="text-sm text-zinc-500">
-                No inference step trace available for this run.
+                {isActive
+                  ? "Waiting for the first inference steps… the trace streams in live as samples complete."
+                  : "No inference step trace available for this run."}
               </p>
             ) : (
               <div className="space-y-4">

@@ -310,8 +310,8 @@ def _run_experiment(
     _refresh_queue_positions()
 
     callbacks = RunnerCallbacks(
-        on_sample_complete=lambda cur, total, resp: _handle_sample_complete(
-            experiment_id, cur, total, resp
+        on_sample_complete=lambda cur, total, resp, sample=None: _handle_sample_complete(
+            experiment_id, cur, total, resp, sample
         ),
         on_metric_update=lambda name, value: _push_event(
             experiment_id,
@@ -448,11 +448,15 @@ def _run_experiment(
         )
 
 
+_LIVE_INFERENCE_STEP_CAP = 40
+
+
 def _handle_sample_complete(
     experiment_id: str,
     current: int,
     total: int,
     response: Any,
+    sample: Any = None,
 ) -> None:
     exp = _experiments[experiment_id]
     exp.progress = current
@@ -466,6 +470,33 @@ def _handle_sample_complete(
             "current_query": getattr(response, "query_id", ""),
         },
     )
+
+    # Stream the full per-sample payload so the detail page can render Samples
+    # and Inference traces live, instead of waiting for the final report. The
+    # inference trace is capped to keep the in-memory event buffer bounded on
+    # long runs; the complete trace still lands in the saved report.
+    if sample is None:
+        return
+    try:
+        from evaluation.reporter import build_sample_payload
+
+        payload = build_sample_payload(sample)
+        steps = payload.get("inference_steps")
+        if isinstance(steps, list) and len(steps) > _LIVE_INFERENCE_STEP_CAP:
+            payload["inference_steps"] = steps[:_LIVE_INFERENCE_STEP_CAP]
+            payload["inference_steps_truncated"] = True
+        _push_event(
+            experiment_id,
+            {
+                "type": "sample",
+                "completed": current,
+                "total": total,
+                "sample": payload,
+            },
+        )
+    except Exception:
+        # Never let live-streaming serialization break a run.
+        pass
 
 
 def _validate_model_selection(model_id: str, expected_kind: str, *, require_runtime: bool) -> None:

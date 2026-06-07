@@ -17,15 +17,17 @@ class ExperimentResult:
 
 @dataclass
 class RunnerCallbacks:
-    on_sample_complete: Callable[[int, int, Any], None] | None = None
+    on_sample_complete: Callable[..., None] | None = None
     on_metric_update: Callable[[str, float], None] | None = None
     on_experiment_done: Callable[[ExperimentResult], None] | None = None
     on_error: Callable[[Exception], None] | None = None
     should_cancel: Callable[[], bool] | None = None
 
-    def sample_complete(self, current: int, total: int, response: Any) -> None:
+    def sample_complete(
+        self, current: int, total: int, response: Any, sample: Any = None
+    ) -> None:
         if self.on_sample_complete is not None:
-            self.on_sample_complete(current, total, response)
+            self.on_sample_complete(current, total, response, sample)
 
     def metric_update(self, name: str, value: float) -> None:
         if self.on_metric_update is not None:

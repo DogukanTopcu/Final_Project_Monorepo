@@ -345,9 +345,10 @@ class ExperimentRunner:
                 try:
                     response = annotate_response_resource_usage(response)
                     correct = benchmark.is_correct(response.predicted_answer, query)
-                    result.samples.append(
-                        SampleResult(query=query, response=response, correct=correct)
+                    sample_result = SampleResult(
+                        query=query, response=response, correct=correct
                     )
+                    result.samples.append(sample_result)
                     done = len(result.samples)
 
                     if tracker:
@@ -357,7 +358,7 @@ class ExperimentRunner:
                             pass
 
                     if self.callbacks:
-                        self.callbacks.sample_complete(done, len(queries), response)
+                        self.callbacks.sample_complete(done, len(queries), response, sample_result)
                         self.callbacks.metric_update("accuracy", result.n_correct / done)
                         self.callbacks.metric_update("llm_call_ratio", result.llm_call_ratio)
 
