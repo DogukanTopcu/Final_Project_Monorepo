@@ -351,6 +351,7 @@ function getCoreTextFields(
     blackboard: ["prompt_text", "final_text", "predicted", "ground_truth"],
     entropy_blackboard: ["prompt_text", "final_text", "predicted", "ground_truth"],
     pure_swarm: ["prompt_text", "final_text", "predicted", "ground_truth"],
+    dynamic_bidding: ["prompt_text", "final_text", "predicted", "ground_truth"],
     unknown: ["prompt_text", "slm_text", "final_text", "predicted", "ground_truth"],
   };
 
@@ -687,6 +688,16 @@ function getOverviewRows({
       label: "LLM",
       value: llm ?? "—",
     });
+  } else if (architecture === "multi_agent") {
+    const arbitratorRole = config.arbitrator === "slm" ? "slm" : "llm";
+    rows.push({
+      label: "Proponent / Opponent",
+      value: slm ?? "—",
+    });
+    rows.push({
+      label: `Arbitrator (${arbitratorRole.toUpperCase()})`,
+      value: arbitratorRole === "slm" ? slm ?? "—" : llm ?? "—",
+    });
   } else if (architecture === "blackboard" || architecture === "entropy_blackboard") {
     rows.push({
       label: "Primary SLM",
@@ -744,7 +755,8 @@ function getOverviewRows({
   }
 
   if (
-    isArchitectureWithDirectLlm(architecture) ||
+    (isArchitectureWithDirectLlm(architecture) &&
+      (architecture !== "multi_agent" || config.arbitrator !== "slm")) ||
     (architecture === "ensemble" && showEnsembleTiebreak)
   ) {
     rows.push({
@@ -900,10 +912,13 @@ export default function ExperimentDetailPage({
       );
     }
     if (architecture === "multi_agent") {
+      const arbitratorRole = config.arbitrator === "slm" ? "slm" : "llm";
+      const arbitratorModel = arbitratorRole === "slm" ? slm : llm;
       return (
         <p>
-          Proponent / opponent debate flow between SLM <strong>{slm}</strong> and LLM{" "}
-          <strong>{llm}</strong>. The arbitrator decides the final answer.
+          <strong>{slm}</strong> served as both Proponent and Opponent. The{" "}
+          {arbitratorRole.toUpperCase()} <strong>{arbitratorModel}</strong> served as Arbitrator
+          and produced the final answer.
         </p>
       );
     }
