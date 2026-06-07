@@ -281,15 +281,32 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         can_spawn = task.subtask_spawned < self.max_subtasks and task.id.count("sub_") < depth_limit
         if can_spawn:
             execution_prompt = (
-                "Solve the following problem step-by-step.\n"
-                "If you lack the information to solve it, or need a sub-calculation, format a request exactly as:\n"
-                "SUB_TASK: <query>\n\n"
-                f"Problem: {task.prompt}"
+                "You are a smart logical reasoning agent acting on a blackboard system.\n"
+                "Think briefly about the problem. If you encounter a specific detail or sub-calculation that you are unsure about, DO NOT GUESS.\n"
+                "Instead, pause and post a sub-task to the blackboard by writing exactly:\n"
+                "SUB_TASK: <your specific query>\n\n"
+                "Wait for the blackboard to provide the resolved parameters. Once you receive them, synthesize the final definitive solution.\n"
+                "Keep all reasoning extremely brief.\n\n"
+                "Example:\n"
+                "Problem: Did the author of '1984' also write 'Brave New World'?\n"
+                "A. Yes\n"
+                "B. No\n"
+                "Reasoning: I know '1984' was written by George Orwell. I need to check 'Brave New World'.\n"
+                "SUB_TASK: Who wrote the book 'Brave New World'?\n"
+                "Resolved parameters gathered from the blackboard:\n"
+                "Aldous Huxley.\n"
+                "Brief Reasoning (Max 1 sentence): The authors are different.\n"
+                "Answer: B\n\n"
+                f"Problem:\n{task.prompt.strip()}\n\n"
+                "Reasoning:\n"
             )
         else:
             execution_prompt = (
-                "Solve the following problem step-by-step and provide the final answer.\n\n"
-                f"Problem: {task.prompt}"
+                "You are a smart logical reasoning agent acting on a blackboard system.\n"
+                "Think briefly about the problem and provide the final answer.\n"
+                "Keep all reasoning extremely brief.\n\n"
+                f"Problem:\n{task.prompt.strip()}\n\n"
+                "Reasoning:\n"
             )
 
         budget = compute_completion_budget(provider, execution_prompt, task_type="open", role="swarm_node")
@@ -386,7 +403,7 @@ class BaseBlackboardArchitecture(BaseArchitecture):
                 resolved_contexts = [blackboard[dep_id].results["final_output"] for dep_id in task.dependencies]
                 task.prompt = (
                     f"{task.prompt}\n\n"
-                    "Resolved parameters gathered from the swarm:\n"
+                    "Resolved parameters gathered from the blackboard:\n"
                     f"{chr(10).join(resolved_contexts)}\n"
                     "Synthesize the final definitive solution."
                 )
