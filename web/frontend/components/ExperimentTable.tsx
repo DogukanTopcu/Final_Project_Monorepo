@@ -30,6 +30,14 @@ function getExperimentModelsText(exp: ExperimentResponse) {
     return exp.llm ?? "—";
   }
 
+  if (exp.architecture === "multi_agent") {
+    const arbitratorRole = exp.config_overrides?.arbitrator === "slm" ? "slm" : "llm";
+    if (arbitratorRole === "slm") {
+      return `${exp.slm ?? "—"} (all roles)`;
+    }
+    return `${exp.slm ?? "—"} → arbitrator ${exp.llm ?? "—"}`;
+  }
+
   if (exp.architecture === "ensemble" && exp.ensemble_slms?.length) {
     return `${exp.ensemble_slms.join(", ")}${exp.llm ? ` → tiebreak ${exp.llm}` : ""}`;
   }
