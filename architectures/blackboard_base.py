@@ -90,7 +90,7 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         self.inference_steps = []
 
         t0 = time.perf_counter()
-        final_answer_text, used_model, final_confidence = asyncio.run(self._orchestrate_blackboard(query))
+        final_answer_text, used_worker, final_confidence, final_model_id = asyncio.run(self._orchestrate_blackboard(query))
         self.total_latency = (time.perf_counter() - t0) * 1000
 
         parsed = parse_answer(final_answer_text, self.task_type)
@@ -100,7 +100,7 @@ class BaseBlackboardArchitecture(BaseArchitecture):
             text=final_answer_text,
             predicted_answer=parsed,
             confidence=final_confidence,
-            model_id=used_model,
+            model_id=used_worker,
             latency_ms=self.total_latency,
             input_tokens=self.total_in,
             output_tokens=self.total_out,
@@ -109,10 +109,14 @@ class BaseBlackboardArchitecture(BaseArchitecture):
             metadata={
                 "inference_steps": self.inference_steps,
                 "framework": "event_driven_pub_sub_swarm",
+                # The worker tier that resolved the root task (e.g. PrimarySLM)
+                # and the actual model it loaded (e.g. google/gemma-4-E4B-it).
+                "final_model_id": final_model_id or used_worker,
+                "final_worker": used_worker,
             },
         )
 
-    async def _orchestrate_blackboard(self, query: Query) -> tuple[str, str, float]:
+    async def _orchestrate_blackboard(self, query: Query) -> tuple[str, str, float, str | None]:
         base_prompt = build_prompt(query, self.task_type)
 
         blackboard: dict[str, BlackboardTask] = {}
@@ -156,7 +160,12 @@ class BaseBlackboardArchitecture(BaseArchitecture):
             wt.cancel()
 
         root_task = blackboard[root_id]
-        return root_task.results.get("final_output", ""), root_task.assigned_worker or "unknown", root_task.results.get("confidence", 0.5)
+        return (
+            root_task.results.get("final_output", ""),
+            root_task.assigned_worker or "unknown",
+            root_task.results.get("confidence", 0.5),
+            root_task.results.get("final_model_id"),
+        )
 
     async def _worker_loop(
         self,
@@ -252,6 +261,9 @@ class BaseBlackboardArchitecture(BaseArchitecture):
             "role": "bid",
             "model_id": provider.model_id,
             "latency_ms": lat,
+            "input_tokens": in_t,
+            "output_tokens": out_t,
+            "api_cost_usd": cost,
             "cost_usd": cost,
         })
         return text, conf, meta
@@ -309,6 +321,9 @@ class BaseBlackboardArchitecture(BaseArchitecture):
                 "role": "error",
                 "model_id": provider.model_id,
                 "latency_ms": 0.0,
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "api_cost_usd": 0.0,
                 "cost_usd": 0.0,
                 "error": str(exc),
             })
@@ -317,6 +332,7 @@ class BaseBlackboardArchitecture(BaseArchitecture):
                 # best-effort so the orchestrator can never spin forever.
                 task.results["final_output"] = ""
                 task.results["confidence"] = 0.0
+                task.results["final_model_id"] = provider.model_id
                 task.status = TaskStatus.RESOLVED
             else:
                 # Re-open with an already-expired TTL so the heavy sweeper claims
@@ -330,8 +346,12 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         self.total_cost += cost
         self.inference_steps.append({
             "worker": worker_name,
+            "role": "sweep" if is_sweeper else "execution",
             "model_id": provider.model_id,
             "latency_ms": lat,
+            "input_tokens": in_t,
+            "output_tokens": out_t,
+            "api_cost_usd": cost,
             "cost_usd": cost,
         })
 
@@ -353,6 +373,7 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         else:
             task.results["final_output"] = text
             task.results["confidence"] = conf
+            task.results["final_model_id"] = provider.model_id
             task.status = TaskStatus.RESOLVED
 
     async def _await_dependencies_and_resume(

@@ -1018,7 +1018,8 @@ export default function ExperimentDetailPage({
       latency: Number(step.latency_ms ?? 0),
       tokensIn: Number(step.input_tokens ?? 0),
       tokensOut: Number(step.output_tokens ?? 0),
-      cost: Number(step.api_cost_usd ?? 0),
+      // Total compute cost: API cost (0 for local endpoints) + infra/GPU cost.
+      cost: Number(step.api_cost_usd ?? 0) + Number(step.infra_cost_usd ?? 0),
     })),
   );
   const stepsByRole = new Map<string, typeof inferenceSteps>();

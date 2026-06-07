@@ -131,6 +131,7 @@ export interface ResultSampleInferenceStep {
   input_tokens?: number;
   output_tokens?: number;
   api_cost_usd?: number;
+  infra_cost_usd?: number;
   [key: string]: unknown;
 }
 
