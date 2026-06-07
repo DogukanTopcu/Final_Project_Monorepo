@@ -207,6 +207,8 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         "ttl_ms",
         "max_subtasks",
         "allow_nested_subtasks",
+        "entropy_weight",
+        "entropy_top_k",
     }
     unexpected = sorted(set(overrides) - allowed_override_keys)
     if unexpected:
@@ -264,6 +266,8 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         ttl_ms=int(overrides.get("ttl_ms", 1500)),
         max_subtasks=int(overrides.get("max_subtasks", 2)),
         allow_nested_subtasks=bool(overrides.get("allow_nested_subtasks", False)),
+        entropy_weight=float(overrides.get("entropy_weight", 0.5)),
+        entropy_top_k=int(overrides.get("entropy_top_k", 20)),
         dry_run=bool(overrides.get("dry_run", False)),
         seed=int(overrides.get("seed", 42)),
         output_dir=settings.results_dir,

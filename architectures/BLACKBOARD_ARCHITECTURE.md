@@ -16,11 +16,13 @@ Queries and sub-queries are posted as tasks with a status (OPEN, IN_PROGRESS, BL
 
 2. Bidding
 
-Workers compute a bid and claim a task if the bid exceeds the configured threshold:
+Each worker looks at an OPEN task and computes a **bid** — a quick self-estimate of "how well can I answer this, given my cost?" A worker claims the task only if its bid clears the configured `bid_threshold`. The bid always subtracts a small cost penalty so cheaper workers are slightly preferred:
 
 $$
-Utility = Predicted\_Confidence - (Cost\_Weight \times Compute\_Penalty)
+bid = (\text{quality signal}) - (Cost\_Weight \times Compute\_Penalty)
 $$
+
+The **only** thing that separates Blackboard from Entropy Blackboard is the quality signal: Blackboard uses raw confidence; Entropy Blackboard additionally subtracts an uncertainty term read from the model's token distribution. The bid is a real (but tiny) model probe — 1 token for Blackboard, a few tokens for Entropy Blackboard — so its cost and energy are recorded like any other inference step.
 
 3. Sub-tasking
 
@@ -32,11 +34,17 @@ Workers run concurrently. The system ends when the root task is RESOLVED. `Respo
 
 ## 1) Blackboard (Geleneksel Merkezi Olmayan Suru)
 
-Blackboard replaces routing with an async bidding system:
+Blackboard replaces routing with an async bidding system that bids on **confidence alone**:
 
-- SLMs compute a quick confidence-based bid.
+$$
+bid = Confidence - (Cost\_Weight \times Compute\_Penalty)
+$$
+
+- SLMs compute a quick confidence-based bid (the probability on the model's first answer token).
 - The first SLM that clears the threshold claims the task.
 - If no SLM claims the task before TTL expires, the heavy LLM (sweeper) wakes and solves it.
+
+This is cheap, but blind to the overconfident-but-wrong case: a small model can *sound* certain and still be incorrect, and Blackboard will let it claim the task.
 
 Project role: baseline decentralized swarm with safety fallback.
 
@@ -44,17 +52,32 @@ Implementation: [architectures/blackboard.py](architectures/blackboard.py)
 
 ## 2) Entropy-Based Blackboard (Entropi Tabanli Guvenlik Agi)
 
-Entropy Blackboard shares the same flow as Blackboard, but changes the bidding calculation:
+Entropy Blackboard shares the same board, workers, sweeper, and TTL. It changes **only** the bid, adding an uncertainty penalty on top of confidence:
 
-- The model produces token probabilities (logprobs).
-- Shannon entropy is computed from the distribution.
-- High entropy indicates uncertainty, so the bid is penalized.
+$$
+bid = Confidence - (Entropy\_Weight \times H_{norm}) - (Cost\_Weight \times Compute\_Penalty)
+$$
 
-Advantage: reduces hallucinations by preventing overconfident claims from uncertain SLMs, sending hard cases to the sweeper earlier.
+- The probe requests the model's **top-k** next-token distribution (`entropy_top_k`, default 20) instead of just its top pick.
+- For the first few output tokens it computes the normalized Shannon entropy $H_{norm} = \dfrac{-\sum_i p_i \ln p_i}{\ln k}$, which lands in $[0, 1]$: ~0 when the model is sharply decided, ~1 when its probability mass is smeared across several options (internally torn).
+- `entropy_weight` (default 0.5) scales how hard that uncertainty drags the bid down.
 
-Project role: improves routing quality using objective information-theoretic signals.
+The effect: a model that *sounds* confident but is *internally* undecided gets its bid pulled below the threshold, so the task is handed to the 70B sweeper instead of being answered by a guessing SLM. If a provider cannot return a token distribution (e.g. a hosted API without logprobs), the bid gracefully falls back to confidence-only — identical to plain Blackboard.
+
+Project role: the uncertainty-aware variant — trades a bit more sweeper usage for fewer confident-but-wrong SLM claims.
 
 Implementation: [architectures/entropy_based_blackboard.py](architectures/entropy_based_blackboard.py)
+
+### How they behave differently (what to expect)
+
+| Situation | Blackboard | Entropy Blackboard |
+| --- | --- | --- |
+| Easy question | An SLM claims it | Same — low entropy, SLM still claims |
+| SLM is genuinely sure | SLM claims it | SLM claims it |
+| SLM *sounds* sure but is internally torn | SLM claims it (risk of confident-wrong) | Penalty drops the bid → 70B sweeper handles it |
+| Hard / ambiguous question | Sometimes an SLM grabs it anyway | More often escalated to the 70B |
+
+Expected trade-off: Entropy Blackboard should be **more accurate / better calibrated** (fewer confident-wrong answers) at the cost of **more 70B calls — slightly slower and pricier**. Setting `entropy_weight` to 0 collapses Entropy Blackboard back into plain Blackboard.
 
 ## 3) Pure Swarm (Saf Suru Zekasi - Tam Otonomi)
 
@@ -73,6 +96,8 @@ Implementation: [architectures/pure_swarm.py](architectures/pure_swarm.py)
 - `cost_weight`: penalizes expensive workers in the bid.
 - `bid_threshold`: minimum bid required to claim an OPEN task.
 - `ttl_ms`: TTL for tasks; after this, Blackboard variants allow the sweeper to claim, and Pure Swarm drops the threshold to 0.
+- `entropy_weight` (Entropy Blackboard only): how strongly output-distribution uncertainty penalizes the bid. `0` = behaves like plain Blackboard.
+- `entropy_top_k` (Entropy Blackboard only): width of the top-k token distribution sampled to estimate entropy.
 
 ## Example usage
 

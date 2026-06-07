@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import asyncio
-
 from architectures.blackboard_base import BaseBlackboardArchitecture
 from core.models import ModelProvider
 
@@ -24,6 +22,8 @@ class DecentralizedBlackboardArchitecture(BaseBlackboardArchitecture):
         task_type: str = "mcq",
         max_subtasks: int = 2,
         allow_nested_subtasks: bool = False,
+        max_task_attempts: int = 2,
+        max_orchestration_s: float = 120.0,
     ) -> None:
         super().__init__(
             slm=slm,
@@ -39,19 +39,23 @@ class DecentralizedBlackboardArchitecture(BaseBlackboardArchitecture):
             task_type=task_type,
             max_subtasks=max_subtasks,
             allow_nested_subtasks=allow_nested_subtasks,
+            max_task_attempts=max_task_attempts,
+            max_orchestration_s=max_orchestration_s,
         )
 
-    async def _calculate_bid(self, provider: ModelProvider, prompt: str, compute_penalty: float) -> float:
-        loop = asyncio.get_running_loop()
+    async def _calculate_bid(
+        self,
+        worker_name: str,
+        provider: ModelProvider,
+        prompt: str,
+        compute_penalty: float,
+    ) -> float:
         try:
-            _, raw_conf, _, _, _ = await loop.run_in_executor(
-                None,
-                lambda: provider.generate(
-                    prompt[:300],
-                    max_tokens=1,
-                    temperature=self.slm_temperature,
-                ),
+            # Cheap confidence probe on a truncated prompt; a single token is
+            # enough to read the model's inherent confidence from its logprobs.
+            _, raw_conf, _ = await self._probe_confidence(
+                worker_name, provider, prompt[:300], max_tokens=1
             )
-            return raw_conf - (self.cost_weight * compute_penalty)
+            return (raw_conf or 0.0) - (self.cost_weight * compute_penalty)
         except Exception:
             return 0.0

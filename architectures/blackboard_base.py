@@ -31,6 +31,13 @@ class BlackboardTask:
     results: dict[str, Any] = field(default_factory=dict)
     ttl_expiry: float = 0.0
     subtask_spawned: int = 0
+    # Bumped whenever a blocked task re-opens (prompt changed) so workers
+    # invalidate their cached bid and re-bid against the new prompt.
+    version: int = 0
+    # Execution attempts, used to cap retries after worker failures.
+    attempts: int = 0
+    # Workers that errored on this task; they skip it so the sweeper takes over.
+    failed_workers: set[str] = field(default_factory=set)
 
 
 class BaseBlackboardArchitecture(BaseArchitecture):
@@ -51,6 +58,8 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         task_type: str = "mcq",
         max_subtasks: int = 2,
         allow_nested_subtasks: bool = False,
+        max_task_attempts: int = 2,
+        max_orchestration_s: float = 120.0,
     ) -> None:
         super().__init__(slm, llm)
         self.secondary_slm = secondary_slm
@@ -64,6 +73,8 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         self.llm_max_tokens = llm_max_tokens
         self.max_subtasks = max_subtasks
         self.allow_nested_subtasks = allow_nested_subtasks
+        self.max_task_attempts = max_task_attempts
+        self.max_orchestration_s = max_orchestration_s
 
         self.total_in = 0
         self.total_out = 0
@@ -101,7 +112,7 @@ class BaseBlackboardArchitecture(BaseArchitecture):
             },
         )
 
-    async def _orchestrate_blackboard(self, query: Query) -> tuple[str, str]:
+    async def _orchestrate_blackboard(self, query: Query) -> tuple[str, str, float]:
         base_prompt = build_prompt(query, self.task_type)
 
         blackboard: dict[str, BlackboardTask] = {}
@@ -120,8 +131,19 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         ]
 
         async def monitor():
+            deadline = time.time() + self.max_orchestration_s
             while True:
                 if blackboard[root_id].status == TaskStatus.RESOLVED:
+                    break
+                # Belt-and-suspenders deadlock guard: if no worker (not even the
+                # sweeper) has resolved the root within the budget, force a
+                # best-effort resolution so asyncio.run() can never hang.
+                if time.time() > deadline:
+                    root = blackboard[root_id]
+                    root.results.setdefault("final_output", "")
+                    root.results.setdefault("confidence", 0.0)
+                    root.assigned_worker = root.assigned_worker or "watchdog_timeout"
+                    root.status = TaskStatus.RESOLVED
                     break
                 await asyncio.sleep(0.02)
 
@@ -143,14 +165,25 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         compute_penalty: float,
         blackboard: dict[str, BlackboardTask],
     ) -> None:
+        # Bids are deterministic at temperature 0, so compute each one once per
+        # (task, version) and cache it. Re-polling never re-bids — this bounds
+        # the bidding inference to ~1 call/worker/task-version instead of one
+        # per ~50ms tick. The version invalidates the cache when a blocked task
+        # re-opens with a synthesized prompt.
+        bids: dict[tuple[str, int], float] = {}
         while True:
             for task_id, task in list(blackboard.items()):
-                if task.status == TaskStatus.OPEN:
-                    bid = await self._calculate_bid(provider, task.prompt, compute_penalty)
-                    if bid >= self.bid_threshold and task.status == TaskStatus.OPEN:
-                        task.status = TaskStatus.IN_PROGRESS
-                        task.assigned_worker = name
-                        await self._execute_task(name, provider, task, blackboard)
+                if task.status != TaskStatus.OPEN or name in task.failed_workers:
+                    continue
+                key = (task_id, task.version)
+                if key not in bids:
+                    bids[key] = await self._calculate_bid(
+                        name, provider, task.prompt, compute_penalty
+                    )
+                if bids[key] >= self.bid_threshold and task.status == TaskStatus.OPEN:
+                    task.status = TaskStatus.IN_PROGRESS
+                    task.assigned_worker = name
+                    await self._execute_task(name, provider, task, blackboard)
             await asyncio.sleep(0.05)
 
     async def _heavy_sweeper_loop(
@@ -172,11 +205,56 @@ class BaseBlackboardArchitecture(BaseArchitecture):
 
     async def _calculate_bid(
         self,
+        worker_name: str,
         provider: ModelProvider,
         prompt: str,
         compute_penalty: float,
     ) -> float:
         raise NotImplementedError
+
+    async def _probe_confidence(
+        self,
+        worker_name: str,
+        provider: ModelProvider,
+        prompt: str,
+        max_tokens: int,
+        top_logprobs: int = 1,
+    ) -> tuple[str, float | None, dict[str, Any]]:
+        """Run a bid probe and account for its real inference cost.
+
+        Bids are genuine ``generate`` calls that consume GPU time. Recording
+        them as ``role="bid"`` inference steps (and folding their tokens/cost
+        into the run totals) lets evaluation/energy.py attribute their energy and
+        CO2, so the swarm's bidding overhead is not invisible in the EATS
+        comparison. ``top_logprobs > 1`` opts into the token distribution so the
+        entropy variant can read ``mean_token_entropy_norm`` from the returned
+        metadata snapshot. Returns ``(text, confidence, metadata)``.
+        """
+        loop = asyncio.get_running_loop()
+        text, conf, in_t, out_t, cost, lat = await loop.run_in_executor(
+            None,
+            lambda: self._timed_generate(
+                provider,
+                prompt,
+                max_tokens=max_tokens,
+                temperature=self.slm_temperature,
+                top_logprobs=top_logprobs,
+            ),
+        )
+        # Snapshot the provider's per-call metadata before any later call can
+        # overwrite it (a worker serializes calls on its own provider).
+        meta = dict(getattr(provider, "last_generation_metadata", {}) or {})
+        self.total_in += in_t
+        self.total_out += out_t
+        self.total_cost += cost
+        self.inference_steps.append({
+            "worker": worker_name,
+            "role": "bid",
+            "model_id": provider.model_id,
+            "latency_ms": lat,
+            "cost_usd": cost,
+        })
+        return text, conf, meta
 
     async def _execute_task(
         self,
@@ -211,15 +289,41 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         elif self.slm_max_tokens > 0:
             budget = self.slm_max_tokens
 
-        text, conf, in_t, out_t, cost, lat = await loop.run_in_executor(
-            None,
-            lambda: self._timed_generate(
-                provider,
-                execution_prompt,
-                max_tokens=budget,
-                temperature=temperature,
-            ),
-        )
+        try:
+            text, conf, in_t, out_t, cost, lat = await loop.run_in_executor(
+                None,
+                lambda: self._timed_generate(
+                    provider,
+                    execution_prompt,
+                    max_tokens=budget,
+                    temperature=temperature,
+                ),
+            )
+        except Exception as exc:
+            # Worker failed (e.g. endpoint blip). Record it, then route the task
+            # to the heavy sweeper instead of letting it hang IN_PROGRESS.
+            task.failed_workers.add(worker_name)
+            task.attempts += 1
+            self.inference_steps.append({
+                "worker": worker_name,
+                "role": "error",
+                "model_id": provider.model_id,
+                "latency_ms": 0.0,
+                "cost_usd": 0.0,
+                "error": str(exc),
+            })
+            if task.attempts >= self.max_task_attempts:
+                # Exhausted retries (even the sweeper failed): resolve
+                # best-effort so the orchestrator can never spin forever.
+                task.results["final_output"] = ""
+                task.results["confidence"] = 0.0
+                task.status = TaskStatus.RESOLVED
+            else:
+                # Re-open with an already-expired TTL so the heavy sweeper claims
+                # it on its next tick; the failed worker skips it.
+                task.ttl_expiry = time.time()
+                task.status = TaskStatus.OPEN
+            return
 
         self.total_in += in_t
         self.total_out += out_t
@@ -265,6 +369,10 @@ class BaseBlackboardArchitecture(BaseArchitecture):
                     f"{chr(10).join(resolved_contexts)}\n"
                     "Synthesize the final definitive solution."
                 )
+                # New prompt → invalidate cached bids and let every worker
+                # (including any that previously failed) re-bid on the synthesis.
+                task.version += 1
+                task.failed_workers.clear()
                 task.status = TaskStatus.OPEN
                 task.ttl_expiry = time.time() + (self.ttl_ms / 1000.0)
                 break

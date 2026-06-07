@@ -827,8 +827,34 @@ class BlackboardStubModel(ModelProvider):
             # Otherwise, get "stuck" and generate a sub-task
             else:
                 return "I am stuck. SUB_TASK: what is X?", self.confidence, 10, 5, 0.0
-                
+
         return "B", self.confidence, 10, 5, 0.0
+
+
+class RecordingBlackboardStub(BlackboardStubModel):
+    """Counts how many bid probes (max_tokens == 1) the worker issues."""
+
+    def __init__(self, model_id: str, behavior: str, confidence: float = 0.9):
+        super().__init__(model_id, behavior, confidence)
+        self.bid_calls = 0
+
+    def generate(self, prompt: str, **kwargs):
+        if kwargs.get("max_tokens") == 1:
+            self.bid_calls += 1
+        return super().generate(prompt, **kwargs)
+
+
+class FailingExecStubModel(ModelProvider):
+    """Bids fine (max_tokens == 1) but raises on any real execution call."""
+
+    def __init__(self, model_id: str, confidence: float = 0.9):
+        super().__init__(model_id)
+        self.confidence = confidence
+
+    def generate(self, prompt: str, **kwargs):
+        if kwargs.get("max_tokens") == 1:
+            return "bid_token", self.confidence, 1, 1, 0.0
+        raise RuntimeError("simulated endpoint failure")
 
 
 class TestBlackboardArchitecture:
@@ -883,6 +909,60 @@ class TestBlackboardArchitecture:
         # Verify the inference steps reflect the sub-tasking loop
         steps = resp.metadata["inference_steps"]
         assert len(steps) >= 3 # 1. Main task blocks, 2. Sub-task resolves, 3. Main task resumes
+
+    def test_run_does_not_hang_when_workers_fail(self):
+        """A failing worker re-routes to the sweeper; retries cap → best-effort."""
+        from architectures.blackboard import DecentralizedBlackboardArchitecture
+
+        slm1 = FailingExecStubModel("slm_primary", confidence=0.9)
+        slm2 = FailingExecStubModel("slm_secondary", confidence=0.9)
+        llm = FailingExecStubModel("llm_sweeper", confidence=0.9)
+
+        arch = DecentralizedBlackboardArchitecture(
+            slm1, slm2, llm, ttl_ms=50, max_task_attempts=2
+        )
+        resp = arch.run(QUERY)  # must return rather than hang forever
+
+        # Exhausted retries → best-effort empty resolution, no crash.
+        assert resp is not None
+        assert resp.predicted_answer is None
+        error_steps = [s for s in resp.metadata["inference_steps"] if s.get("role") == "error"]
+        assert error_steps  # failures were recorded for observability
+
+    def test_bids_are_accounted_in_inference_steps(self):
+        """Bid probes are recorded as role='bid' steps and counted in totals."""
+        from architectures.blackboard import DecentralizedBlackboardArchitecture
+
+        slm1 = BlackboardStubModel("slm_primary", behavior="direct", confidence=0.9)
+        slm2 = BlackboardStubModel("slm_secondary", behavior="direct", confidence=0.1)
+        llm = BlackboardStubModel("llm_sweeper", behavior="sweeper", confidence=0.9)
+
+        arch = DecentralizedBlackboardArchitecture(slm1, slm2, llm)
+        resp = arch.run(QUERY)
+
+        bid_steps = [s for s in resp.metadata["inference_steps"] if s.get("role") == "bid"]
+        assert bid_steps  # bidding overhead is visible to energy accounting
+        assert all("model_id" in s and "latency_ms" in s for s in bid_steps)
+        assert resp.input_tokens > 0  # bid + execution tokens folded into totals
+
+    def test_bid_is_computed_once_per_task(self):
+        """Caching: each worker bids once per task despite many polling ticks."""
+        from architectures.blackboard import DecentralizedBlackboardArchitecture
+
+        # Both SLMs bid too low to claim, so the root stays OPEN for the whole
+        # TTL window (~6 ticks at 50ms) before the sweeper takes it. Without
+        # caching each worker would re-bid every tick.
+        slm1 = RecordingBlackboardStub("slm_primary", behavior="direct", confidence=0.1)
+        slm2 = RecordingBlackboardStub("slm_secondary", behavior="direct", confidence=0.1)
+        llm = BlackboardStubModel("llm_sweeper", behavior="sweeper", confidence=0.9)
+
+        arch = DecentralizedBlackboardArchitecture(slm1, slm2, llm, ttl_ms=300)
+        resp = arch.run(QUERY)
+
+        assert resp.model_id == "HeavySweeper70B"
+        assert resp.llm_calls == 1
+        assert slm1.bid_calls == 1
+        assert slm2.bid_calls == 1
 
 
 class TestSwarmAndBlackboardPromptWrapping:
@@ -984,3 +1064,156 @@ class TestSwarmAndBlackboardPromptWrapping:
         # Verification that prompt was formatted to allow subtasks
         assert "SUB_TASK: <query>" in captured_prompt
         assert "You MUST solve the problem step-by-step." in captured_prompt
+
+
+def _entropy_fake_post(distribution: list[dict]):
+    """Build a fake OpenAI-compatible response whose single output token carries
+    the given top_logprobs distribution."""
+
+    class FakeResponse:
+        def __init__(self, payload: dict) -> None:
+            self._payload = payload
+            self.status_code = 200
+            self.headers = {}
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return self._payload
+
+    def fake_post(url, json, headers, timeout):
+        return FakeResponse({
+            "choices": [
+                {
+                    "message": {"content": "B"},
+                    "logprobs": {
+                        "content": [
+                            {
+                                "token": distribution[0]["token"],
+                                "logprob": distribution[0]["logprob"],
+                                "top_logprobs": distribution,
+                            }
+                        ]
+                    },
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 5, "completion_tokens": 1},
+        })
+
+    return fake_post
+
+
+class TestTokenEntropy:
+    def test_uniform_distribution_yields_max_entropy(self, monkeypatch):
+        import math
+
+        from core.models import OpenAICompatibleModel
+
+        uniform = [{"token": t, "logprob": math.log(0.25)} for t in ["A", "B", "C", "D"]]
+        monkeypatch.setattr("core.models.requests.post", _entropy_fake_post(uniform))
+        model = OpenAICompatibleModel("test/model", base_url="http://localhost:8000/v1")
+        model.generate("Question?", max_tokens=1, top_logprobs=4)
+
+        assert abs(model.last_generation_metadata["mean_token_entropy_norm"] - 1.0) < 1e-6
+
+    def test_peaked_distribution_yields_low_entropy(self, monkeypatch):
+        import math
+
+        from core.models import OpenAICompatibleModel
+
+        peaked = [
+            {"token": "B", "logprob": math.log(0.97)},
+            {"token": "A", "logprob": math.log(0.01)},
+            {"token": "C", "logprob": math.log(0.01)},
+            {"token": "D", "logprob": math.log(0.01)},
+        ]
+        monkeypatch.setattr("core.models.requests.post", _entropy_fake_post(peaked))
+        model = OpenAICompatibleModel("test/model", base_url="http://localhost:8000/v1")
+        model.generate("Question?", max_tokens=1, top_logprobs=4)
+
+        assert model.last_generation_metadata["mean_token_entropy_norm"] < 0.2
+
+    def test_default_top_logprobs_skips_entropy(self, monkeypatch):
+        import math
+
+        from core.models import OpenAICompatibleModel
+
+        single = [{"token": "B", "logprob": math.log(0.9)}]
+        monkeypatch.setattr("core.models.requests.post", _entropy_fake_post(single))
+        model = OpenAICompatibleModel("test/model", base_url="http://localhost:8000/v1")
+        model.generate("Question?", max_tokens=1)  # default top_logprobs=1 → no-op
+
+        assert "mean_token_entropy_norm" not in model.last_generation_metadata
+
+
+class EntropyStub(ModelProvider):
+    """Bid probes (top_logprobs > 1) expose a normalized entropy; execution
+    calls (default top_logprobs) return a fixed answer."""
+
+    def __init__(self, model_id: str, h_norm: float | None, confidence: float = 0.9, answer: str = "B"):
+        super().__init__(model_id)
+        self.h_norm = h_norm
+        self.confidence = confidence
+        self.answer = answer
+
+    def generate(self, prompt: str, **kwargs):
+        if int(kwargs.get("top_logprobs", 1)) > 1:
+            self.last_generation_metadata = (
+                {} if self.h_norm is None else {"mean_token_entropy_norm": self.h_norm}
+            )
+            return "bid_token", self.confidence, 1, 1, 0.0
+        return self.answer, self.confidence, 10, 5, 0.0
+
+
+class TestEntropyBlackboardArchitecture:
+    def test_low_entropy_slm_claims_without_sweeper(self):
+        from architectures.entropy_based_blackboard import (
+            DecentralizedBlackboardArchitecture as Entropy,
+        )
+
+        slm1 = EntropyStub("slm_primary", h_norm=0.0, confidence=0.9)
+        slm2 = EntropyStub("slm_secondary", h_norm=0.0, confidence=0.1)
+        llm = EntropyStub("llm_sweeper", h_norm=0.0, confidence=0.9)
+
+        arch = Entropy(slm1, slm2, llm, entropy_weight=0.5)
+        resp = arch.run(QUERY)
+
+        assert resp.llm_calls == 0
+        assert resp.model_id == "PrimarySLM"
+        assert resp.predicted_answer == "B"
+
+    def test_high_entropy_defers_to_sweeper(self):
+        from architectures.entropy_based_blackboard import (
+            DecentralizedBlackboardArchitecture as Entropy,
+        )
+
+        # confidence 0.9 but H_norm 1.0 → bid 0.9 - 0.5*1.0 - ~0 = 0.4 < 0.65,
+        # so no SLM claims and the TTL hands the task to the heavy sweeper.
+        slm1 = EntropyStub("slm_primary", h_norm=1.0, confidence=0.9)
+        slm2 = EntropyStub("slm_secondary", h_norm=1.0, confidence=0.9)
+        llm = EntropyStub("llm_sweeper", h_norm=1.0, confidence=0.9)
+
+        arch = Entropy(slm1, slm2, llm, entropy_weight=0.5, ttl_ms=100)
+        resp = arch.run(QUERY)
+
+        assert resp.llm_calls == 1
+        assert resp.model_id == "HeavySweeper70B"
+
+    def test_missing_distribution_falls_back_to_confidence(self):
+        from architectures.entropy_based_blackboard import (
+            DecentralizedBlackboardArchitecture as Entropy,
+        )
+
+        # Provider exposes no entropy → bid reduces to the confidence proxy, so a
+        # confident primary still claims the task.
+        slm1 = EntropyStub("slm_primary", h_norm=None, confidence=0.9)
+        slm2 = EntropyStub("slm_secondary", h_norm=None, confidence=0.1)
+        llm = EntropyStub("llm_sweeper", h_norm=None, confidence=0.9)
+
+        arch = Entropy(slm1, slm2, llm, entropy_weight=0.5)
+        resp = arch.run(QUERY)
+
+        assert resp.llm_calls == 0
+        assert resp.model_id == "PrimarySLM"
