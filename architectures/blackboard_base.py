@@ -38,6 +38,9 @@ class BlackboardTask:
     attempts: int = 0
     # Workers that errored on this task; they skip it so the sweeper takes over.
     failed_workers: set[str] = field(default_factory=set)
+    # Bids posted by each SLM worker for this task version (worker_name -> bid).
+    # Used by the highest-bid auction to award the task to the top bidder.
+    bids: dict[str, float] = field(default_factory=dict)
 
 
 class BaseBlackboardArchitecture(BaseArchitecture):
@@ -60,6 +63,7 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         allow_nested_subtasks: bool = False,
         max_task_attempts: int = 2,
         max_orchestration_s: float = 120.0,
+        claim_policy: str = "highest_bid",
     ) -> None:
         super().__init__(slm, llm)
         self.secondary_slm = secondary_slm
@@ -75,6 +79,12 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         self.allow_nested_subtasks = allow_nested_subtasks
         self.max_task_attempts = max_task_attempts
         self.max_orchestration_s = max_orchestration_s
+        # "highest_bid": competitive auction — the top eligible bidder wins each
+        # task. "first_threshold": legacy — the first worker to clear the
+        # threshold claims it (primary has de-facto priority by polling order).
+        self.claim_policy = claim_policy
+        self._bidder_names: list[str] = ["PrimarySLM", "SecondarySLM"]
+        self._bidder_order: dict[str, int] = {n: i for i, n in enumerate(self._bidder_names)}
 
         self.total_in = 0
         self.total_out = 0
@@ -174,26 +184,58 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         compute_penalty: float,
         blackboard: dict[str, BlackboardTask],
     ) -> None:
-        # Bids are deterministic at temperature 0, so compute each one once per
-        # (task, version) and cache it. Re-polling never re-bids — this bounds
-        # the bidding inference to ~1 call/worker/task-version instead of one
-        # per ~50ms tick. The version invalidates the cache when a blocked task
-        # re-opens with a synthesized prompt.
-        bids: dict[tuple[str, int], float] = {}
+        # Each worker posts its bid to the shared task exactly once per version
+        # (bids are deterministic at temperature 0). It then claims the task only
+        # if _should_claim approves — under "highest_bid" that means waiting for
+        # every bidder and winning the auction; under "first_threshold" it means
+        # simply clearing the threshold. task.bids is cleared when a blocked task
+        # re-opens with a synthesized prompt, triggering a re-bid.
         while True:
             for task_id, task in list(blackboard.items()):
                 if task.status != TaskStatus.OPEN or name in task.failed_workers:
                     continue
-                key = (task_id, task.version)
-                if key not in bids:
-                    bids[key] = await self._calculate_bid(
+                if name not in task.bids:
+                    task.bids[name] = await self._calculate_bid(
                         name, provider, task.prompt, compute_penalty
                     )
-                if bids[key] >= self.bid_threshold and task.status == TaskStatus.OPEN:
+                if task.status == TaskStatus.OPEN and self._should_claim(name, task):
                     task.status = TaskStatus.IN_PROGRESS
                     task.assigned_worker = name
                     await self._execute_task(name, provider, task, blackboard)
             await asyncio.sleep(0.05)
+
+    def _should_claim(self, name: str, task: BlackboardTask) -> bool:
+        """Decide whether worker ``name`` should claim ``task`` right now.
+
+        ``first_threshold``: any worker whose bid clears the threshold claims
+        immediately (legacy — the first to evaluate wins, so the primary has
+        de-facto priority). ``highest_bid``: a competitive auction — the worker
+        waits until every live bidder has posted, then claims only if it holds
+        the strictly highest eligible bid (ties broken deterministically by
+        bidder order, so the primary wins exact ties).
+        """
+        my_bid = task.bids.get(name)
+        if my_bid is None or my_bid < self.bid_threshold:
+            return False
+        if self.claim_policy == "first_threshold":
+            return True
+
+        # Wait until every still-eligible bidder has weighed in, so the maximum
+        # bid is final before we award the task.
+        pending = [
+            w for w in self._bidder_names
+            if w not in task.failed_workers and w not in task.bids
+        ]
+        if pending:
+            return False
+        eligible = {
+            w: b for w, b in task.bids.items()
+            if b >= self.bid_threshold and w not in task.failed_workers
+        }
+        if not eligible:
+            return False
+        winner = max(eligible, key=lambda w: (eligible[w], -self._bidder_order.get(w, 0)))
+        return winner == name
 
     async def _heavy_sweeper_loop(
         self,
@@ -394,6 +436,7 @@ class BaseBlackboardArchitecture(BaseArchitecture):
                 # (including any that previously failed) re-bid on the synthesis.
                 task.version += 1
                 task.failed_workers.clear()
+                task.bids.clear()
                 task.status = TaskStatus.OPEN
                 task.ttl_expiry = time.time() + (self.ttl_ms / 1000.0)
                 break

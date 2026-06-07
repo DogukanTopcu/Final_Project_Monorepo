@@ -209,6 +209,7 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         "allow_nested_subtasks",
         "entropy_weight",
         "entropy_top_k",
+        "claim_policy",
     }
     unexpected = sorted(set(overrides) - allowed_override_keys)
     if unexpected:
@@ -268,6 +269,7 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         allow_nested_subtasks=bool(overrides.get("allow_nested_subtasks", False)),
         entropy_weight=float(overrides.get("entropy_weight", 0.5)),
         entropy_top_k=int(overrides.get("entropy_top_k", 20)),
+        claim_policy=str(overrides.get("claim_policy", "highest_bid")),
         dry_run=bool(overrides.get("dry_run", False)),
         seed=int(overrides.get("seed", 42)),
         output_dir=settings.results_dir,

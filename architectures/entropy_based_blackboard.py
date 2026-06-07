@@ -25,6 +25,7 @@ class DecentralizedBlackboardArchitecture(BaseBlackboardArchitecture):
         max_orchestration_s: float = 120.0,
         entropy_weight: float = 0.5,
         top_k: int = 20,
+        claim_policy: str = "highest_bid",
     ) -> None:
         super().__init__(
             slm=slm,
@@ -41,6 +42,7 @@ class DecentralizedBlackboardArchitecture(BaseBlackboardArchitecture):
             max_subtasks=max_subtasks,
             max_task_attempts=max_task_attempts,
             max_orchestration_s=max_orchestration_s,
+            claim_policy=claim_policy,
         )
         self.entropy_weight = entropy_weight
         self.top_k = top_k

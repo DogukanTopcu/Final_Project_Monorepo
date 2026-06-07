@@ -964,6 +964,42 @@ class TestBlackboardArchitecture:
         assert slm1.bid_calls == 1
         assert slm2.bid_calls == 1
 
+    def test_highest_bidder_wins_not_first_polled(self):
+        """Auction: the secondary wins when it outbids the (first-polled) primary."""
+        from architectures.blackboard import DecentralizedBlackboardArchitecture
+
+        # Primary bid ~0.6985, secondary bid ~0.987 — both clear 0.65, secondary
+        # is higher. Under first_threshold the primary would steal it by polling
+        # order; under the default highest_bid auction the secondary must win.
+        slm1 = BlackboardStubModel("slm_primary", behavior="direct", confidence=0.70)
+        slm2 = BlackboardStubModel("slm_secondary", behavior="direct", confidence=0.99)
+        llm = BlackboardStubModel("llm_sweeper", behavior="sweeper", confidence=0.9)
+
+        arch = DecentralizedBlackboardArchitecture(slm1, slm2, llm)
+        resp = arch.run(QUERY)
+
+        assert resp.llm_calls == 0
+        assert resp.model_id == "SecondarySLM"
+        assert resp.metadata["final_model_id"] == "slm_secondary"
+
+    def test_first_threshold_policy_keeps_primary_priority(self):
+        """Legacy policy: the first-polled eligible worker (primary) claims."""
+        from architectures.blackboard import DecentralizedBlackboardArchitecture
+
+        # Same bids as above, but with the legacy policy the primary wins despite
+        # the secondary's higher bid.
+        slm1 = BlackboardStubModel("slm_primary", behavior="direct", confidence=0.70)
+        slm2 = BlackboardStubModel("slm_secondary", behavior="direct", confidence=0.99)
+        llm = BlackboardStubModel("llm_sweeper", behavior="sweeper", confidence=0.9)
+
+        arch = DecentralizedBlackboardArchitecture(
+            slm1, slm2, llm, claim_policy="first_threshold"
+        )
+        resp = arch.run(QUERY)
+
+        assert resp.llm_calls == 0
+        assert resp.model_id == "PrimarySLM"
+
 
 class TestSwarmAndBlackboardPromptWrapping:
     def test_pure_swarm_prompt_wrapping(self, monkeypatch):

@@ -93,6 +93,21 @@ def _max_subtasks_param() -> ArchitectureParamSpec:
     )
 
 
+def _claim_policy_param() -> ArchitectureParamSpec:
+    return ArchitectureParamSpec(
+        key="claim_policy",
+        label="Claim policy",
+        type="enum",
+        default="highest_bid",
+        options=["highest_bid", "first_threshold"],
+        description=(
+            "highest_bid: competitive auction — the top eligible bidder wins each task. "
+            "first_threshold: legacy — the first worker to clear the threshold claims it "
+            "(primary SLM has de-facto priority)."
+        ),
+    )
+
+
 _SPECS: list[ArchitectureSpec] = [
     ArchitectureSpec(
         id=Architecture.MONOLITHIC,
@@ -265,6 +280,7 @@ _SPECS: list[ArchitectureSpec] = [
                 max=1.0,
                 description="Minimum bid needed before a worker claims a task.",
             ),
+            _claim_policy_param(),
             ArchitectureParamSpec(
                 key="ttl_ms",
                 label="Task TTL (ms)",
@@ -323,6 +339,7 @@ _SPECS: list[ArchitectureSpec] = [
                 max=100,
                 description="Width of the token distribution sampled to estimate Shannon entropy.",
             ),
+            _claim_policy_param(),
             ArchitectureParamSpec(
                 key="ttl_ms",
                 label="Task TTL (ms)",

@@ -24,6 +24,7 @@ class DecentralizedBlackboardArchitecture(BaseBlackboardArchitecture):
         allow_nested_subtasks: bool = False,
         max_task_attempts: int = 2,
         max_orchestration_s: float = 120.0,
+        claim_policy: str = "highest_bid",
     ) -> None:
         super().__init__(
             slm=slm,
@@ -41,6 +42,7 @@ class DecentralizedBlackboardArchitecture(BaseBlackboardArchitecture):
             allow_nested_subtasks=allow_nested_subtasks,
             max_task_attempts=max_task_attempts,
             max_orchestration_s=max_orchestration_s,
+            claim_policy=claim_policy,
         )
 
     async def _calculate_bid(

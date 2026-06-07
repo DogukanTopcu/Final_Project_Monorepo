@@ -204,6 +204,7 @@ class ExperimentRunner:
             arch_kwargs["bid_threshold"] = getattr(cfg, "bid_threshold", 0.65)
             arch_kwargs["ttl_ms"] = getattr(cfg, "ttl_ms", 1500)
             arch_kwargs["max_subtasks"] = getattr(cfg, "max_subtasks", 2)
+            arch_kwargs["claim_policy"] = getattr(cfg, "claim_policy", "highest_bid")
         if cfg.architecture == "entropy_blackboard":
             arch_kwargs["entropy_weight"] = getattr(cfg, "entropy_weight", 0.5)
             arch_kwargs["top_k"] = getattr(cfg, "entropy_top_k", 20)
