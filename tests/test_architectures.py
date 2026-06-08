@@ -975,7 +975,9 @@ class TestBlackboardArchitecture:
         slm2 = BlackboardStubModel("slm_secondary", behavior="direct", confidence=0.99)
         llm = BlackboardStubModel("llm_sweeper", behavior="sweeper", confidence=0.9)
 
-        arch = DecentralizedBlackboardArchitecture(slm1, slm2, llm)
+        # Pin the threshold so the test exercises the claim policy, not the
+        # default bid_threshold — both bids (0.6985, 0.987) must clear it.
+        arch = DecentralizedBlackboardArchitecture(slm1, slm2, llm, bid_threshold=0.65)
         resp = arch.run(QUERY)
 
         assert resp.llm_calls == 0
@@ -993,12 +995,45 @@ class TestBlackboardArchitecture:
         llm = BlackboardStubModel("llm_sweeper", behavior="sweeper", confidence=0.9)
 
         arch = DecentralizedBlackboardArchitecture(
-            slm1, slm2, llm, claim_policy="first_threshold"
+            slm1, slm2, llm, claim_policy="first_threshold", bid_threshold=0.65
         )
         resp = arch.run(QUERY)
 
         assert resp.llm_calls == 0
         assert resp.model_id == "PrimarySLM"
+
+    def test_slow_eligible_bid_not_preempted_by_sweeper(self):
+        """A bid that takes longer than the TTL must still win, not be swept.
+
+        Reproduces the 'ghost escalation' bug: on a busy GPU a bid's wall time
+        can exceed ttl_ms; the sweeper must wait for the SLMs to actually bid
+        (and decline) instead of racing a fixed timer.
+        """
+        import time as _time
+        from architectures.blackboard import DecentralizedBlackboardArchitecture
+
+        class SlowBidStub(ModelProvider):
+            def __init__(self, model_id: str, conf: float):
+                super().__init__(model_id)
+                self.conf = conf
+
+            def generate(self, prompt: str, **kwargs):
+                if kwargs.get("max_tokens") == 1:
+                    _time.sleep(0.3)  # bid wall time >> ttl_ms below
+                    return "x", self.conf, 1, 1, 0.0
+                return "B", self.conf, 10, 5, 0.0
+
+        slm1 = SlowBidStub("slm_primary", 0.99)    # bid ~0.988 ≥ 0.8 → eligible
+        slm2 = SlowBidStub("slm_secondary", 0.99)
+        llm = SlowBidStub("llm_sweeper", 0.9)
+
+        # ttl is 100ms but each bid takes 300ms; the old timer-based sweeper would
+        # steal the task before the bids return.
+        arch = DecentralizedBlackboardArchitecture(slm1, slm2, llm, ttl_ms=100)
+        resp = arch.run(QUERY)
+
+        assert resp.llm_calls == 0
+        assert resp.model_id in ("PrimarySLM", "SecondarySLM")
 
 
 class TestSwarmAndBlackboardPromptWrapping:

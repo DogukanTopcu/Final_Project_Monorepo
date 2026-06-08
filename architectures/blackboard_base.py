@@ -64,6 +64,7 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         max_task_attempts: int = 2,
         max_orchestration_s: float = 120.0,
         claim_policy: str = "highest_bid",
+        sweeper_grace_s: float = 15.0,
     ) -> None:
         super().__init__(slm, llm)
         self.secondary_slm = secondary_slm
@@ -79,6 +80,10 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         self.allow_nested_subtasks = allow_nested_subtasks
         self.max_task_attempts = max_task_attempts
         self.max_orchestration_s = max_orchestration_s
+        # The sweeper escalates only once the SLMs have genuinely declined (all
+        # bid, none eligible). This grace window is the hard fallback for a bid
+        # that never returns, so a hung endpoint can't block a task forever.
+        self.sweeper_grace_s = sweeper_grace_s
         # "highest_bid": competitive auction — the top eligible bidder wins each
         # task. "first_threshold": legacy — the first worker to clear the
         # threshold claims it (primary has de-facto priority by polling order).
@@ -198,6 +203,13 @@ class BaseBlackboardArchitecture(BaseArchitecture):
                     task.bids[name] = await self._calculate_bid(
                         name, provider, task.prompt, compute_penalty
                     )
+                    # Record the bid value on the bid step just emitted, so every
+                    # saved report shows exactly what each worker bid (and the
+                    # threshold). Makes "why did the sweeper win?" diagnosable
+                    # straight from the report instead of guesswork.
+                    if self.inference_steps and self.inference_steps[-1].get("role") == "bid":
+                        self.inference_steps[-1]["bid"] = round(task.bids[name], 4)
+                        self.inference_steps[-1]["bid_threshold"] = self.bid_threshold
                 if task.status == TaskStatus.OPEN and self._should_claim(name, task):
                     task.status = TaskStatus.IN_PROGRESS
                     task.assigned_worker = name
@@ -245,9 +257,22 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         blackboard: dict[str, BlackboardTask],
     ) -> None:
         while True:
-            now = time.time()
             for task_id, task in list(blackboard.items()):
-                if task.status == TaskStatus.OPEN and now > task.ttl_expiry:
+                if task.status != TaskStatus.OPEN:
+                    continue
+                live_bidders = [w for w in self._bidder_names if w not in task.failed_workers]
+                all_bid = all(w in task.bids for w in live_bidders)
+                any_eligible = any(
+                    task.bids.get(w, 0.0) >= self.bid_threshold for w in live_bidders
+                )
+                # Escalate when the SLMs have genuinely passed — all of them bid
+                # and none cleared the threshold (or all failed) — instead of on a
+                # wall-clock TTL that can preempt an eligible bid still queued on a
+                # busy GPU. The grace window is a hard fallback for a bid that
+                # never returns, so a hung endpoint can't block the task forever.
+                declined = (not live_bidders) or (all_bid and not any_eligible)
+                hung = time.time() > task.ttl_expiry + self.sweeper_grace_s
+                if declined or hung:
                     task.status = TaskStatus.IN_PROGRESS
                     task.assigned_worker = name
                     self.llm_calls += 1
@@ -323,30 +348,22 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         can_spawn = task.subtask_spawned < self.max_subtasks and task.id.count("sub_") < depth_limit
         if can_spawn:
             execution_prompt = (
-                "You are a smart logical reasoning agent acting on a blackboard system.\n"
-                "Think briefly about the problem. If you encounter a specific detail or sub-calculation that you are unsure about, DO NOT GUESS.\n"
-                "Instead, pause and post a sub-task to the blackboard by writing exactly:\n"
-                "SUB_TASK: <your specific query>\n\n"
-                "Wait for the blackboard to provide the resolved parameters. Once you receive them, synthesize the final definitive solution.\n"
-                "Keep all reasoning extremely brief.\n\n"
-                "Example:\n"
-                "Problem: Did the author of '1984' also write 'Brave New World'?\n"
-                "A. Yes\n"
-                "B. No\n"
-                "Reasoning: I know '1984' was written by George Orwell. I need to check 'Brave New World'.\n"
-                "SUB_TASK: Who wrote the book 'Brave New World'?\n"
-                "Resolved parameters gathered from the blackboard:\n"
-                "Aldous Huxley.\n"
-                "Brief Reasoning (Max 1 sentence): The authors are different.\n"
-                "Answer: B\n\n"
+                "You are a reasoning agent working on a shared blackboard.\n"
+                "Think briefly about the problem. If you reach a specific sub-fact or "
+                "sub-calculation you are unsure about, do not guess — post it to the "
+                "blackboard by writing exactly:\n"
+                "SUB_TASK: <your specific query>\n"
+                "Once the blackboard returns the resolved parameters, synthesize the "
+                "final solution. Keep all reasoning brief, then answer in the exact "
+                "format requested in the problem below.\n\n"
                 f"Problem:\n{task.prompt.strip()}\n\n"
                 "Reasoning:\n"
             )
         else:
             execution_prompt = (
-                "You are a smart logical reasoning agent acting on a blackboard system.\n"
-                "Think briefly about the problem and provide the final answer.\n"
-                "Keep all reasoning extremely brief.\n\n"
+                "You are a reasoning agent working on a shared blackboard.\n"
+                "Think briefly about the problem, then answer in the exact format "
+                "requested in the problem below. Keep all reasoning brief.\n\n"
                 f"Problem:\n{task.prompt.strip()}\n\n"
                 "Reasoning:\n"
             )
