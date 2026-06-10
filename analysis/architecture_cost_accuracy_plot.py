@@ -290,7 +290,7 @@ def main() -> None:
     fig.text(
         0.5,
         0.02,
-        "Best N>=100 result per architecture; standalone is selected per model "
+        "Best result per architecture; standalone is selected per model "
         "(accuracy first, then lower cost). "
         "Higher is better for accuracy; farther left is better for cost. "
         "Y-axis ranges are fitted per benchmark; labels identify Pareto-optimal configurations.",
