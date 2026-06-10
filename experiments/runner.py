@@ -211,7 +211,7 @@ class ExperimentRunner:
         if cfg.architecture == "pure_swarm":
             arch_kwargs["secondary_slm"] = secondary_slm
             arch_kwargs["cost_weight"] = getattr(cfg, "cost_weight", 0.15)
-            arch_kwargs["bid_threshold"] = getattr(cfg, "bid_threshold", 0.65)
+            arch_kwargs["bid_threshold"] = getattr(cfg, "bid_threshold", 0.8)
             arch_kwargs["ttl_ms"] = getattr(cfg, "ttl_ms", 1500)
             arch_kwargs["max_subtasks"] = getattr(cfg, "max_subtasks", 2)
             arch_kwargs["allow_nested_subtasks"] = getattr(cfg, "allow_nested_subtasks", False)

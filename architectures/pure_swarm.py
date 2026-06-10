@@ -46,7 +46,7 @@ class PureSwarmArchitecture(BaseArchitecture):
         slm_max_tokens: int = 0,
         llm_max_tokens: int = 0,
         cost_weight: float = 0.15,
-        bid_threshold: float = 0.65,
+        bid_threshold: float = 0.8,
         ttl_ms: int = 1500,
         task_type: str = "mcq",
         max_subtasks: int = 2,
@@ -189,16 +189,20 @@ class PureSwarmArchitecture(BaseArchitecture):
         can_spawn = task.subtask_spawned < self.max_subtasks and task.id.count("sub_") < depth_limit
         if can_spawn:
             execution_prompt = (
-                "You are a reasoning node in a swarm. You MUST solve the problem step-by-step.\n"
-                "If you lack the information to solve it, or need a sub-calculation, format a request exactly as:\n"
-                "SUB_TASK: <query>\n\n"
-                f"Problem: {task.prompt}\n\n"
+                "You are a reasoning node in a swarm.\n"
+                "Think briefly about the problem. If you reach a specific sub-fact or "
+                "sub-calculation you are unsure about, do not guess — ask the swarm by writing exactly:\n"
+                "SUB_TASK: <your specific query>\n"
+                "Once the swarm returns the resolved parameters, synthesize the "
+                "final solution. Keep all reasoning brief.\n\n"
+                f"Problem:\n{task.prompt.strip()}\n\n"
                 "Reasoning:\n"
             )
         else:
             execution_prompt = (
-                "You are a reasoning node in a swarm. Solve the problem step-by-step and provide the final answer.\n\n"
-                f"Problem: {task.prompt}\n\n"
+                "You are a reasoning node in a swarm.\n"
+                "Think briefly about the problem, then provide the final answer. Keep all reasoning brief.\n\n"
+                f"Problem:\n{task.prompt.strip()}\n\n"
                 "Reasoning:\n"
             )
 
