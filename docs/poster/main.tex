@@ -7,8 +7,8 @@
 %  Build:  pdflatex main.tex   (from this directory)
 %  Needs:  tikzposter, pgfplots, qrcode  (tlmgr --usermode install ...)
 % ===========================================================================
-\documentclass[25pt, a0paper, portrait, margin=12mm, innermargin=14mm,
-               blockverticalspace=14mm, colspace=14mm, subcolspace=8mm]{tikzposter}
+\documentclass[25pt, a0paper, portrait, margin=12mm, innermargin=9mm,
+               blockverticalspace=2mm, colspace=10mm, subcolspace=8mm]{tikzposter}
 
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
@@ -98,9 +98,9 @@ in Standalone, Hybrid, and Multi-Agent Architectures}}
   \begin{minipage}[c]{0.86\linewidth}
     \centering
     {\color{titlefgcolor}\@title\par}
-    \vspace{0.9cm}
+    \vspace{0.55cm}
     {\color{titlefgcolor}\@author\par}
-    \vspace{0.6cm}
+    \vspace{0.35cm}
     {\color{titlefgcolor}\@institute\par}
   \end{minipage}%
 }
@@ -136,12 +136,12 @@ Every architecture consumes the same \texttt{Query} and returns the same \texttt
 carrying \textbf{accuracy, latency, tokens, cost, energy, and CO$_2$} per query. The
 architecture layer is the \emph{only} interchangeable component.
 
-\vspace{10pt}
+\vspace{6pt}
 \centering
 \begin{tikzpicture}[
-  node distance=0.5cm,
+  node distance=0.38cm,
   box/.style={rectangle, rounded corners=6pt, draw=iyteDark!40, line width=1.2pt,
-              minimum width=0.78\linewidth, minimum height=1.65cm, align=center,
+              minimum width=0.78\linewidth, minimum height=1.45cm, align=center,
               inner sep=8pt, font=\normalsize},
   arrow/.style={-{Stealth[length=10pt]}, line width=2pt, draw=iyteDark!60}
 ]
@@ -152,7 +152,7 @@ architecture layer is the \emph{only} interchangeable component.
 \node[box, fill=accentTeal!22, draw=accentTeal, line width=2pt, below=of cp] (arch)
   {\textbf{Architecture Layer}\\
   {\small routing $|$ speculative $|$ oracle $|$ ensemble $|$ swarm}};
-\node[box, fill=accentGold!18, below=1.0cm of arch] (proxy) {\textbf{Metrics Proxy + vLLM}\\
+\node[box, fill=accentGold!18, below=0.8cm of arch] (proxy) {\textbf{Metrics Proxy + vLLM}\\
   {\small latency $\cdot$ GPU power (NVML) $\cdot$ energy $\cdot$ CO$_2$ $\cdot$ cost}};
 \node[box, fill=iyteDark!8, below=of proxy] (out) {\textbf{Scorer $\rightarrow$ MLflow + Reports}\\
   {\small per-item and aggregate metrics}};
@@ -163,7 +163,7 @@ architecture layer is the \emph{only} interchangeable component.
 \draw[arrow] (proxy) -- (out);
 \end{tikzpicture}
 
-\vspace{8pt}
+\vspace{4pt}
 \raggedright
 \textbf{GPU inference plane} (open-weight models, vLLM serving):
 \begin{center}
@@ -181,24 +181,24 @@ Heavy (shared)   & Nebius H200     & 141\,GB & LLaMA\,3.3-70B, gpt-oss-120B \\
 }
 
 \block{3\,\textbar\, EATS: Efficiency-Accuracy Trade-off Score}{
-Accuracy $\alpha$ is combined with cost, latency, and energy ratios, each normalised by the
-benchmark-specific standalone LLM baseline ($\tilde{C}=C/C_0$, $\tilde{L}=L/L_0$, $\tilde{E}=E/E_0$):
+Accuracy $\alpha$ meets cost, latency, and energy ratios normalised by the
+benchmark-specific standalone-LLM baseline ($\tilde{C}=C/C_0$, $\tilde{L}=L/L_0$, $\tilde{E}=E/E_0$):
 \begin{align*}
   P &= 0.5\,\tilde{C} + 0.3\,\tilde{L} + 0.2\,\tilde{E},
   \qquad
   \text{EATS} = \frac{\alpha}{\alpha + P}
 \end{align*}
 \begin{itemize}
-  \item Strictly increasing in accuracy, decreasing in resource penalty.
-  \item Baseline reduces to $\alpha/(\alpha+1)$ --- a clean reference curve.
+  \item Increasing in accuracy, decreasing in resource penalty; baseline reduces
+        to $\alpha/(\alpha+1)$ --- a clean reference curve.
   \item Weights reflect deployment priorities: cost $>$ latency $>$ energy.
 \end{itemize}
 }
 
 \block{4\,\textbar\, Energy, Carbon \& Cost Measurement}{
-A metrics proxy on each GPU host measures inference time and samples GPU power via NVIDIA
-NVML (CodeCarbon preferred), so the measurement boundary sits \emph{at the inference host}
---- real hardware power draw, not network or orchestration overhead.
+A per-host metrics proxy times each request and samples GPU power via NVIDIA NVML
+(CodeCarbon preferred): the boundary sits \emph{at the inference host} --- real power
+draw, not network overhead.
 \begin{align*}
   E = \tfrac{P_{\text{GPU}}\,\Delta s}{3.6\times 10^{6}}\,\text{kWh},
   \quad
@@ -206,8 +206,7 @@ NVML (CodeCarbon preferred), so the measurement boundary sits \emph{at the infer
   \quad
   C = C_{\text{API}} + r t
 \end{align*}
-Grid intensity $k=380$ gCO$_2$/kWh; hourly rates: L4 \$0.75 $\cdot$ RTX PRO6000 \$2.35
-$\cdot$ H200 \$6.50.
+$k=380$ gCO$_2$/kWh; GPU-tier rates \$0.75--\$6.50/h.
 }
 
 % =========================== MIDDLE COLUMN ==================================
