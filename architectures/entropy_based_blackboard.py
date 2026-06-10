@@ -17,7 +17,7 @@ class DecentralizedBlackboardArchitecture(BaseBlackboardArchitecture):
         slm_max_tokens: int = 0,
         llm_max_tokens: int = 0,
         cost_weight: float = 0.15,
-        bid_threshold: float = 0.8,
+        bid_threshold: float = 0.75,
         ttl_ms: int = 3500,
         task_type: str = "mcq",
         max_subtasks: int = 2,
