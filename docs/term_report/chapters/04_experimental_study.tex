@@ -1,6 +1,6 @@
 \chapter{EXPERIMENTAL STUDY}
 
-This chapter presents the complete set of experimental results produced by the platform described in Chapter~3. The results cover 88 completed experiments---runs were excluded if benchmark items did not return a fully populated \texttt{Response} object with a resource record---across five publicly available benchmarks and six of the ten architecture families defined in the Chapter~3 taxonomy; the three remaining families (Debate, Blackboard, and Entropy Blackboard) are implemented but have not yet been benchmarked, as described in Section~\ref{sec:pending}. Section~\ref{sec:eval-env} summarizes the evaluation environment. Section~\ref{sec:bench-suite} defines the benchmark suite and evaluation protocol. Section~\ref{sec:benchmark-results} presents per-benchmark result tables for every evaluated configuration. Section~\ref{sec:arch-analysis} provides an architecture-family analysis synthesizing findings across benchmarks. Section~\ref{sec:cross-bench} reports a cross-benchmark EATS comparison. Section~\ref{sec:exp-discussion} discusses the principal findings and noteworthy observations. Section~\ref{sec:pending} describes planned extensions.
+This chapter presents the complete set of experimental results produced by the platform described in Chapter~3. The results cover 88 individual runs across five publicly available benchmarks; runs producing incomplete \texttt{Response} objects were excluded. These 88 runs are reported as 60 unique architecture--model configurations spanning six of the ten architectures defined in the Chapter~3 taxonomy. The three remaining architectures (Debate, Blackboard, and Entropy Blackboard) are implemented but have not yet been benchmarked, as described in Section~\ref{sec:pending}. Section~\ref{sec:eval-env} summarizes the evaluation environment. Section~\ref{sec:bench-suite} defines the benchmark suite and evaluation protocol. Section~\ref{sec:benchmark-results} presents per-benchmark result tables for every evaluated configuration. Section~\ref{sec:arch-analysis} provides an architecture-family analysis synthesizing findings across benchmarks. Section~\ref{sec:cross-bench} reports a cross-benchmark EATS comparison. Section~\ref{sec:exp-discussion} discusses the principal findings and noteworthy observations. Section~\ref{sec:pending} describes planned extensions.
 
 \section{Evaluation Environment}
 \label{sec:eval-env}
@@ -31,7 +31,7 @@ All model endpoints are exposed through OpenAI-compatible HTTP interfaces so tha
 \section{Benchmark Suite and Evaluation Protocol}
 \label{sec:bench-suite}
 
-Five benchmarks are evaluated in this chapter. All runs use zero temperature. Accuracy is the proportion of samples for which the predicted answer matches the reference. Individual experiment artefacts use the per-experiment normalisation mode described in Section~\ref{sec:normalisation}, which normalises each run against the registry-based full-LLM baseline for the exact same benchmark, sample count, and seed. For the aggregated benchmark tables in this chapter, EATS is recomputed in aggregate mode---using the mean of all standalone monolithic runs on that benchmark as the common reference, as defined in Section~\ref{sec:normalisation}---so that heterogeneous standalone, hybrid, ensemble, and swarm configurations are placed on the same per-benchmark comparison scale. Active Oracle was not evaluated on TruthfulQA or GSM8K in the current experimental batch; those benchmarks therefore contain no Active Oracle rows.
+Five benchmarks are evaluated in this chapter. All runs use zero temperature. Accuracy is the proportion of samples for which the predicted answer matches the reference. Individual experiment artefacts use the per-experiment normalisation mode described in Section~\ref{sec:normalisation}, which normalises each run against the registry-based full-LLM baseline for the exact same benchmark, sample count, and seed. For the aggregated benchmark tables in this chapter, EATS is recomputed in aggregate mode---using the mean of all standalone monolithic runs on that benchmark as the common reference, as defined in Section~\ref{sec:normalisation}---so that heterogeneous standalone, hybrid, ensemble, and swarm configurations are placed on the same per-benchmark comparison scale. Active Oracle was not evaluated on TruthfulQA or GSM8K in the experiments reported here; those benchmarks therefore contain no Active Oracle rows.
 
 \begin{table}[htbp]
     \centering
@@ -58,11 +58,11 @@ The following tables report aggregated results for every evaluated architecture-
 
 \subsection{MMLU}
 
-Fifteen configurations meet the reporting threshold on MMLU, covering six architecture families. Pure Swarm achieves the highest reported accuracy (89.5\%), narrowly surpassing the best standalone checkpoint \texttt{qwen3.5-27b} at 88.6\%. Among hybrid architectures, speculative decoding reaches 86.0\% accuracy (EATS 0.818), while routing reaches 76.7\% accuracy at EATS 0.835, limiting heavy-model usage to 48.7\% of queries. Routing achieves the highest EATS of any configuration on MMLU, as its low per-query cost and latency outweigh the accuracy gap relative to the best standalone models. Among standalone checkpoints, \texttt{gpt-oss-20b} achieves the highest standalone EATS (0.698), while \texttt{qwen3.5-35b-a3b} remains close behind at 0.674.
+Fifteen configurations meet the reporting threshold on MMLU, covering six architectures. Pure Swarm achieves the highest reported accuracy (89.5\%), narrowly surpassing the best standalone checkpoint \texttt{qwen3.5-27b} at 88.6\%. Among hybrid architectures, speculative decoding reaches 86.0\% accuracy (EATS 0.818), while routing reaches 76.7\% accuracy at EATS 0.835, limiting heavy-model usage to 48.7\% of queries. Routing achieves the highest EATS of any configuration on MMLU, as its low per-query cost and latency outweigh the accuracy gap relative to the best standalone models. Among standalone checkpoints, \texttt{gpt-oss-20b} achieves the highest standalone EATS (0.698), while \texttt{qwen3.5-35b-a3b} remains close behind at 0.674.
 
 \begin{table}[htbp]
 \centering
-\caption{MMLU results across 15 configurations meeting the reporting threshold.}
+\caption{MMLU results across 15 configurations meeting the reporting threshold. Routing and speculative latency values are algorithmic (model-side inference only).}
 \label{tab:result-mmlu}
 \scriptsize
 \renewcommand{\arraystretch}{1.15}
@@ -227,7 +227,7 @@ On GSM8K, routing escalates only 1\% of queries to the LLM and achieves 95.0\% a
 
 \subsection{Active Oracle}
 
-Active Oracle is evaluated on MMLU, ARC, and HellaSwag, achieving 74.0\%, 91.0\%, and 66.0\% accuracy with EATS of 0.304, 0.388, and 0.294. In all three cases it underperforms both routing and speculative decoding in accuracy and EATS, despite using the same SLM--LLM pair. The sub-query mechanism---which targets LLM consultation at specific knowledge gaps---incurs high wall-clock latency (21.4--30.6 seconds) and non-trivial sub-query costs that outweigh the benefit for multiple-choice benchmarks where targeted follow-up questions do not reliably correct the SLM's reasoning path.
+Active Oracle is evaluated on MMLU, ARC, and HellaSwag, achieving 74.0\%, 91.0\%, and 66.0\% accuracy with EATS of 0.304, 0.388, and 0.294. In all three cases it underperforms both routing and speculative decoding in accuracy and EATS, despite using the same SLM--LLM pair. The sub-query mechanism---which targets LLM consultation at specific knowledge gaps---incurs high wall-clock latency (21.4--30.6 seconds) and non-trivial sub-query costs that outweigh the benefit for multiple-choice benchmarks. A key structural reason is that the sub-question is generated from the SLM's current, partially incorrect intermediate state; the oracle response therefore frequently addresses a mis-specified query and fails to redirect the SLM's reasoning chain toward the correct answer.
 
 \subsection{Ensemble}
 
@@ -240,7 +240,7 @@ Pure Swarm with \texttt{gemma4-4b} uses no heavy-model calls at inference time. 
 \section{Cross-Benchmark EATS Comparison}
 \label{sec:cross-bench}
 
-Table~\ref{tab:eats-leaders} summarizes the top-three configurations by EATS on each benchmark, providing a compact view of the efficiency--quality frontier across the evaluated architecture families.
+Table~\ref{tab:eats-leaders} summarizes the top-three configurations by EATS on each benchmark, providing a compact view of the efficiency--quality frontier across the evaluated architectures.
 
 \begin{table}[htbp]
 \centering
@@ -280,16 +280,16 @@ The table reveals a consistent cross-benchmark pattern. Routing and speculative 
 \section{Discussion}
 \label{sec:exp-discussion}
 
-\paragraph{Hybrid architectures on the efficiency--quality frontier.}
-The ARC, HellaSwag, and TruthfulQA results provide strong empirical support for the thesis hypothesis that routing and speculative decoding can achieve accuracy close to or matching the best standalone models while reducing per-query cost, latency, and CO$_2$ emission by factors of 2--15 relative to the same LLM running in standalone mode. This directly addresses RQ1 (can collaborative architectures match standalone LLM accuracy?) and RQ2 (what are the efficiency trade-offs?). EATS as a composite signal (RQ3) confirms the joint finding: hybrid architectures dominate the top two EATS positions on ARC, HellaSwag, and TruthfulQA, with values in the 0.817--0.884 range compared to 0.665--0.738 for the best standalone options.
+\subsection{Hybrid architectures on the efficiency--quality frontier}
+The ARC, HellaSwag, and TruthfulQA results provide strong empirical support for the central hypothesis that routing and speculative decoding can achieve accuracy close to or matching the best standalone models while reducing per-query cost, latency, and CO$_2$ emission by factors of 2--15 relative to the same LLM running in standalone mode. This directly addresses RQ1 (can collaborative architectures match standalone LLM accuracy?) and RQ2 (what are the efficiency trade-offs?). EATS as a composite signal (RQ3) confirms the joint finding: hybrid architectures dominate the top two EATS positions on ARC, HellaSwag, and TruthfulQA, with values in the 0.817--0.884 range compared to 0.665--0.738 for the best standalone options.
 
-\paragraph{GSM8K GPT-family anomaly.}
+\subsection{GSM8K GPT-family anomaly}
 The low accuracy of \texttt{gpt-oss-120b} (67.8\%) and \texttt{gpt-oss-20b} (59.4\%) on GSM8K is inconsistent with their performance on all other benchmarks. One plausible explanation is answer-extraction sensitivity: GSM8K answers require identifying a numeric value from a free-form response, and GPT-family models may format their reasoning and final answers in ways that defeat the platform's numeric extraction heuristic. This is a suspected measurement artefact rather than a confirmed capability finding; dedicated output-parsing improvements and re-evaluation are required before any capability claims regarding these models on GSM8K can be advanced in the final thesis.
 
-\paragraph{Pure Swarm capability ceiling.}
-Pure Swarm demonstrates that compact SLM peer coordination can reach 96.0\% on ARC and 95.0\% on GSM8K with zero LLM calls, partially addressing RQ4 by matching multi-SLM collaboration findings from the reviewed literature. The design's wall-clock latency (21--27 seconds) currently prevents it from competing on EATS with well-instrumented hybrid architectures. Reducing swarm coordination latency is a natural optimization direction for future work.
+\subsection{Pure Swarm capability ceiling}
+Pure Swarm demonstrates that compact SLM peer coordination can reach 96.0\% on ARC and 95.0\% on GSM8K with zero LLM calls, partially addressing RQ4 by matching multi-SLM collaboration findings from the reviewed literature. The design's wall-clock latency (21--27 seconds) currently prevents it from competing on EATS with well-instrumented hybrid architectures. Reducing swarm coordination latency is a natural optimisation direction for future work.
 
-\paragraph{Ensemble accuracy ceiling.}
+\subsection{Ensemble accuracy ceiling}
 The four-SLM ensemble achieves 96.0\% on GSM8K, the highest raw accuracy of any configuration, consistent with ensemble-diversity findings in the literature. EATS is limited to 0.387 because four parallel SLM calls carry a latency and energy penalty that the EATS formulation weights heavily. This result illustrates the fundamental trade-off the EATS metric is designed to quantify: accuracy gains from coordination are real but arrive at a cost that may not be acceptable in latency-sensitive deployments.
 
 \section{Planned Extensions}
@@ -297,4 +297,4 @@ The four-SLM ensemble achieves 96.0\% on GSM8K, the highest raw accuracy of any 
 
 The current results cover all five benchmarks in the evaluation suite (MMLU, ARC-Challenge, GSM8K, HellaSwag, and TruthfulQA). One principal extension is planned before the final thesis submission.
 
-Three architecture families defined in the taxonomy---Debate (POA), Blackboard, and Entropy Blackboard---have not yet been benchmarked. These architectures are implemented in the repository but have not been included in the present evaluation. Incorporating them will complete the taxonomy comparison and provide empirical coverage for the full set of architecture families introduced in Chapter~3. All three will be evaluated on the same five benchmarks under the same evaluation protocol used in this chapter.
+Three architectures defined in the taxonomy---Debate (POA), Blackboard, and Entropy Blackboard---have not yet been benchmarked. These architectures are implemented in the repository but have not been included in the present evaluation. Incorporating them will complete the taxonomy comparison and provide empirical coverage for the full set of architectures introduced in Chapter~3. All three will be evaluated on the same five benchmarks under the same evaluation protocol used in this chapter.

@@ -1,6 +1,6 @@
 \chapter{CONCLUSIONS AND FUTURE WORK}
 
-This report presents a measurement-first experiment platform for comparing SLM--LLM collaborative architectures and reports the results of 88 experiments executed across five public benchmarks and six architecture families. This chapter synthesizes the principal findings, revisits the four research questions from Chapter~1, identifies the limitations of the current evaluation, and sets out the work that remains before the final thesis submission.
+This report presents a measurement-first experiment platform for comparing SLM--LLM collaborative architectures and reports the results of 88 experimental runs executed across five public benchmarks and six architectures. This chapter synthesizes the principal findings, revisits the four research questions from Chapter~1, identifies the limitations of the current evaluation, and sets out the work that remains before the final thesis submission.
 
 \section{Principal Findings}
 
@@ -24,11 +24,11 @@ One methodological issue is carried into the full thesis evaluation. The GSM8K a
 
 \section{Research Questions Revisited}
 
-\textbf{RQ1 (Performance):} Routing and speculative decoding match or approach the accuracy of the best standalone models on ARC, HellaSwag, and TruthfulQA. Pure Swarm exceeds every standalone model on ARC. The answer to RQ1 is affirmative for these benchmarks: collaborative architectures can match standalone LLM accuracy. On MMLU, Pure Swarm reaches the highest reported accuracy, while routing and speculative decoding remain competitive but do not exceed the top standalone or swarm configurations.
+\textbf{RQ1 (Performance):} Routing and speculative decoding match or approach the accuracy of the best standalone models on ARC, HellaSwag, and TruthfulQA. Pure Swarm exceeds every standalone model on ARC. The present results provide support for an affirmative answer to RQ1 on these benchmarks: collaborative architectures can match standalone LLM accuracy. On MMLU, Pure Swarm reaches the highest reported accuracy, while routing and speculative decoding remain competitive but do not exceed the top standalone or swarm configurations.
 
 \textbf{RQ2 (Efficiency):} On ARC, HellaSwag, and TruthfulQA, routing reduces per-query cost by factors of 3--12 and latency by factors of 2--7 relative to the same LLM running in standalone mode, while maintaining near-monolithic accuracy. The MoE standalone checkpoints represent the most efficient non-collaborative alternative. Ensemble and Pure Swarm architectures achieve competitive accuracy at the cost of elevated latency. The efficiency picture is therefore architecture- and workload-dependent rather than universal.
 
-\textbf{RQ3 (Unified Metric):} EATS provides a stable ranking signal that captures the joint accuracy-efficiency trade-off in a single score. On ARC, HellaSwag, and TruthfulQA, EATS correctly identifies routing and speculative decoding as the top-ranked configurations and separates the efficient MoE standalone checkpoints from the less efficient dense-model alternatives.
+\textbf{RQ3 (Unified Metric):} EATS yields a consistent ranking signal across the evaluated benchmarks, capturing the joint accuracy--efficiency trade-off in a single composite score. On ARC, HellaSwag, and TruthfulQA, EATS correctly identifies routing and speculative decoding as the top-ranked configurations and separates the efficient MoE standalone checkpoints from the less efficient dense-model alternatives.
 
 \textbf{RQ4 (Empirical Grounding):} The platform-measured results corroborate several findings from the companion systematic literature review. The ability of SLM-first routing to achieve near-LLM accuracy while limiting heavy-model invocations was a frequently reported trend in the reviewed studies; the ARC, HellaSwag, and TruthfulQA results confirm this empirically under a controlled measurement policy. The ensemble accuracy ceiling on GSM8K and the Pure Swarm result on ARC are consistent with multi-SLM coordination findings from the literature. The Active Oracle underperformance is consistent with reports that oracle-query mechanisms are sensitive to task format.
 
@@ -40,14 +40,14 @@ First, all five benchmarks use multiple-choice or fixed numeric-answer formats w
 
 Second, all routing and speculative experiments use a single SLM--LLM pair (\texttt{gemma4-4b}$\rightarrow$\texttt{gemma4-31b}). It is unknown whether the efficiency gains generalize to other pair configurations or whether the specific confidence-threshold setting contributes substantially to the observed results.
 
-Third, three architecture families from the Chapter~3 taxonomy---Debate (POA), Blackboard, and Entropy Blackboard---have not been benchmarked. The current evaluation therefore does not yet cover the full architecture space defined by the thesis.
+Third, three architectures from the Chapter~3 taxonomy---Debate (POA), Blackboard, and Entropy Blackboard---have not been benchmarked. The current evaluation therefore does not yet cover the full architecture space defined by the present study.
 
 \section{Future Work}
 
 \begin{enumerate}
     \item \textbf{GSM8K output-parsing fix.} The numeric answer extraction heuristic should be audited and corrected for GPT-family output formats. The GPT-family GSM8K runs should then be re-executed to verify whether the 67.8\%/59.4\% anomaly was a parsing artefact.
 
-    \item \textbf{Remaining architecture benchmarking.} Debate (POA), Blackboard, and Entropy Blackboard architectures are implemented in the repository but have not been evaluated. Benchmarking these families on the same five benchmarks (MMLU, ARC-Challenge, GSM8K, HellaSwag, and TruthfulQA) will complete the taxonomy coverage and provide empirical data for the full set of architecture families introduced in Chapter~3.
+    \item \textbf{Remaining architecture benchmarking.} Debate (POA), Blackboard, and Entropy Blackboard are implemented in the repository but have not been evaluated. Benchmarking these architectures on the same five benchmarks (MMLU, ARC-Challenge, GSM8K, HellaSwag, and TruthfulQA) will complete the taxonomy coverage and provide empirical data for the full set of architectures introduced in Chapter~3.
 
     \item \textbf{Routing-threshold and pair ablations.} The confidence threshold used for routing (\texttt{gemma4-4b}$\rightarrow$\texttt{gemma4-31b}) has not been systematically varied. Ablations across threshold values and across alternative SLM--LLM pairs will clarify whether the observed EATS gains are robust to configuration choice or specific to the current setting.
 

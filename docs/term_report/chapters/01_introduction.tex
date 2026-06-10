@@ -6,7 +6,7 @@ Large language models have achieved state-of-the-art performance across diverse 
 
 A systematic literature review conducted as part of this project synthesized 54 primary studies on collaborative SLM--LLM architectures under a PRISMA 2020-guided protocol~\cite{slrmanuscript2026}. That review confirmed a strong and ongoing shift toward hybrid and multi-agent designs in which small models handle routine sub-tasks while large models are invoked selectively for escalation, verification, or arbitration. It also identified a clear reporting asymmetry: accuracy is quantified in nearly every study, while cost, latency, and energy are treated as secondary observations and are frequently omitted altogether. No included study provided a unified comparison of multiple architecture families under a shared measurement policy. This asymmetry---and the absence of a shared evaluation framework---directly motivates the platform design described in this report.
 
-The thesis project described in this term report responds to that gap with a measurement-first experiment platform. Every architecture receives the same \texttt{Query} object and returns the same \texttt{Response} object, ensuring that standalone, hybrid, and multi-SLM strategies are evaluated on identical inputs under identical reporting conditions. Accuracy, latency, token usage, cost, energy, and carbon are all treated as first-class outcomes rather than secondary diagnostics. To rank architectures across all these dimensions simultaneously, the platform introduces EATS (Efficiency-Accuracy Trade-off Score; a composite of accuracy, cost, latency, and energy), a unified quality--efficiency signal.
+The present study responds to that gap with a measurement-first experiment platform. Every architecture receives the same \texttt{Query} object and returns the same \texttt{Response} object, ensuring that standalone, hybrid, and multi-SLM strategies are evaluated on identical inputs under identical reporting conditions. Accuracy, latency, token usage, cost, energy, and carbon are all treated as first-class outcomes rather than secondary diagnostics. To rank architectures across all these dimensions simultaneously, the platform introduces EATS---the Efficiency-Accuracy Trade-off Score, a composite of accuracy, cost, latency, and energy---as a unified quality--efficiency ranking signal.
 
 \section{Research Questions}
 \label{sec:rqs}
@@ -27,7 +27,7 @@ These questions operationalize the most underserved dimensions identified in the
 
 \section{Project Scope and Research Goal}
 
-The thesis project treats architecture as the primary independent variable within the shared \texttt{Query}/\texttt{Response} platform introduced above. Models still matter, but they are studied as components inside a larger orchestration surface.
+The present study treats architecture as the primary independent variable within the shared \texttt{Query}/\texttt{Response} platform introduced above. Models still matter, but they are studied as components inside a larger orchestration surface.
 
 The current report focuses on four tightly connected goals:
 
