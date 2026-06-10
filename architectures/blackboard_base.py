@@ -31,6 +31,16 @@ class BlackboardTask:
     results: dict[str, Any] = field(default_factory=dict)
     ttl_expiry: float = 0.0
     subtask_spawned: int = 0
+    # Bumped whenever a blocked task re-opens (prompt changed) so workers
+    # invalidate their cached bid and re-bid against the new prompt.
+    version: int = 0
+    # Execution attempts, used to cap retries after worker failures.
+    attempts: int = 0
+    # Workers that errored on this task; they skip it so the sweeper takes over.
+    failed_workers: set[str] = field(default_factory=set)
+    # Bids posted by each SLM worker for this task version (worker_name -> bid).
+    # Used by the highest-bid auction to award the task to the top bidder.
+    bids: dict[str, float] = field(default_factory=dict)
 
 
 class BaseBlackboardArchitecture(BaseArchitecture):
@@ -46,11 +56,15 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         slm_max_tokens: int = 0,
         llm_max_tokens: int = 0,
         cost_weight: float = 0.15,
-        bid_threshold: float = 0.65,
-        ttl_ms: int = 1500,
+        bid_threshold: float = 0.8,
+        ttl_ms: int = 3500,
         task_type: str = "mcq",
         max_subtasks: int = 2,
         allow_nested_subtasks: bool = False,
+        max_task_attempts: int = 2,
+        max_orchestration_s: float = 120.0,
+        claim_policy: str = "highest_bid",
+        sweeper_grace_s: float = 15.0,
     ) -> None:
         super().__init__(slm, llm)
         self.secondary_slm = secondary_slm
@@ -64,6 +78,18 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         self.llm_max_tokens = llm_max_tokens
         self.max_subtasks = max_subtasks
         self.allow_nested_subtasks = allow_nested_subtasks
+        self.max_task_attempts = max_task_attempts
+        self.max_orchestration_s = max_orchestration_s
+        # The sweeper escalates only once the SLMs have genuinely declined (all
+        # bid, none eligible). This grace window is the hard fallback for a bid
+        # that never returns, so a hung endpoint can't block a task forever.
+        self.sweeper_grace_s = sweeper_grace_s
+        # "highest_bid": competitive auction — the top eligible bidder wins each
+        # task. "first_threshold": legacy — the first worker to clear the
+        # threshold claims it (primary has de-facto priority by polling order).
+        self.claim_policy = claim_policy
+        self._bidder_names: list[str] = ["PrimarySLM", "SecondarySLM"]
+        self._bidder_order: dict[str, int] = {n: i for i, n in enumerate(self._bidder_names)}
 
         self.total_in = 0
         self.total_out = 0
@@ -79,7 +105,7 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         self.inference_steps = []
 
         t0 = time.perf_counter()
-        final_answer_text, used_model, final_confidence = asyncio.run(self._orchestrate_blackboard(query))
+        final_answer_text, used_worker, final_confidence, final_model_id = asyncio.run(self._orchestrate_blackboard(query))
         self.total_latency = (time.perf_counter() - t0) * 1000
 
         parsed = parse_answer(final_answer_text, self.task_type)
@@ -89,7 +115,7 @@ class BaseBlackboardArchitecture(BaseArchitecture):
             text=final_answer_text,
             predicted_answer=parsed,
             confidence=final_confidence,
-            model_id=used_model,
+            model_id=used_worker,
             latency_ms=self.total_latency,
             input_tokens=self.total_in,
             output_tokens=self.total_out,
@@ -98,10 +124,14 @@ class BaseBlackboardArchitecture(BaseArchitecture):
             metadata={
                 "inference_steps": self.inference_steps,
                 "framework": "event_driven_pub_sub_swarm",
+                # The worker tier that resolved the root task (e.g. PrimarySLM)
+                # and the actual model it loaded (e.g. google/gemma-4-E4B-it).
+                "final_model_id": final_model_id or used_worker,
+                "final_worker": used_worker,
             },
         )
 
-    async def _orchestrate_blackboard(self, query: Query) -> tuple[str, str]:
+    async def _orchestrate_blackboard(self, query: Query) -> tuple[str, str, float, str | None]:
         base_prompt = build_prompt(query, self.task_type)
 
         blackboard: dict[str, BlackboardTask] = {}
@@ -120,8 +150,19 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         ]
 
         async def monitor():
+            deadline = time.time() + self.max_orchestration_s
             while True:
                 if blackboard[root_id].status == TaskStatus.RESOLVED:
+                    break
+                # Belt-and-suspenders deadlock guard: if no worker (not even the
+                # sweeper) has resolved the root within the budget, force a
+                # best-effort resolution so asyncio.run() can never hang.
+                if time.time() > deadline:
+                    root = blackboard[root_id]
+                    root.results.setdefault("final_output", "")
+                    root.results.setdefault("confidence", 0.0)
+                    root.assigned_worker = root.assigned_worker or "watchdog_timeout"
+                    root.status = TaskStatus.RESOLVED
                     break
                 await asyncio.sleep(0.02)
 
@@ -134,7 +175,12 @@ class BaseBlackboardArchitecture(BaseArchitecture):
             wt.cancel()
 
         root_task = blackboard[root_id]
-        return root_task.results.get("final_output", ""), root_task.assigned_worker or "unknown", root_task.results.get("confidence", 0.5)
+        return (
+            root_task.results.get("final_output", ""),
+            root_task.assigned_worker or "unknown",
+            root_task.results.get("confidence", 0.5),
+            root_task.results.get("final_model_id"),
+        )
 
     async def _worker_loop(
         self,
@@ -143,15 +189,65 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         compute_penalty: float,
         blackboard: dict[str, BlackboardTask],
     ) -> None:
+        # Each worker posts its bid to the shared task exactly once per version
+        # (bids are deterministic at temperature 0). It then claims the task only
+        # if _should_claim approves — under "highest_bid" that means waiting for
+        # every bidder and winning the auction; under "first_threshold" it means
+        # simply clearing the threshold. task.bids is cleared when a blocked task
+        # re-opens with a synthesized prompt, triggering a re-bid.
         while True:
             for task_id, task in list(blackboard.items()):
-                if task.status == TaskStatus.OPEN:
-                    bid = await self._calculate_bid(provider, task.prompt, compute_penalty)
-                    if bid >= self.bid_threshold and task.status == TaskStatus.OPEN:
-                        task.status = TaskStatus.IN_PROGRESS
-                        task.assigned_worker = name
-                        await self._execute_task(name, provider, task, blackboard)
+                if task.status != TaskStatus.OPEN or name in task.failed_workers:
+                    continue
+                if name not in task.bids:
+                    task.bids[name] = await self._calculate_bid(
+                        name, provider, task.prompt, compute_penalty
+                    )
+                    # Record the bid value on the bid step just emitted, so every
+                    # saved report shows exactly what each worker bid (and the
+                    # threshold). Makes "why did the sweeper win?" diagnosable
+                    # straight from the report instead of guesswork.
+                    if self.inference_steps and self.inference_steps[-1].get("role") == "bid":
+                        self.inference_steps[-1]["bid"] = round(task.bids[name], 4)
+                        self.inference_steps[-1]["bid_threshold"] = self.bid_threshold
+                if task.status == TaskStatus.OPEN and self._should_claim(name, task):
+                    task.status = TaskStatus.IN_PROGRESS
+                    task.assigned_worker = name
+                    await self._execute_task(name, provider, task, blackboard)
             await asyncio.sleep(0.05)
+
+    def _should_claim(self, name: str, task: BlackboardTask) -> bool:
+        """Decide whether worker ``name`` should claim ``task`` right now.
+
+        ``first_threshold``: any worker whose bid clears the threshold claims
+        immediately (legacy — the first to evaluate wins, so the primary has
+        de-facto priority). ``highest_bid``: a competitive auction — the worker
+        waits until every live bidder has posted, then claims only if it holds
+        the strictly highest eligible bid (ties broken deterministically by
+        bidder order, so the primary wins exact ties).
+        """
+        my_bid = task.bids.get(name)
+        if my_bid is None or my_bid < self.bid_threshold:
+            return False
+        if self.claim_policy == "first_threshold":
+            return True
+
+        # Wait until every still-eligible bidder has weighed in, so the maximum
+        # bid is final before we award the task.
+        pending = [
+            w for w in self._bidder_names
+            if w not in task.failed_workers and w not in task.bids
+        ]
+        if pending:
+            return False
+        eligible = {
+            w: b for w, b in task.bids.items()
+            if b >= self.bid_threshold and w not in task.failed_workers
+        }
+        if not eligible:
+            return False
+        winner = max(eligible, key=lambda w: (eligible[w], -self._bidder_order.get(w, 0)))
+        return winner == name
 
     async def _heavy_sweeper_loop(
         self,
@@ -161,9 +257,22 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         blackboard: dict[str, BlackboardTask],
     ) -> None:
         while True:
-            now = time.time()
             for task_id, task in list(blackboard.items()):
-                if task.status == TaskStatus.OPEN and now > task.ttl_expiry:
+                if task.status != TaskStatus.OPEN:
+                    continue
+                live_bidders = [w for w in self._bidder_names if w not in task.failed_workers]
+                all_bid = all(w in task.bids for w in live_bidders)
+                any_eligible = any(
+                    task.bids.get(w, 0.0) >= self.bid_threshold for w in live_bidders
+                )
+                # Escalate when the SLMs have genuinely passed — all of them bid
+                # and none cleared the threshold (or all failed) — instead of on a
+                # wall-clock TTL that can preempt an eligible bid still queued on a
+                # busy GPU. The grace window is a hard fallback for a bid that
+                # never returns, so a hung endpoint can't block the task forever.
+                declined = (not live_bidders) or (all_bid and not any_eligible)
+                hung = time.time() > task.ttl_expiry + self.sweeper_grace_s
+                if declined or hung:
                     task.status = TaskStatus.IN_PROGRESS
                     task.assigned_worker = name
                     self.llm_calls += 1
@@ -172,11 +281,59 @@ class BaseBlackboardArchitecture(BaseArchitecture):
 
     async def _calculate_bid(
         self,
+        worker_name: str,
         provider: ModelProvider,
         prompt: str,
         compute_penalty: float,
     ) -> float:
         raise NotImplementedError
+
+    async def _probe_confidence(
+        self,
+        worker_name: str,
+        provider: ModelProvider,
+        prompt: str,
+        max_tokens: int,
+        top_logprobs: int = 1,
+    ) -> tuple[str, float | None, dict[str, Any]]:
+        """Run a bid probe and account for its real inference cost.
+
+        Bids are genuine ``generate`` calls that consume GPU time. Recording
+        them as ``role="bid"`` inference steps (and folding their tokens/cost
+        into the run totals) lets evaluation/energy.py attribute their energy and
+        CO2, so the swarm's bidding overhead is not invisible in the EATS
+        comparison. ``top_logprobs > 1`` opts into the token distribution so the
+        entropy variant can read ``mean_token_entropy_norm`` from the returned
+        metadata snapshot. Returns ``(text, confidence, metadata)``.
+        """
+        loop = asyncio.get_running_loop()
+        text, conf, in_t, out_t, cost, lat = await loop.run_in_executor(
+            None,
+            lambda: self._timed_generate(
+                provider,
+                prompt,
+                max_tokens=max_tokens,
+                temperature=self.slm_temperature,
+                top_logprobs=top_logprobs,
+            ),
+        )
+        # Snapshot the provider's per-call metadata before any later call can
+        # overwrite it (a worker serializes calls on its own provider).
+        meta = dict(getattr(provider, "last_generation_metadata", {}) or {})
+        self.total_in += in_t
+        self.total_out += out_t
+        self.total_cost += cost
+        self.inference_steps.append({
+            "worker": worker_name,
+            "role": "bid",
+            "model_id": provider.model_id,
+            "latency_ms": lat,
+            "input_tokens": in_t,
+            "output_tokens": out_t,
+            "api_cost_usd": cost,
+            "cost_usd": cost,
+        })
+        return text, conf, meta
 
     async def _execute_task(
         self,
@@ -191,15 +348,24 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         can_spawn = task.subtask_spawned < self.max_subtasks and task.id.count("sub_") < depth_limit
         if can_spawn:
             execution_prompt = (
-                "Solve the following problem step-by-step.\n"
-                "If you lack the information to solve it, or need a sub-calculation, format a request exactly as:\n"
-                "SUB_TASK: <query>\n\n"
-                f"Problem: {task.prompt}"
+                "You are a reasoning agent working on a shared blackboard.\n"
+                "Think briefly about the problem. If you reach a specific sub-fact or "
+                "sub-calculation you are unsure about, do not guess — post it to the "
+                "blackboard by writing exactly:\n"
+                "SUB_TASK: <your specific query>\n"
+                "Once the blackboard returns the resolved parameters, synthesize the "
+                "final solution. Keep all reasoning brief, then answer in the exact "
+                "format requested in the problem below.\n\n"
+                f"Problem:\n{task.prompt.strip()}\n\n"
+                "Reasoning:\n"
             )
         else:
             execution_prompt = (
-                "Solve the following problem step-by-step and provide the final answer.\n\n"
-                f"Problem: {task.prompt}"
+                "You are a reasoning agent working on a shared blackboard.\n"
+                "Think briefly about the problem, then answer in the exact format "
+                "requested in the problem below. Keep all reasoning brief.\n\n"
+                f"Problem:\n{task.prompt.strip()}\n\n"
+                "Reasoning:\n"
             )
 
         budget = compute_completion_budget(provider, execution_prompt, task_type="open", role="swarm_node")
@@ -211,23 +377,57 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         elif self.slm_max_tokens > 0:
             budget = self.slm_max_tokens
 
-        text, conf, in_t, out_t, cost, lat = await loop.run_in_executor(
-            None,
-            lambda: self._timed_generate(
-                provider,
-                execution_prompt,
-                max_tokens=budget,
-                temperature=temperature,
-            ),
-        )
+        try:
+            text, conf, in_t, out_t, cost, lat = await loop.run_in_executor(
+                None,
+                lambda: self._timed_generate(
+                    provider,
+                    execution_prompt,
+                    max_tokens=budget,
+                    temperature=temperature,
+                ),
+            )
+        except Exception as exc:
+            # Worker failed (e.g. endpoint blip). Record it, then route the task
+            # to the heavy sweeper instead of letting it hang IN_PROGRESS.
+            task.failed_workers.add(worker_name)
+            task.attempts += 1
+            self.inference_steps.append({
+                "worker": worker_name,
+                "role": "error",
+                "model_id": provider.model_id,
+                "latency_ms": 0.0,
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "api_cost_usd": 0.0,
+                "cost_usd": 0.0,
+                "error": str(exc),
+            })
+            if task.attempts >= self.max_task_attempts:
+                # Exhausted retries (even the sweeper failed): resolve
+                # best-effort so the orchestrator can never spin forever.
+                task.results["final_output"] = ""
+                task.results["confidence"] = 0.0
+                task.results["final_model_id"] = provider.model_id
+                task.status = TaskStatus.RESOLVED
+            else:
+                # Re-open with an already-expired TTL so the heavy sweeper claims
+                # it on its next tick; the failed worker skips it.
+                task.ttl_expiry = time.time()
+                task.status = TaskStatus.OPEN
+            return
 
         self.total_in += in_t
         self.total_out += out_t
         self.total_cost += cost
         self.inference_steps.append({
             "worker": worker_name,
+            "role": "sweep" if is_sweeper else "execution",
             "model_id": provider.model_id,
             "latency_ms": lat,
+            "input_tokens": in_t,
+            "output_tokens": out_t,
+            "api_cost_usd": cost,
             "cost_usd": cost,
         })
 
@@ -249,6 +449,7 @@ class BaseBlackboardArchitecture(BaseArchitecture):
         else:
             task.results["final_output"] = text
             task.results["confidence"] = conf
+            task.results["final_model_id"] = provider.model_id
             task.status = TaskStatus.RESOLVED
 
     async def _await_dependencies_and_resume(
@@ -261,10 +462,15 @@ class BaseBlackboardArchitecture(BaseArchitecture):
                 resolved_contexts = [blackboard[dep_id].results["final_output"] for dep_id in task.dependencies]
                 task.prompt = (
                     f"{task.prompt}\n\n"
-                    "Resolved parameters gathered from the swarm:\n"
+                    "Resolved parameters gathered from the blackboard:\n"
                     f"{chr(10).join(resolved_contexts)}\n"
                     "Synthesize the final definitive solution."
                 )
+                # New prompt → invalidate cached bids and let every worker
+                # (including any that previously failed) re-bid on the synthesis.
+                task.version += 1
+                task.failed_workers.clear()
+                task.bids.clear()
                 task.status = TaskStatus.OPEN
                 task.ttl_expiry = time.time() + (self.ttl_ms / 1000.0)
                 break

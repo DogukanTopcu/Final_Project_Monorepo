@@ -73,6 +73,9 @@ class ExperimentConfig:
     ttl_ms: int = 1500
     max_subtasks: int = 2
     allow_nested_subtasks: bool = False
+    entropy_weight: float = 0.5  # entropy blackboard: bid penalty per unit normalized entropy
+    entropy_top_k: int = 20  # entropy blackboard: top-k logprob distribution width
+    claim_policy: str = "highest_bid"  # blackboard: "highest_bid" auction | "first_threshold" legacy
     # Runtime
     dry_run: bool = False
     seed: int = 42

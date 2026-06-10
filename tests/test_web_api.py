@@ -540,3 +540,77 @@ def create_stub_params(llm: str = "gpt-oss-20b"):
         llm=llm,
         config_overrides={"confidence_threshold": 0.7},
     )
+
+
+def _make_sample(inference_steps: list[dict]) -> SampleResult:
+    return SampleResult(
+        query=Query(id="q1", text="Question", choices=["A", "B"], answer="B"),
+        response=Response(
+            query_id="q1",
+            text="B",
+            predicted_answer="B",
+            confidence=0.9,
+            model_id="qwen3.5-4b",
+            latency_ms=10.0,
+            input_tokens=3,
+            output_tokens=1,
+            cost_usd=0.0,
+            llm_calls=0,
+            metadata={"inference_steps": inference_steps},
+        ),
+        correct=True,
+    )
+
+
+def test_build_sample_payload_includes_inference_steps():
+    from evaluation.reporter import build_sample_payload
+
+    payload = build_sample_payload(
+        _make_sample([{"role": "bid", "model_id": "qwen3.5-4b", "latency_ms": 1.0}])
+    )
+
+    assert payload["query_id"] == "q1"
+    assert payload["correct"] is True
+    assert payload["inference_steps"][0]["role"] == "bid"
+
+
+def test_handle_sample_complete_streams_capped_sample_event():
+    import types as _types
+
+    experiment_service._experiments["exp_live"] = _types.SimpleNamespace(
+        progress=0, total=0
+    )
+    steps = [
+        {"role": "bid", "model_id": "qwen3.5-4b", "latency_ms": 1.0} for _ in range(60)
+    ]
+    sample = _make_sample(steps)
+
+    experiment_service._handle_sample_complete(  # type: ignore[attr-defined]
+        "exp_live", 1, 10, sample.response, sample
+    )
+
+    events = experiment_service.get_events("exp_live")
+    event_types = [event["type"] for event in events]
+    assert "progress" in event_types
+
+    sample_events = [event for event in events if event["type"] == "sample"]
+    assert len(sample_events) == 1
+    streamed = sample_events[0]["sample"]
+    assert streamed["query_id"] == "q1"
+    assert len(streamed["inference_steps"]) == 40  # capped
+    assert streamed["inference_steps_truncated"] is True
+
+
+def test_handle_sample_complete_without_sample_pushes_only_progress():
+    import types as _types
+
+    experiment_service._experiments["exp_live2"] = _types.SimpleNamespace(
+        progress=0, total=0
+    )
+
+    experiment_service._handle_sample_complete(  # type: ignore[attr-defined]
+        "exp_live2", 1, 5, _make_sample([]).response
+    )
+
+    event_types = [event["type"] for event in experiment_service.get_events("exp_live2")]
+    assert event_types == ["progress"]

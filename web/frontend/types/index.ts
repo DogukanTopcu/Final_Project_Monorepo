@@ -131,6 +131,7 @@ export interface ResultSampleInferenceStep {
   input_tokens?: number;
   output_tokens?: number;
   api_cost_usd?: number;
+  infra_cost_usd?: number;
   [key: string]: unknown;
 }
 
@@ -221,7 +222,7 @@ export interface CostEstimate {
 }
 
 export interface SSEEvent {
-  type: "progress" | "metric" | "complete" | "error" | "status";
+  type: "progress" | "metric" | "complete" | "error" | "status" | "sample";
   completed?: number;
   total?: number;
   current_query?: string;
@@ -231,6 +232,7 @@ export interface SSEEvent {
   metrics?: Record<string, number>;
   message?: string;
   status?: string;
+  sample?: ResultSample;
 }
 
 export interface BenchmarkInfo {

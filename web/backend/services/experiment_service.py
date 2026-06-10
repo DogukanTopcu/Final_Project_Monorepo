@@ -207,6 +207,9 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         "ttl_ms",
         "max_subtasks",
         "allow_nested_subtasks",
+        "entropy_weight",
+        "entropy_top_k",
+        "claim_policy",
     }
     unexpected = sorted(set(overrides) - allowed_override_keys)
     if unexpected:
@@ -264,6 +267,9 @@ def _build_config(params: ExperimentCreate, settings: Settings) -> ExperimentCon
         ttl_ms=int(overrides.get("ttl_ms", 1500)),
         max_subtasks=int(overrides.get("max_subtasks", 2)),
         allow_nested_subtasks=bool(overrides.get("allow_nested_subtasks", False)),
+        entropy_weight=float(overrides.get("entropy_weight", 0.5)),
+        entropy_top_k=int(overrides.get("entropy_top_k", 20)),
+        claim_policy=str(overrides.get("claim_policy", "highest_bid")),
         dry_run=bool(overrides.get("dry_run", False)),
         seed=int(overrides.get("seed", 42)),
         output_dir=settings.results_dir,
@@ -306,8 +312,8 @@ def _run_experiment(
     _refresh_queue_positions()
 
     callbacks = RunnerCallbacks(
-        on_sample_complete=lambda cur, total, resp: _handle_sample_complete(
-            experiment_id, cur, total, resp
+        on_sample_complete=lambda cur, total, resp, sample=None: _handle_sample_complete(
+            experiment_id, cur, total, resp, sample
         ),
         on_metric_update=lambda name, value: _push_event(
             experiment_id,
@@ -444,11 +450,15 @@ def _run_experiment(
         )
 
 
+_LIVE_INFERENCE_STEP_CAP = 40
+
+
 def _handle_sample_complete(
     experiment_id: str,
     current: int,
     total: int,
     response: Any,
+    sample: Any = None,
 ) -> None:
     exp = _experiments[experiment_id]
     exp.progress = current
@@ -462,6 +472,33 @@ def _handle_sample_complete(
             "current_query": getattr(response, "query_id", ""),
         },
     )
+
+    # Stream the full per-sample payload so the detail page can render Samples
+    # and Inference traces live, instead of waiting for the final report. The
+    # inference trace is capped to keep the in-memory event buffer bounded on
+    # long runs; the complete trace still lands in the saved report.
+    if sample is None:
+        return
+    try:
+        from evaluation.reporter import build_sample_payload
+
+        payload = build_sample_payload(sample)
+        steps = payload.get("inference_steps")
+        if isinstance(steps, list) and len(steps) > _LIVE_INFERENCE_STEP_CAP:
+            payload["inference_steps"] = steps[:_LIVE_INFERENCE_STEP_CAP]
+            payload["inference_steps_truncated"] = True
+        _push_event(
+            experiment_id,
+            {
+                "type": "sample",
+                "completed": current,
+                "total": total,
+                "sample": payload,
+            },
+        )
+    except Exception:
+        # Never let live-streaming serialization break a run.
+        pass
 
 
 def _validate_model_selection(model_id: str, expected_kind: str, *, require_runtime: bool) -> None:

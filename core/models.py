@@ -103,6 +103,43 @@ def _is_qwen35_model(model_id: str) -> bool:
     return normalized.startswith("qwen/qwen3.5-") or normalized.startswith("qwen3.5-")
 
 
+def _mean_normalized_token_entropy(content: list, max_tokens: int = 10) -> float | None:
+    """Mean per-token normalized Shannon entropy from OpenAI-style logprobs.
+
+    For each of the first ``max_tokens`` output positions, the position's
+    ``top_logprobs`` distribution is renormalized over the returned top-k
+    (the API truncates it, so the probs don't sum to 1), then scored with
+    ``H = -Σ pᵢ ln pᵢ`` and normalized by ``ln(k)`` so it lands in [0, 1].
+    The positions are averaged. Returns ``None`` when no usable per-position
+    distribution is present (e.g. ``top_logprobs`` was 1), so callers can fall
+    back gracefully. A peaked distribution → ~0; a flat one → ~1.
+    """
+    if not isinstance(content, list):
+        return None
+
+    norm_entropies: list[float] = []
+    for item in content[:max_tokens]:
+        if not isinstance(item, dict):
+            continue
+        alternatives = item.get("top_logprobs")
+        if not isinstance(alternatives, list) or len(alternatives) < 2:
+            continue
+        probs = [
+            math.exp(alt["logprob"])
+            for alt in alternatives
+            if isinstance(alt, dict) and isinstance(alt.get("logprob"), (int, float))
+        ]
+        total = sum(probs)
+        if len(probs) < 2 or total <= 0.0:
+            continue
+        entropy = -sum((p / total) * math.log(p / total) for p in probs if p > 0.0)
+        norm_entropies.append(entropy / math.log(len(probs)))
+
+    if not norm_entropies:
+        return None
+    return sum(norm_entropies) / len(norm_entropies)
+
+
 class ModelProvider(ABC):
     def __init__(self, model_id: str) -> None:
         self.model_id = model_id
@@ -280,13 +317,14 @@ class OpenAICompatibleModel(ModelProvider):
 
     def generate(self, prompt: str, **kwargs) -> tuple[str, float | None, int, int, float]:
         max_tokens = _resolve_max_tokens(self, prompt, kwargs)
+        top_logprobs = int(kwargs.get("top_logprobs", 1))
         payload = {
             "model": self.model_id,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": kwargs.get("temperature", self.temperature),
             "max_tokens": max_tokens,
             "logprobs": True,
-            "top_logprobs": 1,
+            "top_logprobs": top_logprobs,
         }
         if _is_qwen35_model(self.model_id):
             payload["chat_template_kwargs"] = {"enable_thinking": False}
@@ -318,6 +356,13 @@ class OpenAICompatibleModel(ModelProvider):
             headers=resp.headers,
             requested_max_tokens=max_tokens,
         )
+        # Only fetch/score the token distribution when a caller opted in by
+        # requesting more than one alternative — keeps the default path a no-op.
+        if top_logprobs > 1:
+            content = (choice.get("logprobs") or {}).get("content") or []
+            h_norm = _mean_normalized_token_entropy(content)
+            if h_norm is not None:
+                self.last_generation_metadata["mean_token_entropy_norm"] = h_norm
         confidence = self._logprob_confidence(choice)
         return text, confidence, in_tok, out_tok, cost
 

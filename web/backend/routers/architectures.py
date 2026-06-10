@@ -93,6 +93,21 @@ def _max_subtasks_param() -> ArchitectureParamSpec:
     )
 
 
+def _claim_policy_param() -> ArchitectureParamSpec:
+    return ArchitectureParamSpec(
+        key="claim_policy",
+        label="Claim policy",
+        type="enum",
+        default="highest_bid",
+        options=["highest_bid", "first_threshold"],
+        description=(
+            "highest_bid: competitive auction — the top eligible bidder wins each task. "
+            "first_threshold: legacy — the first worker to clear the threshold claims it "
+            "(primary SLM has de-facto priority)."
+        ),
+    )
+
+
 _SPECS: list[ArchitectureSpec] = [
     ArchitectureSpec(
         id=Architecture.MONOLITHIC,
@@ -155,14 +170,6 @@ _SPECS: list[ArchitectureSpec] = [
                 type="enum",
                 default="llm",
                 options=["slm", "llm"],
-            ),
-            ArchitectureParamSpec(
-                key="n_debate_rounds",
-                label="Debate rounds",
-                type="int",
-                default=1,
-                min=1,
-                max=5,
             ),
             *_temp_params(),
         ],
@@ -268,16 +275,17 @@ _SPECS: list[ArchitectureSpec] = [
                 key="bid_threshold",
                 label="Bid threshold",
                 type="float",
-                default=0.65,
+                default=0.75,
                 min=0.0,
                 max=1.0,
                 description="Minimum bid needed before a worker claims a task.",
             ),
+            _claim_policy_param(),
             ArchitectureParamSpec(
                 key="ttl_ms",
                 label="Task TTL (ms)",
                 type="int",
-                default=1500,
+                default=3500,
                 min=100,
                 max=10000,
                 description="After TTL, the heavy sweeper can claim the task.",
@@ -308,16 +316,35 @@ _SPECS: list[ArchitectureSpec] = [
                 key="bid_threshold",
                 label="Bid threshold",
                 type="float",
-                default=0.65,
+                default=0.75,
                 min=0.0,
                 max=1.0,
                 description="Minimum bid needed before a worker claims a task.",
             ),
             ArchitectureParamSpec(
+                key="entropy_weight",
+                label="Entropy weight",
+                type="float",
+                default=0.5,
+                min=0.0,
+                max=1.0,
+                description="Bid penalty per unit of normalized output entropy. Higher → uncertain SLMs defer to the sweeper.",
+            ),
+            ArchitectureParamSpec(
+                key="entropy_top_k",
+                label="Entropy top-k",
+                type="int",
+                default=20,
+                min=2,
+                max=100,
+                description="Width of the token distribution sampled to estimate Shannon entropy.",
+            ),
+            _claim_policy_param(),
+            ArchitectureParamSpec(
                 key="ttl_ms",
                 label="Task TTL (ms)",
                 type="int",
-                default=1500,
+                default=3500,
                 min=100,
                 max=10000,
                 description="After TTL, the heavy sweeper can claim the task.",
