@@ -19,23 +19,22 @@
 ## Accuracy
 | Metric | Value |
 |--------|-------|
-| Accuracy | 95.60% |
-| 95% CI | [93.43%, 97.08%] |
-| Correct / Total | 478 / 500 |
+| Accuracy | 96.40% |
+| 95% CI | [94.38%, 97.71%] |
+| Correct / Total | 482 / 500 |
 | Escalation Rate | 100.00% |
-| ECE (confidence calibration) | 0.0131 |
+| ECE (confidence calibration) | 0.0211 |
 
 ## Latency
 | Metric | Value |
 |--------|-------|
 | Throughput (output tok/s) | 38930.5 |
-| Wall-clock avg (ms) | 4510.5 |
-| Algorithmic avg (ms) | 4510.5 |
-| Wall-clock p50 (ms) | 4249.6 |
-| Wall-clock p95 (ms) | 6242.3 |
+| Model avg (ms) | 4510.5 |
+| Summed model avg (ms) | 4510.5 |
+| Model p50 (ms) | 4249.6 |
+| Model p95 (ms) | 6242.3 |
 
-> **Wall-clock**: observed end-to-end time including network and queue.  
-> **Algorithmic**: intrinsic inference + orchestration time summed across steps.
+> Latency metrics use model-reported inference time when available and fall back to observed timing otherwise.
 
 ## Cost
 | Metric | Value |
@@ -62,8 +61,8 @@
 | Normalized energy (vs baseline) | 1.0000 |
 
 ## EATS Score
-**EATS = 0.4888**  
+**EATS = 0.4908**  
 Normalized efficiency penalty: 1.0000  
 
-> EATS = accuracy² / (accuracy² + cost^0.5 × latency^0.3 × energy^0.2).  
-> Range [0, 1]; higher is better. Penalties are relative to the monolithic LLM baseline.
+> EATS = accuracy / (accuracy + efficiency penalty).  
+> Efficiency penalty = 0.5 × normalized cost + 0.3 × normalized latency + 0.2 × normalized energy.

@@ -49,7 +49,7 @@
     "total_co2_g": 131.20601281418197,
     "n_total": 500.0,
     "n_correct": 485.0,
-    "eats_score": 0.9603960396039604,
+    "eats_score": 0.49238578680203043,
     "normalized_cost": 1.0,
     "latency_p50_ms": 7590.050666000025,
     "latency_p95_ms": 11791.813831998297,
@@ -62,7 +62,10 @@
     "avg_confidence_escalated": 0.907796121877661,
     "avg_confidence_non_escalated": 0.0,
     "avg_energy_per_sample_kwh": 0.000690557962179905,
-    "avg_co2_per_sample_g": 0.26241202562836397
+    "avg_co2_per_sample_g": 0.26241202562836397,
+    "normalized_algorithmic_latency": 1.0,
+    "normalized_energy": 1.0,
+    "normalized_efficiency_penalty": 1.0
   },
   "samples": [
     {

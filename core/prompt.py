@@ -141,11 +141,15 @@ def parse_open_answer(text: str) -> str | None:
     if not stripped:
         return None
 
+    # Leading [\s*_#>]* tolerates markdown emphasis/heading/quote markers and the
+    # trailing \**  the closing bold, so a model that writes "**Answer: 80**"
+    # (e.g. gpt-oss-120b) is parsed the same as a plain "Answer: 80". The lines
+    # stay anchored to start/end so we never grab a stray number from reasoning.
     patterns = [
-        r"(?im)^\s*Answer:\s*(-?\d[\d,\.]*)\s*$",
-        r"(?im)^\s*Final Answer:\s*(-?\d[\d,\.]*)\s*$",
-        r"(?im)^\s*The answer is\s*(-?\d[\d,\.]*)\s*$",
-        r"(?im)^\s*(-?\d[\d,\.]*)\s*$",
+        r"(?im)^[\s*_#>]*Answer:\s*\**\s*(-?\d[\d,\.]*)\s*\**\s*$",
+        r"(?im)^[\s*_#>]*Final Answer:\s*\**\s*(-?\d[\d,\.]*)\s*\**\s*$",
+        r"(?im)^[\s*_#>]*The answer is\s*\**\s*(-?\d[\d,\.]*)\s*\**\s*$",
+        r"(?im)^[\s*_#>]*(-?\d[\d,\.]*)\s*\**\s*$",
     ]
     for pattern in patterns:
         match = re.search(pattern, stripped)
