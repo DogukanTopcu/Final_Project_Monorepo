@@ -16,36 +16,53 @@
 | N Samples | 10 |
 | Confidence Threshold | 0.7 |
 
-## Results
+## Accuracy
 | Metric | Value |
 |--------|-------|
-| accuracy | 0.6000 |
-| llm_call_ratio | 1.0000 |
-| avg_latency_ms | 8496.2803 |
-| total_cost_usd | 0.0555 |
-| total_api_cost_usd | 0.0000 |
-| total_infra_cost_usd | 0.0555 |
-| total_energy_kwh | 0.0076 |
-| total_co2_g | 2.8699 |
-| n_total | 10.0000 |
-| n_correct | 6.0000 |
-| eats_score | 0.5941 |
-| normalized_cost | 1.0000 |
-| latency_p50_ms | 9036.7512 |
-| latency_p95_ms | 10250.3648 |
-| total_tokens | 3644 |
-| n_escalated | 10.0000 |
-| escalation_rate | 1.0000 |
-| n_slm_only | 0.0000 |
-| n_llm_final | 10.0000 |
-| avg_slm_confidence | 0.9221 |
-| avg_confidence_escalated | 0.9221 |
-| avg_confidence_non_escalated | 0.0000 |
-| avg_energy_per_sample_kwh | 0.0008 |
-| avg_co2_per_sample_g | 0.2870 |
+| Accuracy | 60.00% |
+| 95% CI | [0.00%, 0.00%] |
+| Correct / Total | 6 / 10 |
+| Escalation Rate | 100.00% |
+| ECE (confidence calibration) | 0.0000 |
 
-## EATS Score Interpretation
-**EATS = 0.5941**  
-Accuracy: 60.00%  
-LLM Call Ratio: 100.00%  
-Total Cost: $0.0555  
+## Latency
+| Metric | Value |
+|--------|-------|
+| Throughput (output tok/s) | 0.0 |
+| Model avg (ms) | 8496.3 |
+| Summed model avg (ms) | 0.0 |
+| Model p50 (ms) | 9036.8 |
+| Model p95 (ms) | 10250.4 |
+
+> Latency metrics use model-reported inference time when available and fall back to observed timing otherwise.
+
+## Cost
+| Metric | Value |
+|--------|-------|
+| Cost per query (USD) | $0.000000 |
+| Total cost (USD) | $0.0555 |
+| API cost (USD) | $0.0000 |
+| Infra cost (USD) | $0.0555 |
+| SLM API cost — all queries (USD) | $0.0000 |
+| LLM API cost — escalated only (USD) | $0.0000 |
+| SLM-path total (non-escalated queries) | $0.0000 |
+| Escalated-path total (SLM+LLM) | $0.0000 |
+| SLM-path cost fraction | 0.00% |
+| Normalized cost (vs baseline) | 1.0000 |
+
+## Energy
+| Metric | Value |
+|--------|-------|
+| **Joules per output token** | 0.000000 J/tok |
+| Total energy (kWh) | 0.007552 |
+| Avg energy per sample (kWh) | 0.00075522 |
+| Total CO₂ (g) | 2.8699 |
+| Avg CO₂ per sample (g) | 0.286985 |
+| Normalized energy (vs baseline) | 1.0000 |
+
+## EATS Score
+**EATS = 0.3750**  
+Normalized efficiency penalty: 1.0000  
+
+> EATS = accuracy / (accuracy + efficiency penalty).  
+> Efficiency penalty = 0.5 × normalized cost + 0.3 × normalized latency + 0.2 × normalized energy.
