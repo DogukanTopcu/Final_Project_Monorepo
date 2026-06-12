@@ -114,21 +114,34 @@ in Standalone, Hybrid, and Multi-Agent Architectures}}
 % ============================ LEFT COLUMN ===================================
 \column{0.34}
 
-\block{1\,\textbar\, Motivation \& Research Questions}{
-LLMs deliver state-of-the-art reasoning at heavy \textbf{latency, cost, and energy}
-overheads; collaborative SLM--LLM architectures promise near-LLM quality at a fraction of
-the resources. A companion \textbf{PRISMA 2020 systematic review of 54 studies} found that
-\textbf{cost and energy are routinely underreported} and that no study compares multiple
-architecture families under one shared measurement policy.
+\block{1\,\textbar\, Motivation, RQs \& Review Method}{
+\textbf{Problem.} LLMs deliver state-of-the-art reasoning, but often at substantial
+\textbf{latency, monetary cost, and energy overhead}. SLMs offer a cheaper and more
+data-sovereign alternative, yet still trail frontier LLMs on broad reasoning tasks.
+\textbf{Literature gap.} Our companion systematic review of \textbf{54 collaborative
+SLM--LLM studies} shows a reporting asymmetry: hybrid and multi-agent designs are increasing,
+but \textbf{cost and energy are rarely treated as first-class outcomes} alongside accuracy.
+
+\vspace{6pt}
+\textbf{Objective.} We ask a systems-design question: \emph{which orchestration architecture
+provides the best capability--efficiency trade-off under real deployment conditions?}
+To answer this, we built a \textbf{measurement-first evaluation platform} and introduce
+\textbf{EATS} to jointly rank accuracy, latency, cost, and energy.
 
 \vspace{8pt}
 \innerblock{Research Questions}{%
 \begin{itemize}
-  \item \textbf{RQ1 Performance:} can collaborative architectures match standalone LLM accuracy?
-  \item \textbf{RQ2 Efficiency:} what are the cost / latency / energy trade-offs across families?
-  \item \textbf{RQ3 Unified metric:} does EATS give a stable architecture-agnostic ranking?
-  \item \textbf{RQ4 Grounding:} do measured results corroborate the literature-review trends?
+  \item \textbf{RQ1 Performance:} how do collaborative SLM/LLM systems compare with monolithic LLMs on reasoning and classification tasks?
+  \item \textbf{RQ2 Efficiency:} how do hybrid and multi-agent designs affect inference cost, latency, and energy?
+  \item \textbf{RQ3 Orchestration:} which routing and division-of-labor mechanisms are used across architectures?
+  \item \textbf{RQ4 Domain suitability:} where do collaborative systems match LLM baselines, and where do they fail?
 \end{itemize}}
+
+\vspace{6pt}
+\begin{center}
+\textbf{Systematic Review Method}\\[6pt]
+\includegraphics[width=0.82\linewidth]{prisma_flowchart.pdf}
+\end{center}
 }
 
 \block{2\,\textbar\, Measurement-First Platform}{
