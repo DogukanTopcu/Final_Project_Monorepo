@@ -250,7 +250,7 @@ Ten architectures in three families; $\dagger$ marks novel designs contributed b
 project. Architectures marked $^{\ast}$ are implemented but not yet benchmarked.
 \vspace{6pt}
 \begin{center}
-\small
+\footnotesize
 \begin{tabular}{@{} l l l @{}}
 \toprule
 \textbf{Family} & \textbf{Architecture} & \textbf{Key mechanism} \\
@@ -275,13 +275,13 @@ Multi-SLM  & Ensemble     & majority / confidence-weighted voting \\
 \begin{center}
 \begin{minipage}{0.48\linewidth}
   \centering
-  \includegraphics[width=\linewidth]{routing_simplified.png}
-  {\small Routing: SLM answers first; LLM only on low confidence.}
+  \includegraphics[width=0.92\linewidth]{blackboard_vertical.pdf}
+  {\small Blackboard: SLM agents collaborate via a shared task board; an LLM sweeper intervenes when needed.}
 \end{minipage}\hfill
 \begin{minipage}{0.48\linewidth}
   \centering
-  \includegraphics[width=\linewidth]{speculative_simplified.png}
-  {\small Speculative: SLM drafts; LLM verifies and patches the suffix.}
+  \includegraphics[width=0.92\linewidth]{active_oracle_vertical.pdf}
+  {\small Active Oracle: the SLM escalates targeted sub-queries to an LLM only at impasse points.}
 \end{minipage}
 \end{center}
 }

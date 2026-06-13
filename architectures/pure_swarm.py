@@ -29,6 +29,9 @@ class SwarmTask:
     assigned_worker: str | None = None
     dependencies: list[str] = field(default_factory=list)
     results: dict[str, Any] = field(default_factory=dict)
+    bids: dict[str, float] = field(default_factory=dict)
+    failed_workers: set[str] = field(default_factory=set)
+    attempts: int = 0
     created_at: float = 0.0
     ttl_expiry: float = 0.0
     subtask_spawned: int = 0
@@ -101,6 +104,9 @@ class PureSwarmArchitecture(BaseArchitecture):
         base_prompt = build_prompt(query, self.task_type)
         now = time.time()
 
+        self._bidder_names = ["SwarmNode_A", "SwarmNode_B"]
+        self._bidder_order = {"SwarmNode_A": 1, "SwarmNode_B": 0}
+
         blackboard: dict[str, SwarmTask] = {}
         root_id = "task_root"
         blackboard[root_id] = SwarmTask(
@@ -142,14 +148,38 @@ class PureSwarmArchitecture(BaseArchitecture):
     ) -> None:
         while True:
             for task_id, task in list(blackboard.items()):
-                if task.status == TaskStatus.OPEN:
-                    bid = await self._calculate_bid(provider, task.prompt, compute_penalty)
-                    threshold = self._resolve_threshold(task)
-                    if bid >= threshold and task.status == TaskStatus.OPEN:
-                        task.status = TaskStatus.IN_PROGRESS
-                        task.assigned_worker = name
-                        await self._execute_task(name, provider, task, blackboard)
+                if task.status != TaskStatus.OPEN or name in task.failed_workers:
+                    continue
+                if name not in task.bids:
+                    task.bids[name] = await self._calculate_bid(provider, task.prompt, compute_penalty)
+                if task.status == TaskStatus.OPEN and self._should_claim(name, task):
+                    task.status = TaskStatus.IN_PROGRESS
+                    task.assigned_worker = name
+                    await self._execute_task(name, provider, task, blackboard)
             await asyncio.sleep(0.05)
+
+    def _should_claim(self, name: str, task: SwarmTask) -> bool:
+        my_bid = task.bids.get(name)
+        threshold = self._resolve_threshold(task)
+        if my_bid is None or my_bid < threshold:
+            return False
+
+        pending = [
+            w for w in self._bidder_names
+            if w not in task.failed_workers and w not in task.bids
+        ]
+        if pending:
+            return False
+
+        eligible = {
+            w: b for w, b in task.bids.items()
+            if b >= threshold and w not in task.failed_workers
+        }
+        if not eligible:
+            return False
+
+        winner = max(eligible, key=lambda w: (eligible[w], -self._bidder_order.get(w, 0)))
+        return winner == name
 
     def _resolve_threshold(self, task: SwarmTask) -> float:
         if time.time() > task.ttl_expiry:
@@ -210,15 +240,37 @@ class PureSwarmArchitecture(BaseArchitecture):
         if self.slm_max_tokens > 0:
             budget = self.slm_max_tokens
 
-        text, conf, in_t, out_t, cost, lat = await loop.run_in_executor(
-            None,
-            lambda: self._timed_generate(
-                provider,
-                execution_prompt,
-                max_tokens=budget,
-                temperature=self.slm_temperature,
-            ),
-        )
+        try:
+            text, conf, in_t, out_t, cost, lat = await loop.run_in_executor(
+                None,
+                lambda: self._timed_generate(
+                    provider,
+                    execution_prompt,
+                    max_tokens=budget,
+                    temperature=self.slm_temperature,
+                ),
+            )
+        except Exception as exc:
+            task.failed_workers.add(worker_name)
+            task.attempts += 1
+            self.inference_steps.append({
+                "worker": worker_name,
+                "role": "error",
+                "model_id": provider.model_id,
+                "latency_ms": 0.0,
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "api_cost_usd": 0.0,
+                "cost_usd": 0.0,
+                "error": str(exc),
+            })
+            if task.attempts >= self.max_task_attempts:
+                task.results["final_output"] = ""
+                task.results["confidence"] = 0.0
+                task.status = TaskStatus.RESOLVED
+            else:
+                task.status = TaskStatus.OPEN
+            return
 
         self.total_in += in_t
         self.total_out += out_t
@@ -269,6 +321,7 @@ class PureSwarmArchitecture(BaseArchitecture):
                 now = time.time()
                 task.created_at = now
                 task.ttl_expiry = now + (self.ttl_ms / 1000.0)
+                task.bids.clear()
                 task.status = TaskStatus.OPEN
                 break
             await asyncio.sleep(0.02)
