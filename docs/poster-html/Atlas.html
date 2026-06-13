@@ -156,45 +156,38 @@
     display:flex;
     flex-direction:column;
     gap:6px;
-    margin-top:10px;
+    margin-top:4px;
   }
   .benchmark-strip{
     border-top:1px solid var(--line);
-    padding-top:8px;
+    padding-top:6px;
   }
   .benchmark-strip:first-child{border-top:none;padding-top:0;}
   .benchmark-strip-layout{
     display:grid;
-    grid-template-columns:72px 158px 1fr;
-    gap:10px;
+    grid-template-columns:64px 220px 1fr;
+    gap:8px;
     align-items:start;
   }
   .benchmark-name h4{
     font-family:'IBM Plex Mono',monospace;
-    font-size:15px;
+    font-size:14px;
     line-height:1.05;
     color:var(--claret-deep);
     letter-spacing:.03em;
   }
   .benchmark-name span{
-    display:block;
-    margin-top:4px;
-    font-family:'IBM Plex Mono',monospace;
-    font-size:10px;
-    line-height:1.2;
-    color:var(--mut);
-    text-transform:uppercase;
-    letter-spacing:.07em;
+    display:none;
   }
-  .benchmark-chart{padding-top:2px;}
+  .benchmark-chart{padding-top:0;}
   .benchmark-summary{
     display:flex;
     flex-direction:column;
-    gap:4px;
+    gap:3px;
   }
   .benchmark-role{
-    font-size:11.4px;
-    line-height:1.22;
+    font-size:11px;
+    line-height:1.16;
     color:var(--ink);
   }
   .benchmark-role b{
@@ -357,10 +350,10 @@
     const palette = ['#8A1538', '#0F7173', '#B07F2E'];
 
     function miniChart(panel){
-      const W = 158, H = 86;
-      const padL = 14, padR = 6, padT = 6, padB = 14;
+      const W = 220, H = 108;
+      const padL = 18, padR = 8, padT = 8, padB = 16;
       const ch = H - padT - padB;
-      const bw = 16, gap = 18, startX = 42;
+      const bw = 24, gap = 28, startX = 56;
       const labels = ['E', 'A', 'N'];
       const values = [
         panel.eatsLeader.accuracy,
@@ -371,15 +364,15 @@
       [0, 50, 100].forEach((tick) => {
         const y = padT + ch - (tick / 100) * ch;
         svg += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#D8D0C6" stroke-width="1"/>`;
-        svg += `<text x="${padL - 3}" y="${y + 3}" font-size="7.5" text-anchor="end" fill="#6A6C7E">${tick}</text>`;
+        svg += `<text x="${padL - 4}" y="${y + 4}" font-size="9" text-anchor="end" fill="#6A6C7E">${tick}</text>`;
       });
       values.forEach((value, index) => {
         const height = (value / 100) * ch;
         const x = startX + index * (bw + gap);
         const y = padT + ch - height;
         svg += `<rect x="${x}" y="${y}" width="${bw}" height="${height}" rx="4" fill="${palette[index]}"/>`;
-        svg += `<text x="${x + bw / 2}" y="${y - 3}" font-size="7.3" text-anchor="middle" fill="#2B2D42">${value.toFixed(1)}</text>`;
-        svg += `<text x="${x + bw / 2}" y="${H - 4}" font-size="7.3" text-anchor="middle" fill="#6A6C7E">${labels[index]}</text>`;
+        svg += `<text x="${x + bw / 2}" y="${y - 4}" font-size="9" text-anchor="middle" fill="#2B2D42">${value.toFixed(1)}</text>`;
+        svg += `<text x="${x + bw / 2}" y="${H - 4}" font-size="9" text-anchor="middle" fill="#6A6C7E">${labels[index]}</text>`;
       });
       svg += `<line x1="${padL}" y1="${padT + ch}" x2="${W - padR}" y2="${padT + ch}" stroke="#2B2D42" stroke-width="1.2"/>`;
       svg += `</svg>`;
@@ -391,14 +384,13 @@
         <div class="benchmark-strip-layout">
           <div class="benchmark-name">
             <h4>${panel.benchmark}</h4>
-            <span>accuracy<br>readout</span>
           </div>
           <div class="benchmark-chart">${miniChart(panel)}</div>
           <div class="benchmark-summary">
-            <div class="benchmark-role"><b>EATS:</b> ${panel.eatsLeader.label} · ${panel.eatsLeader.eats.toFixed(3)}</div>
-            <div class="benchmark-role"><b>Accuracy:</b> ${panel.accuracyLeader.label} · ${panel.accuracyLeader.accuracy.toFixed(1)}%</div>
-            <div class="benchmark-role"><b>Project:</b> ${panel.novelLeader.label} · ${panel.novelLeader.accuracy.toFixed(1)}% / ${panel.novelLeader.eats.toFixed(3)}</div>
-            <p class="benchmark-note">${panel.insight}</p>
+            <div class="benchmark-role"><b>EATS</b> ${panel.eatsLeader.label} · ${panel.eatsLeader.eats.toFixed(3)}</div>
+            <div class="benchmark-role"><b>ACC</b> ${panel.accuracyLeader.label} · ${panel.accuracyLeader.accuracy.toFixed(1)}%</div>
+            <div class="benchmark-role"><b>THESIS</b> ${panel.novelLeader.label} · ${panel.novelLeader.accuracy.toFixed(1)}% / ${panel.novelLeader.eats.toFixed(3)}</div>
+            ${panel.insight ? `<p class="benchmark-note">${panel.insight}</p>` : ''}
           </div>
         </div>
       </article>
