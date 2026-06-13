@@ -1,0 +1,222 @@
+{
+  "generated_at": "2026-06-13T23:06:28.850667+00:00",
+  "selection_rule": "latest run per benchmark x architecture with n_total >= 100",
+  "scoring_rule": "canonical runner/web EATS from experiment metrics",
+  "panels": [
+    {
+      "benchmark": "MMLU",
+      "benchmark_key": "mmlu",
+      "eats_leader": {
+        "architecture": "routing",
+        "label": "Routing",
+        "experiment_id": "exp_06cb6a22",
+        "accuracy": 77.0,
+        "eats": 0.825,
+        "n_samples": 100,
+        "created_at": "2026-06-04T23:49:11.347706+00:00",
+        "cost_per_query_usd": 0.000805,
+        "latency_ms": 2473.5,
+        "energy_kwh_per_sample": 9.4e-05,
+        "llm_call_ratio": 0.56
+      },
+      "accuracy_leader": {
+        "architecture": "monolithic",
+        "label": "gpt-oss-120b",
+        "experiment_id": "exp_38d91f09",
+        "accuracy": 87.0,
+        "eats": 0.465,
+        "n_samples": 500,
+        "created_at": "2026-06-01T21:49:09.256886+00:00",
+        "cost_per_query_usd": 0.008384,
+        "latency_ms": 3375.1,
+        "energy_kwh_per_sample": 0.000563,
+        "llm_call_ratio": 1.0
+      },
+      "novel_leader": {
+        "architecture": "entropy_blackboard",
+        "label": "Entropy BB",
+        "experiment_id": "exp_b7a50110",
+        "accuracy": 82.0,
+        "eats": 0.521,
+        "n_samples": 100,
+        "created_at": "2026-06-12T19:56:34.544994+00:00",
+        "cost_per_query_usd": 0.003401,
+        "latency_ms": 12294.4,
+        "energy_kwh_per_sample": 0.000376,
+        "llm_call_ratio": 0.33
+      }
+    },
+    {
+      "benchmark": "ARC",
+      "benchmark_key": "arc",
+      "eats_leader": {
+        "architecture": "routing",
+        "label": "Routing",
+        "experiment_id": "exp_6addc383",
+        "accuracy": 91.0,
+        "eats": 0.883,
+        "n_samples": 100,
+        "created_at": "2026-06-05T15:29:39.419970+00:00",
+        "cost_per_query_usd": 0.000519,
+        "latency_ms": 1382.5,
+        "energy_kwh_per_sample": 6.3e-05,
+        "llm_call_ratio": 0.75
+      },
+      "accuracy_leader": {
+        "architecture": "monolithic",
+        "label": "gpt-oss-120b",
+        "experiment_id": "exp_1011a47e",
+        "accuracy": 95.4,
+        "eats": 0.488,
+        "n_samples": 500,
+        "created_at": "2026-06-01T22:11:41.654747+00:00",
+        "cost_per_query_usd": 0.006198,
+        "latency_ms": 2691.8,
+        "energy_kwh_per_sample": 0.000449,
+        "llm_call_ratio": 1.0
+      },
+      "novel_leader": {
+        "architecture": "pure_swarm",
+        "label": "Pure Swarm",
+        "experiment_id": "exp_c1561d76",
+        "accuracy": 92.0,
+        "eats": 0.66,
+        "n_samples": 100,
+        "created_at": "2026-06-12T22:44:56.761807+00:00",
+        "cost_per_query_usd": 0.001468,
+        "latency_ms": 7047.0,
+        "energy_kwh_per_sample": 0.000141,
+        "llm_call_ratio": 0.0
+      }
+    },
+    {
+      "benchmark": "GSM8K",
+      "benchmark_key": "gsm8k",
+      "eats_leader": {
+        "architecture": "pure_swarm",
+        "label": "Pure Swarm",
+        "experiment_id": "exp_bb82ebef",
+        "accuracy": 94.0,
+        "eats": 0.684,
+        "n_samples": 100,
+        "created_at": "2026-06-12T22:45:14.226020+00:00",
+        "cost_per_query_usd": 0.001478,
+        "latency_ms": 7093.2,
+        "energy_kwh_per_sample": 0.000142,
+        "llm_call_ratio": 0.0
+      },
+      "accuracy_leader": {
+        "architecture": "entropy_blackboard",
+        "label": "Entropy BB",
+        "experiment_id": "exp_d9188f36",
+        "accuracy": 97.0,
+        "eats": 0.631,
+        "n_samples": 100,
+        "created_at": "2026-06-12T19:57:03.886470+00:00",
+        "cost_per_query_usd": 0.001957,
+        "latency_ms": 9184.1,
+        "energy_kwh_per_sample": 0.00019,
+        "llm_call_ratio": 0.07
+      },
+      "novel_leader": {
+        "architecture": "entropy_blackboard",
+        "label": "Entropy BB",
+        "experiment_id": "exp_d9188f36",
+        "accuracy": 97.0,
+        "eats": 0.631,
+        "n_samples": 100,
+        "created_at": "2026-06-12T19:57:03.886470+00:00",
+        "cost_per_query_usd": 0.001957,
+        "latency_ms": 9184.1,
+        "energy_kwh_per_sample": 0.00019,
+        "llm_call_ratio": 0.07
+      }
+    },
+    {
+      "benchmark": "HellaSwag",
+      "benchmark_key": "hellaswag",
+      "eats_leader": {
+        "architecture": "routing",
+        "label": "Routing",
+        "experiment_id": "exp_7f42adb3",
+        "accuracy": 90.0,
+        "eats": 0.869,
+        "n_samples": 100,
+        "created_at": "2026-06-05T15:29:46.159326+00:00",
+        "cost_per_query_usd": 0.000607,
+        "latency_ms": 1584.9,
+        "energy_kwh_per_sample": 7.5e-05,
+        "llm_call_ratio": 0.91
+      },
+      "accuracy_leader": {
+        "architecture": "speculative",
+        "label": "Speculative",
+        "experiment_id": "exp_b8cf2ca6",
+        "accuracy": 92.0,
+        "eats": 0.856,
+        "n_samples": 100,
+        "created_at": "2026-06-05T15:30:37.133880+00:00",
+        "cost_per_query_usd": 0.00072,
+        "latency_ms": 1734.3,
+        "energy_kwh_per_sample": 9e-05,
+        "llm_call_ratio": 1.0
+      },
+      "novel_leader": {
+        "architecture": "entropy_blackboard",
+        "label": "Entropy BB",
+        "experiment_id": "exp_ce0b6cc7",
+        "accuracy": 84.0,
+        "eats": 0.53,
+        "n_samples": 100,
+        "created_at": "2026-06-12T19:56:58.937900+00:00",
+        "cost_per_query_usd": 0.003697,
+        "latency_ms": 7649.0,
+        "energy_kwh_per_sample": 0.000479,
+        "llm_call_ratio": 0.82
+      }
+    },
+    {
+      "benchmark": "TruthfulQA",
+      "benchmark_key": "truthfulqa",
+      "eats_leader": {
+        "architecture": "routing",
+        "label": "Routing",
+        "experiment_id": "exp_51426888",
+        "accuracy": 85.0,
+        "eats": 0.843,
+        "n_samples": 100,
+        "created_at": "2026-06-05T15:29:59.812819+00:00",
+        "cost_per_query_usd": 0.000572,
+        "latency_ms": 1452.7,
+        "energy_kwh_per_sample": 7.1e-05,
+        "llm_call_ratio": 0.81
+      },
+      "accuracy_leader": {
+        "architecture": "speculative",
+        "label": "Speculative",
+        "experiment_id": "exp_0759858a",
+        "accuracy": 88.0,
+        "eats": 0.815,
+        "n_samples": 100,
+        "created_at": "2026-06-05T15:30:46.297191+00:00",
+        "cost_per_query_usd": 0.000756,
+        "latency_ms": 1733.4,
+        "energy_kwh_per_sample": 9.6e-05,
+        "llm_call_ratio": 1.0
+      },
+      "novel_leader": {
+        "architecture": "entropy_blackboard",
+        "label": "Entropy BB",
+        "experiment_id": "exp_077ad200",
+        "accuracy": 75.0,
+        "eats": 0.428,
+        "n_samples": 100,
+        "created_at": "2026-06-12T19:57:08.349679+00:00",
+        "cost_per_query_usd": 0.00346,
+        "latency_ms": 9552.1,
+        "energy_kwh_per_sample": 0.000419,
+        "llm_call_ratio": 0.83
+      }
+    }
+  ]
+}
