@@ -152,6 +152,88 @@
   .legend span{display:flex;align-items:center;gap:8px;font-size:16px;color:var(--ink);}
   .legend i{width:18px;height:14px;border-radius:3px;display:inline-block;}
 
+  .benchmark-panels{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    margin-top:10px;
+  }
+  .benchmark-strip{
+    border-top:1px solid var(--line);
+    padding-top:8px;
+  }
+  .benchmark-strip:first-child{border-top:none;padding-top:0;}
+  .benchmark-strip-layout{
+    display:grid;
+    grid-template-columns:72px 158px 1fr;
+    gap:10px;
+    align-items:start;
+  }
+  .benchmark-name h4{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:15px;
+    line-height:1.05;
+    color:var(--claret-deep);
+    letter-spacing:.03em;
+  }
+  .benchmark-name span{
+    display:block;
+    margin-top:4px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    line-height:1.2;
+    color:var(--mut);
+    text-transform:uppercase;
+    letter-spacing:.07em;
+  }
+  .benchmark-chart{padding-top:2px;}
+  .benchmark-summary{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .benchmark-role{
+    font-size:11.4px;
+    line-height:1.22;
+    color:var(--ink);
+  }
+  .benchmark-role b{
+    color:var(--claret-deep);
+    font-weight:600;
+  }
+  .benchmark-note{
+    margin-top:5px;
+    font-size:11.5px;
+    line-height:1.28;
+    color:var(--mut);
+  }
+  .reading-notes{
+    display:flex;
+    flex-direction:column;
+    border-top:1px solid var(--line);
+  }
+  .reading-note{
+    display:grid;
+    grid-template-columns:34px 1fr;
+    gap:12px;
+    padding:8px 0;
+    border-bottom:1px solid var(--line);
+    align-items:start;
+  }
+  .reading-note span{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--teal);
+    letter-spacing:.08em;
+    padding-top:2px;
+  }
+  .reading-note p{
+    margin:0;
+    font-size:14px;
+    line-height:1.34;
+  }
+  .reading-note strong{color:var(--claret-deep);}
+
   /* mini arch sketches */
   .archmini{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px;}
   .ms{border:1px solid var(--line);border-radius:10px;padding:11px;background:#fff;}
@@ -266,43 +348,61 @@
   }
   window.addEventListener('resize',fit); fit();
 
-  /* ---- grouped bar chart (SVG) ---- */
+  /* ---- mini benchmark readouts ---- */
   (function(){
-    const data=[
-      {b:'MMLU', r:0.835, s:0.818, m:0.698},
-      {b:'ARC',  r:0.884, s:0.853, m:0.738},
-      {b:'GSM8K',r:0.560, s:0.513, m:0.660},
-      {b:'HSwag',r:0.869, s:0.856, m:0.665},
-      {b:'TQA',  r:0.844, s:0.817, m:0.577},
-    ];
-    const W=492,H=250,padL=44,padB=30,padT=10,padR=8;
-    const cw=W-padL-padR, ch=H-padB-padT;
-    const groups=data.length, bw=20, gap=6;
-    const gw=cw/groups;
-    let svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" font-family="IBM Plex Mono">`;
-    // gridlines
-    for(let v=0;v<=1;v+=0.25){
-      const y=padT+ch-v*ch;
-      svg+=`<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="#D8D0C6" stroke-width="1"/>`;
-      svg+=`<text x="${padL-8}" y="${y+4}" font-size="12" text-anchor="end" fill="#6A6C7E">${v.toFixed(2)}</text>`;
-    }
-    svg+=`<text x="13" y="${padT+ch/2}" font-size="12" fill="#6A6C7E" transform="rotate(-90 13 ${padT+ch/2})" text-anchor="middle">EATS</text>`;
-    const cols=['#8A1538','#0F7173','#B07F2E'];
-    data.forEach((d,i)=>{
-      const gx=padL+i*gw;
-      const vals=[d.r,d.s,d.m];
-      const totalW=3*bw+2*gap;
-      const startx=gx+(gw-totalW)/2;
-      vals.forEach((v,j)=>{
-        const bh=v*ch, x=startx+j*(bw+gap), y=padT+ch-bh;
-        svg+=`<rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="3" fill="${cols[j]}"/>`;
-        svg+=`<text x="${x+bw/2}" y="${y-4}" font-size="10.5" text-anchor="middle" fill="#2B2D42">${v.toFixed(2)}</text>`;
+    const host = document.getElementById('benchmarkPanels');
+    const panels = window.BENCHMARK_PANELS || [];
+    if (!host || !panels.length) return;
+
+    const palette = ['#8A1538', '#0F7173', '#B07F2E'];
+
+    function miniChart(panel){
+      const W = 158, H = 86;
+      const padL = 14, padR = 6, padT = 6, padB = 14;
+      const ch = H - padT - padB;
+      const bw = 16, gap = 18, startX = 42;
+      const labels = ['E', 'A', 'N'];
+      const values = [
+        panel.eatsLeader.accuracy,
+        panel.accuracyLeader.accuracy,
+        panel.novelLeader.accuracy
+      ];
+      let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" aria-label="${panel.benchmark} mini chart">`;
+      [0, 50, 100].forEach((tick) => {
+        const y = padT + ch - (tick / 100) * ch;
+        svg += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#D8D0C6" stroke-width="1"/>`;
+        svg += `<text x="${padL - 3}" y="${y + 3}" font-size="7.5" text-anchor="end" fill="#6A6C7E">${tick}</text>`;
       });
-      svg+=`<text x="${gx+gw/2}" y="${H-10}" font-size="13" text-anchor="middle" fill="#2B2D42">${d.b}</text>`;
-    });
-    svg+=`<line x1="${padL}" y1="${padT+ch}" x2="${W-padR}" y2="${padT+ch}" stroke="#2B2D42" stroke-width="1.5"/>`;
-    svg+=`</svg>`;
-    document.getElementById('atlasChart').innerHTML=svg;
+      values.forEach((value, index) => {
+        const height = (value / 100) * ch;
+        const x = startX + index * (bw + gap);
+        const y = padT + ch - height;
+        svg += `<rect x="${x}" y="${y}" width="${bw}" height="${height}" rx="4" fill="${palette[index]}"/>`;
+        svg += `<text x="${x + bw / 2}" y="${y - 3}" font-size="7.3" text-anchor="middle" fill="#2B2D42">${value.toFixed(1)}</text>`;
+        svg += `<text x="${x + bw / 2}" y="${H - 4}" font-size="7.3" text-anchor="middle" fill="#6A6C7E">${labels[index]}</text>`;
+      });
+      svg += `<line x1="${padL}" y1="${padT + ch}" x2="${W - padR}" y2="${padT + ch}" stroke="#2B2D42" stroke-width="1.2"/>`;
+      svg += `</svg>`;
+      return svg;
+    }
+
+    host.innerHTML = panels.map((panel) => `
+      <article class="benchmark-strip">
+        <div class="benchmark-strip-layout">
+          <div class="benchmark-name">
+            <h4>${panel.benchmark}</h4>
+            <span>accuracy<br>readout</span>
+          </div>
+          <div class="benchmark-chart">${miniChart(panel)}</div>
+          <div class="benchmark-summary">
+            <div class="benchmark-role"><b>EATS:</b> ${panel.eatsLeader.label} · ${panel.eatsLeader.eats.toFixed(3)}</div>
+            <div class="benchmark-role"><b>Accuracy:</b> ${panel.accuracyLeader.label} · ${panel.accuracyLeader.accuracy.toFixed(1)}%</div>
+            <div class="benchmark-role"><b>Project:</b> ${panel.novelLeader.label} · ${panel.novelLeader.accuracy.toFixed(1)}% / ${panel.novelLeader.eats.toFixed(3)}</div>
+            <p class="benchmark-note">${panel.insight}</p>
+          </div>
+        </div>
+      </article>
+    `).join('');
   })();
 
   /* ---- deterministic QR-style placeholder ---- */
