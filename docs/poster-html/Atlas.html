@@ -120,6 +120,16 @@
   tr.hl td{background:var(--paper);}
   tr.hl td b{color:var(--claret-deep);}
 
+  /* eats heatmap */
+  table.heat{border-collapse:separate;border-spacing:2px;font-size:12.5px;}
+  table.heat th{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:11px;text-transform:uppercase;
+    letter-spacing:.03em;color:var(--mut);border-bottom:none;padding:3px 5px;}
+  table.heat th.num-c{text-align:center;}
+  table.heat td{padding:5px 6px;border-bottom:none;border-radius:4px;}
+  table.heat td.num-c{text-align:center;font-variant-numeric:tabular-nums;}
+  table.heat td:first-child{font-family:'IBM Plex Sans',sans-serif;font-weight:500;font-size:12.5px;
+    color:var(--slate);text-align:left;padding-left:0;}
+
   /* stat cards */
   .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;}
   .stat{border:1.5px solid var(--line);border-top:5px solid var(--claret);border-radius:10px;
@@ -403,6 +413,36 @@
         </div>
       </article>
     `).join('');
+  })();
+
+  /* ---- EATS heatmap matrix (s9) ---- */
+  (function(){
+    const host = document.getElementById('eatsMatrix');
+    const m = window.EATS_MATRIX;
+    if (!host || !m) return;
+
+    const lo = 0.2, hi = 0.9;
+    const colMax = m.benchmarks.map((_, c) => Math.max(...m.rows.map(r => r.eats[c])));
+    const shade = v => {
+      const t = Math.max(0, Math.min(1, (v - lo) / (hi - lo)));
+      const a = 0.10 + t * 0.80;
+      const fg = a > 0.52 ? '#fff' : '#2B2D42';
+      return `background:rgba(138,21,56,${a.toFixed(2)});color:${fg}`;
+    };
+
+    let h = '<table class="heat"><thead><tr><th>Architecture</th>';
+    m.benchmarks.forEach(b => { h += `<th class="num-c">${b}</th>`; });
+    h += '</tr></thead><tbody>';
+    m.rows.forEach(r => {
+      h += `<tr><td>${r.arch}${r.novel ? ' <span class="dag">†</span>' : ''}</td>`;
+      r.eats.forEach((v, c) => {
+        const win = v === colMax[c];
+        h += `<td class="num-c" style="${shade(v)}${win ? ';font-weight:700' : ''}">${v.toFixed(2)}</td>`;
+      });
+      h += '</tr>';
+    });
+    h += '</tbody></table>';
+    host.innerHTML = h;
   })();
 
   /* ---- deterministic QR-style placeholder ---- */
