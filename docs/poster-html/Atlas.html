@@ -194,13 +194,26 @@
     <div class="cols">
 
       <!-- ============ COLUMN 1 ============ -->
-      <div class="col" id="col1"></div>
+      <div class="col">
+        <div id="s1"></div>
+        <div id="s2"></div>
+        <div id="s3"></div>
+      </div>
 
       <!-- ============ COLUMN 2 ============ -->
-      <div class="col" id="col2"></div>
+      <div class="col">
+        <div id="s4"></div>
+        <div id="s5"></div>
+        <div id="s6"></div>
+        <div id="s7"></div>
+      </div>
 
       <!-- ============ COLUMN 3 ============ -->
-      <div class="col" id="col3"></div>
+      <div class="col">
+        <div id="s8"></div>
+        <div id="s9"></div>
+        <div id="s10"></div>
+      </div>
     </div>
 
     <!-- ===================== FOOTER ===================== -->
@@ -220,14 +233,22 @@
   </div>
 </div>
 
-<script src="col1.js"></script>
-<script src="col2.js"></script>
-<script src="col3.js"></script>
+<script src="s1.js"></script>
+<script src="s2.js"></script>
+<script src="s3.js"></script>
+<script src="s4.js"></script>
+<script src="s5.js"></script>
+<script src="s6.js"></script>
+<script src="s7.js"></script>
+<script src="s8.js"></script>
+<script src="s9.js"></script>
+<script src="s10.js"></script>
 <script>
-  /* inject column components */
-  document.getElementById('col1').innerHTML = window.COL1 || '';
-  document.getElementById('col2').innerHTML = window.COL2 || '';
-  document.getElementById('col3').innerHTML = window.COL3 || '';
+  /* inject sections */
+  for (var i = 1; i <= 10; i++) {
+    var el = document.getElementById('s' + i);
+    if (el) el.innerHTML = window['S' + i] || '';
+  }
 
   /* ---- scale poster to fit viewport ---- */
   function fit(){
