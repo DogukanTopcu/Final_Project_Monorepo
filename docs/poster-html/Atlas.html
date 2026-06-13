@@ -63,8 +63,8 @@
     letter-spacing:.03em;color:#f0c9d3;}
 
   /* ---------- Columns ---------- */
-  .cols{flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:34px;padding:28px 60px 18px;}
-  .col{display:flex;flex-direction:column;gap:21px;}
+  .cols{flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:34px;padding:26px 60px 10px;}
+  .col{display:flex;flex-direction:column;gap:18px;}
 
   .block{break-inside:avoid;}
   .bhead{display:flex;align-items:center;gap:13px;margin-bottom:11px;}
@@ -159,18 +159,15 @@
     color:var(--claret-deep);margin-bottom:10px;}
 
   /* footer / refs + qr */
-  .foot{background:var(--paper-2);border-top:3px solid var(--claret);padding:16px 60px;
-    display:grid;grid-template-columns:1fr 200px;gap:30px;align-items:center;}
+  .foot{background:var(--paper-2);border-top:3px solid var(--claret);padding:10px 60px 8px;
+    display:grid;grid-template-columns:1fr 184px;gap:22px;align-items:center;}
   .refs h5{font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.08em;text-transform:uppercase;
     color:var(--claret-deep);margin-bottom:6px;}
-  .refs p{font-size:13px;line-height:1.4;color:var(--mut);margin:0;}
+  .refs p{font-size:12.5px;line-height:1.32;color:var(--mut);margin:0;}
   .refs p b{color:var(--slate);font-weight:600;}
   .qr{text-align:center;}
-  .qr .code{width:128px;height:128px;margin:0 auto;display:block;border:6px solid #fff;outline:1px solid var(--line);}
-  .qr .lbl{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--mut);margin-top:6px;line-height:1.3;}
-  .pill{display:inline-block;white-space:nowrap;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--teal);
-    border:1px solid var(--teal);border-radius:20px;padding:2px 11px;margin-bottom:6px;}
-
+  .qr .code{width:112px;height:112px;margin:0 auto;display:block;border:5px solid #fff;outline:1px solid var(--line);}
+  .qr .lbl{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--mut);margin-top:4px;line-height:1.25;}
   /* ---------- Abstract band ---------- */
   .abstract-band{
     background:var(--paper);border-top:3px solid var(--gold);border-bottom:1px solid var(--line);
@@ -232,10 +229,8 @@
     <!-- ===================== FOOTER ===================== -->
     <footer class="foot">
       <div class="refs">
-        <div class="pill">Future work</div>
-        <h5>Next steps &amp; selected references</h5>
-        <p><b>Future work:</b> benchmark Debate, Blackboard &amp; Entropy Blackboard on the full suite · fix GSM8K numeric extraction · routing-threshold &amp; SLM–LLM pair ablations · scale to ≥500 samples · edge deployment of the best-EATS architecture.</p>
-        <p style="margin-top:8px">[1] Hao et&nbsp;al. <b>Hybrid SLM–LLM Inference</b>, 2024 · [2] Oh&nbsp;&amp;&nbsp;Kim, <b>Uncertainty-Aware Hybrid Inference</b>, 2025 · [3] Shao et&nbsp;al. <b>Division-of-Thoughts</b>, 2025 · [4] Kwon et&nbsp;al. <b>vLLM: PagedAttention</b>, SOSP 2023 · [5] Companion SLR (54 studies, PRISMA 2020) · [6] MMLU, ARC, GSM8K, HellaSwag, TruthfulQA.</p>
+        <h5>Selected references</h5>
+        <p>[1] Hao et&nbsp;al. <b>Hybrid SLM–LLM Inference</b>, 2024 · [2] Oh&nbsp;&amp;&nbsp;Kim, <b>Uncertainty-Aware Hybrid Inference</b>, 2025 · [3] Shao et&nbsp;al. <b>Division-of-Thoughts</b>, 2025 · [4] Kwon et&nbsp;al. <b>vLLM: PagedAttention</b>, SOSP 2023 · [5] Companion SLR (54 studies, PRISMA 2020) · [6] MMLU, ARC, GSM8K, HellaSwag, TruthfulQA.</p>
       </div>
       <div class="qr">
         <canvas class="code" id="qrAtlas" width="150" height="150"></canvas>

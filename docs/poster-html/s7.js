@@ -1,20 +1,20 @@
 window.S7 = `
 <section class="block">
   <div class="bhead"><div class="num">7</div><div class="btitle">Architecture Taxonomy</div><div class="line"></div></div>
-  <p>Ten architectures in three families. <span class="dag">†</span> novel designs from this project; <span class="mono">∗</span> implemented but not yet benchmarked.</p>
+  <p>Ten architectures in three families. <span class="dag">†</span> marks novel project contributions introduced in the current study.</p>
   <table>
-    <thead><tr><th>Family</th><th>Architecture</th><th>Key mechanism</th></tr></thead>
+    <thead><tr><th>Family</th><th>Architecture</th><th>Type</th><th>Key mechanism</th></tr></thead>
     <tbody>
-      <tr><td><span class="fam">Stand</span></td><td>Single-Model</td><td>direct inference</td></tr>
-      <tr><td><span class="fam">Stand</span></td><td>MoE</td><td>sparse expert activation</td></tr>
-      <tr class="hl"><td><span class="fam hy">Hybrid</span></td><td><b>Routing</b></td><td>confidence SLM→LLM escalation</td></tr>
-      <tr class="hl"><td><span class="fam hy">Hybrid</span></td><td><b>Speculative</b></td><td>SLM drafts; LLM rewrites suffix</td></tr>
-      <tr><td><span class="fam hy">Hybrid</span></td><td>Debate (POA)<span class="mono">∗</span></td><td>proponent–opponent–arbiter</td></tr>
-      <tr><td><span class="fam hy">Hybrid</span></td><td>Active Oracle <span class="dag">†</span></td><td>targeted LLM sub-queries</td></tr>
-      <tr><td><span class="fam hy">Hybrid</span></td><td>Blackboard <span class="dag">†∗</span></td><td>bid-based board; LLM sweeper</td></tr>
-      <tr><td><span class="fam hy">Hybrid</span></td><td>Entropy BB <span class="dag">†∗</span></td><td>uncertainty-penalised bidding</td></tr>
-      <tr><td><span class="fam ms">Multi</span></td><td>Ensemble</td><td>confidence-weighted voting</td></tr>
-      <tr><td><span class="fam ms">Multi</span></td><td>Pure Swarm <span class="dag">†</span></td><td>SLM-only peers; no LLM online</td></tr>
+      <tr><td><span class="fam">Stand</span></td><td>Single-Model</td><td>Baseline</td><td>direct inference</td></tr>
+      <tr><td><span class="fam">Stand</span></td><td>MoE</td><td>Baseline</td><td>internal sparse expert activation</td></tr>
+      <tr class="hl"><td><span class="fam hy">Hybrid</span></td><td><b>Routing</b></td><td>Literature</td><td>confidence SLM→LLM escalation</td></tr>
+      <tr class="hl"><td><span class="fam hy">Hybrid</span></td><td><b>Speculative</b></td><td>Literature</td><td>SLM drafts; LLM rewrites suffix</td></tr>
+      <tr><td><span class="fam hy">Hybrid</span></td><td>Debate (POA)</td><td>Literature</td><td>proponent–opponent–arbitrator</td></tr>
+      <tr><td><span class="fam hy">Hybrid</span></td><td>Active Oracle <span class="dag">†</span></td><td>Novel</td><td>targeted LLM sub-queries</td></tr>
+      <tr><td><span class="fam hy">Hybrid</span></td><td>Blackboard <span class="dag">†</span></td><td>Novel</td><td>bid-based task board; LLM sweeper fallback</td></tr>
+      <tr><td><span class="fam hy">Hybrid</span></td><td>Entropy Blackboard <span class="dag">†</span></td><td>Novel</td><td>uncertainty-penalised bidding</td></tr>
+      <tr><td><span class="fam ms">Multi</span></td><td>Ensemble</td><td>Literature</td><td>majority or confidence-weighted voting</td></tr>
+      <tr><td><span class="fam ms">Multi</span></td><td>Pure Swarm <span class="dag">†</span></td><td>Novel</td><td>SLM-only peer coordination; no LLM online</td></tr>
     </tbody>
   </table>
   <div class="archmini">
