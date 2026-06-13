@@ -1,4 +1,4 @@
-.PHONY: dev dev-down tf-init tf-plan tf-apply tf-destroy ecr-login push-api push-runner mlflow-ui web
+.PHONY: dev dev-down tf-init tf-plan tf-apply tf-destroy ecr-login push-api push-runner mlflow-ui web poster-pdf
 
 # ──────────────────────────────────────────────
 # Local development
@@ -56,3 +56,6 @@ mlflow-ui:
 
 web:
 	open http://localhost:3000
+
+poster-pdf:
+	python scripts/export_poster_pdf.py
