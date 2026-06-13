@@ -1,13 +1,13 @@
 window.S2 = `
 <section class="block">
-  <div class="bhead"><div class="num">2</div><div class="btitle">Systematic Review</div><div class="line"></div></div>
-  <p>PRISMA 2020-guided screening narrowed the literature to the core collaborative corpus that frames our questions.</p>
-  <div class="diagram" style="gap:0">
-    <div class="dnode"><div class="t">Records identified</div><div class="s">1,200+ database hits</div></div>
-    <div class="darrow"><svg width="18" height="24"><path d="M9 0V18M9 24L2 16M9 24L16 16" stroke="currentColor" stroke-width="2.5" fill="none"/></svg></div>
-    <div class="dnode"><div class="t">Screened &amp; de-duplicated</div><div class="s">title · abstract · eligibility</div></div>
-    <div class="darrow"><svg width="18" height="24"><path d="M9 0V18M9 24L2 16M9 24L16 16" stroke="currentColor" stroke-width="2.5" fill="none"/></svg></div>
-    <div class="dnode key"><div class="t">54 studies included</div><div class="s">collaborative SLM–LLM systems</div></div>
+  <div class="bhead"><div class="num">2</div><div class="btitle">Background / Literature Review</div><div class="line"></div></div>
+  <p><strong>LLMs</strong> deliver state-of-the-art reasoning but impose high latency, cost, and energy. <strong>SLMs</strong> are cheaper and data-sovereign, yet trail on broad reasoning tasks.</p>
+  <p>A PRISMA 2020-guided review of <strong>54 collaborative SLM–LLM studies</strong> reveals a critical gap: hybrid and multi-agent designs are rising, but <strong>cost and energy are rarely first-class outcomes</strong> alongside accuracy.</p>
+  <div class="rqs" style="margin-top:8px">
+    <div class="rq"><div class="tag">RQ1</div><div class="txt"><b>Performance.</b> How do collaborative SLM/LLM systems compare with monolithic LLMs on reasoning &amp; classification?</div></div>
+    <div class="rq"><div class="tag">RQ2</div><div class="txt"><b>Efficiency.</b> How do hybrid &amp; multi-agent designs affect cost, latency, and energy?</div></div>
+    <div class="rq"><div class="tag">RQ3</div><div class="txt"><b>Orchestration.</b> Which routing &amp; division-of-labor mechanisms recur across architectures?</div></div>
+    <div class="rq"><div class="tag">RQ4</div><div class="txt"><b>Domain fit.</b> Where do collaborative systems match LLM baselines — and where do they fail?</div></div>
   </div>
 </section>
 `;

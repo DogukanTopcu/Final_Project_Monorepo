@@ -1,13 +1,11 @@
 window.S1 = `
 <section class="block">
-  <div class="bhead"><div class="num">1</div><div class="btitle">Motivation &amp; Research Questions</div><div class="line"></div></div>
-  <p class="lead"><strong>LLMs</strong> deliver state-of-the-art reasoning, but at substantial <strong>latency, monetary, and energy</strong> cost. <strong>SLMs</strong> are cheaper and more data-sovereign, yet still trail frontier models on broad reasoning.</p>
-  <p>A companion review of <strong>54 collaborative SLM–LLM studies</strong> reveals a reporting asymmetry: hybrid and multi-agent designs are rising, but <strong>cost and energy are rarely treated as first-class outcomes</strong> alongside accuracy.</p>
-  <div class="rqs" style="margin-top:8px">
-    <div class="rq"><div class="tag">RQ1</div><div class="txt"><b>Performance.</b> How do collaborative SLM/LLM systems compare with monolithic LLMs on reasoning &amp; classification?</div></div>
-    <div class="rq"><div class="tag">RQ2</div><div class="txt"><b>Efficiency.</b> How do hybrid &amp; multi-agent designs affect cost, latency, and energy?</div></div>
-    <div class="rq"><div class="tag">RQ3</div><div class="txt"><b>Orchestration.</b> Which routing &amp; division-of-labor mechanisms recur across architectures?</div></div>
-    <div class="rq"><div class="tag">RQ4</div><div class="txt"><b>Domain fit.</b> Where do collaborative systems match LLM baselines — and where do they fail?</div></div>
-  </div>
+  <div class="bhead"><div class="num">1</div><div class="btitle">Abstract / Summary</div><div class="line"></div></div>
+  <ul class="clean">
+    <li>Measurement-first platform benchmarking <b>nine SLM–LLM architectures</b> across five reasoning benchmarks under a unified observability contract (accuracy · latency · cost · energy · carbon).</li>
+    <li>Novel composite metric <b>EATS</b> (Efficiency-Accuracy Trade-off Score) jointly ranks architectures on quality and efficiency.</li>
+    <li><b>Routing</b> reaches 76.7% on MMLU with only 48.7% heavy-model calls; <b>speculative decoding</b> reaches 86.0%.</li>
+    <li>Novel <b>Blackboard &amp; Entropy Blackboard</b> resolve 72–93% of queries on SLMs alone at up to <b>97% accuracy</b> — highest in the study.</li>
+  </ul>
 </section>
 `;
