@@ -2,13 +2,13 @@ window.S7 = `
 <section class="block">
   <div class="bhead"><div class="num">7</div><div class="btitle">Architecture Taxonomy</div><div class="line"></div></div>
   <p>Ten architectures in three families. <span class="dag">†</span> marks novel project contributions introduced in the current study.</p>
-  <table>
+  <table class="zebra">
     <thead><tr><th>Family</th><th>Architecture</th><th>Type</th><th>Key mechanism</th></tr></thead>
     <tbody>
       <tr><td><span class="fam">Stand</span></td><td>Single-Model</td><td>Baseline</td><td>direct inference</td></tr>
       <tr><td><span class="fam">Stand</span></td><td>MoE</td><td>Baseline</td><td>internal sparse expert activation</td></tr>
-      <tr class="hl"><td><span class="fam hy">Hybrid</span></td><td><b>Routing</b></td><td>Literature</td><td>confidence SLM→LLM escalation</td></tr>
-      <tr class="hl"><td><span class="fam hy">Hybrid</span></td><td><b>Speculative</b></td><td>Literature</td><td>SLM drafts; LLM rewrites suffix</td></tr>
+      <tr><td><span class="fam hy">Hybrid</span></td><td>Routing</td><td>Literature</td><td>confidence SLM→LLM escalation</td></tr>
+      <tr><td><span class="fam hy">Hybrid</span></td><td>Speculative</td><td>Literature</td><td>SLM drafts; LLM rewrites suffix</td></tr>
       <tr><td><span class="fam hy">Hybrid</span></td><td>Debate (POA)</td><td>Literature</td><td>proponent–opponent–arbitrator</td></tr>
       <tr><td><span class="fam hy">Hybrid</span></td><td>Active Oracle <span class="dag">†</span></td><td>Novel</td><td>targeted LLM sub-queries</td></tr>
       <tr><td><span class="fam hy">Hybrid</span></td><td>Blackboard <span class="dag">†</span></td><td>Novel</td><td>bid-based task board; LLM sweeper fallback</td></tr>
