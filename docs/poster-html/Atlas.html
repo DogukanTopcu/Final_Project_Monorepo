@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poster — Atlas (Classic Column Grid)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --claret:#8A1538;
+    --claret-deep:#6E1029;
+    --slate:#2B2D42;
+    --ink:#23253a;
+    --teal:#0F7173;
+    --gold:#B07F2E;
+    --paper:#F4F1ED;
+    --paper-2:#EDE8E1;
+    --line:#D8D0C6;
+    --mut:#6A6C7E;
+    --w:1684px;
+    --h:2382px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    background:#3a3a3e;
+    font-family:'IBM Plex Sans',sans-serif;
+    display:flex;align-items:flex-start;justify-content:center;
+    overflow:auto;
+  }
+  .stage{width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;position:fixed;inset:0;}
+  .poster{
+    width:var(--w);height:var(--h);
+    background:#fff;color:var(--ink);
+    position:relative;transform-origin:center center;
+    box-shadow:0 30px 90px rgba(0,0,0,.45);
+    display:flex;flex-direction:column;
+    overflow:hidden;
+  }
+
+  /* ---------- Header ---------- */
+  .head{
+    background:var(--claret);color:#fff;
+    padding:34px 60px 28px;
+    display:grid;grid-template-columns:168px 1fr;gap:36px;align-items:center;
+    position:relative;
+  }
+  .head::after{content:"";position:absolute;left:0;right:0;bottom:0;height:7px;background:var(--gold);}
+  .head .logo{width:168px;height:168px;display:flex;align-items:center;justify-content:center;
+    background:#fff;border-radius:50%;padding:12px;}
+  .head .logo img{width:100%;height:100%;object-fit:contain;}
+  .kicker{font-family:'IBM Plex Mono',monospace;font-size:16px;letter-spacing:.3em;
+    text-transform:uppercase;color:#f0c9d3;margin-bottom:10px;}
+  h1.title{font-family:'IBM Plex Serif',serif;font-weight:600;font-size:49px;line-height:1.06;
+    letter-spacing:-.01em;max-width:1180px;}
+  h1.title em{font-style:italic;color:#f4d6a0;font-weight:500;}
+  .byline{margin-top:15px;display:flex;flex-direction:column;gap:5px;}
+  .byline .authors{font-size:21px;font-weight:600;line-height:1.2;}
+  .byline .adv{font-size:16px;color:#f0c9d3;}
+  .affil{margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:14px;
+    letter-spacing:.03em;color:#f0c9d3;}
+
+  /* ---------- Columns ---------- */
+  .cols{flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:34px;padding:28px 60px 18px;}
+  .col{display:flex;flex-direction:column;gap:21px;}
+
+  .block{break-inside:avoid;}
+  .bhead{display:flex;align-items:center;gap:13px;margin-bottom:11px;}
+  .num{flex:none;width:38px;height:38px;border-radius:50%;background:var(--claret);color:#fff;
+    font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:19px;
+    display:flex;align-items:center;justify-content:center;}
+  .btitle{font-family:'IBM Plex Serif',serif;font-weight:600;font-size:23px;color:var(--claret-deep);
+    line-height:1.08;letter-spacing:-.01em;}
+  .bhead .line{flex:1;height:2px;background:linear-gradient(90deg,var(--line),transparent);}
+  p{font-size:16.5px;line-height:1.4;color:var(--ink);margin-bottom:8px;}
+  p:last-child{margin-bottom:0;}
+  strong{font-weight:600;color:var(--claret-deep);}
+  .lead strong{color:var(--slate);}
+  .mono{font-family:'IBM Plex Mono',monospace;font-size:.9em;}
+
+  ul.clean{list-style:none;display:flex;flex-direction:column;gap:7px;}
+  ul.clean li{font-size:16px;line-height:1.36;padding-left:21px;position:relative;}
+  ul.clean li::before{content:"";position:absolute;left:2px;top:7px;width:8px;height:8px;
+    background:var(--claret);transform:rotate(45deg);}
+  ul.clean li b{font-weight:600;color:var(--claret-deep);}
+
+  .rqs{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--line);}
+  .rq{display:grid;grid-template-columns:58px 1fr;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);align-items:start;}
+  .rq .tag{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:15.5px;color:var(--teal);}
+  .rq .txt{font-size:15.5px;line-height:1.34;}
+  .rq .txt b{color:var(--claret-deep);font-weight:600;}
+
+  /* callout / inner card */
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:14px 18px;}
+  .card.accent{border-left:5px solid var(--claret);}
+
+  /* equations */
+  .eq{font-family:'IBM Plex Serif',serif;font-size:21px;text-align:center;color:var(--slate);
+    padding:10px 6px;line-height:1.45;}
+  .eq .frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;margin:0 4px;}
+  .eq .frac .t{border-bottom:2px solid var(--slate);padding:0 8px 2px;}
+  .eq .frac .b{padding:3px 8px 0;}
+  .eq i{color:var(--claret);}
+  .eqnote{font-size:14px;color:var(--mut);text-align:center;font-family:'IBM Plex Mono',monospace;}
+
+  /* tables */
+  table{width:100%;border-collapse:collapse;font-size:15.5px;}
+  thead th{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:12.5px;text-transform:uppercase;
+    letter-spacing:.05em;color:var(--mut);text-align:left;padding:6px 9px;border-bottom:2px solid var(--slate);}
+  tbody td{padding:5.5px 9px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  tbody tr:last-child td{border-bottom:none;}
+  td.num-c,th.num-c{text-align:right;font-variant-numeric:tabular-nums;font-family:'IBM Plex Mono',monospace;}
+  .fam{font-family:'IBM Plex Mono',monospace;font-size:12px;text-transform:uppercase;letter-spacing:.05em;
+    color:#fff;background:var(--slate);padding:2px 8px;border-radius:4px;display:inline-block;}
+  .fam.hy{background:var(--teal);}
+  .fam.ms{background:var(--gold);}
+  .dag{color:var(--claret);font-weight:700;}
+  tr.hl td{background:var(--paper);}
+  tr.hl td b{color:var(--claret-deep);}
+
+  /* stat cards */
+  .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;}
+  .stat{border:1.5px solid var(--line);border-top:5px solid var(--claret);border-radius:10px;
+    padding:13px 10px;text-align:center;background:#fff;}
+  .stat:nth-child(2){border-top-color:var(--teal);}
+  .stat:nth-child(3){border-top-color:var(--gold);}
+  .stat .big{font-family:'IBM Plex Serif',serif;font-weight:700;font-size:38px;line-height:1;color:var(--claret);}
+  .stat:nth-child(2) .big{color:var(--teal);}
+  .stat:nth-child(3) .big{color:var(--gold);}
+  .stat .cap{margin-top:7px;font-size:13.5px;line-height:1.28;color:var(--ink);}
+  .stat .cap b{color:var(--slate);}
+
+  /* diagrams */
+  .diagram{display:flex;flex-direction:column;gap:0;align-items:stretch;}
+  .dnode{position:relative;border-radius:9px;padding:10px 14px;text-align:center;border:1.5px solid var(--line);background:var(--paper);}
+  .dnode .t{font-weight:600;font-size:16px;color:var(--slate);}
+  .dnode .s{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--mut);margin-top:2px;}
+  .dnode.key{background:rgba(15,113,115,.12);border-color:var(--teal);border-width:2px;}
+  .dnode.key .t{color:var(--teal);}
+  .dnode.metric{background:rgba(176,127,46,.14);border-color:var(--gold);}
+  .darrow{height:19px;display:flex;align-items:center;justify-content:center;color:var(--claret);}
+  .darrow svg{display:block;}
+  .dlbl{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--mut);}
+
+  figcaption{font-size:14px;color:var(--mut);line-height:1.3;margin-top:6px;text-align:center;}
+
+  /* bar chart */
+  .chart{width:100%;}
+  .legend{display:flex;gap:20px;justify-content:center;margin-top:10px;flex-wrap:wrap;}
+  .legend span{display:flex;align-items:center;gap:8px;font-size:16px;color:var(--ink);}
+  .legend i{width:18px;height:14px;border-radius:3px;display:inline-block;}
+
+  /* mini arch sketches */
+  .archmini{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px;}
+  .ms{border:1px solid var(--line);border-radius:10px;padding:11px;background:#fff;}
+  .ms h4{font-family:'IBM Plex Mono',monospace;font-size:14px;text-transform:uppercase;letter-spacing:.05em;
+    color:var(--claret-deep);margin-bottom:10px;}
+
+  /* footer / refs + qr */
+  .foot{background:var(--paper-2);border-top:3px solid var(--claret);padding:16px 60px;
+    display:grid;grid-template-columns:1fr 200px;gap:30px;align-items:center;}
+  .refs h5{font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--claret-deep);margin-bottom:6px;}
+  .refs p{font-size:13px;line-height:1.4;color:var(--mut);margin:0;}
+  .refs p b{color:var(--slate);font-weight:600;}
+  .qr{text-align:center;}
+  .qr .code{width:128px;height:128px;margin:0 auto;display:block;border:6px solid #fff;outline:1px solid var(--line);}
+  .qr .lbl{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--mut);margin-top:6px;line-height:1.3;}
+  .pill{display:inline-block;white-space:nowrap;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--teal);
+    border:1px solid var(--teal);border-radius:20px;padding:2px 11px;margin-bottom:6px;}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="poster" id="poster" data-screen-label="Atlas">
+
+    <!-- ===================== HEADER ===================== -->
+    <header class="head">
+      <div class="logo"><img src="iyte_logo.png" alt="İzmir Institute of Technology"></div>
+      <div>
+        <div class="kicker">Department of Computer Engineering · Senior Design Project 2026</div>
+        <h1 class="title">A Systematic Comparison of Large and Small Language Models in <em>Standalone, Hybrid &amp; Multi-Agent</em> Architectures</h1>
+        <div class="byline">
+          <span class="authors">Doğukan Topçu · Abdulbaki Çeltik · Berkhan Kargılı · Meriç Kelemeden</span>
+          <span class="adv">Advisors: Dr. Hüseyin Ünlü · Prof. Dr. Onur Demirörs</span>
+        </div>
+        <div class="affil">İzmir Institute of Technology · İzmir, Türkiye · June 2026</div>
+      </div>
+    </header>
+
+    <!-- ===================== COLUMNS ===================== -->
+    <div class="cols">
+
+      <!-- ============ COLUMN 1 ============ -->
+      <div class="col" id="col1"></div>
+
+      <!-- ============ COLUMN 2 ============ -->
+      <div class="col" id="col2"></div>
+
+      <!-- ============ COLUMN 3 ============ -->
+      <div class="col" id="col3"></div>
+    </div>
+
+    <!-- ===================== FOOTER ===================== -->
+    <footer class="foot">
+      <div class="refs">
+        <div class="pill">Future work</div>
+        <h5>Next steps &amp; selected references</h5>
+        <p><b>Future work:</b> benchmark Debate, Blackboard &amp; Entropy Blackboard on the full suite · fix GSM8K numeric extraction · routing-threshold &amp; SLM–LLM pair ablations · scale to ≥500 samples · edge deployment of the best-EATS architecture.</p>
+        <p style="margin-top:8px">[1] Hao et&nbsp;al. <b>Hybrid SLM–LLM Inference</b>, 2024 · [2] Oh&nbsp;&amp;&nbsp;Kim, <b>Uncertainty-Aware Hybrid Inference</b>, 2025 · [3] Shao et&nbsp;al. <b>Division-of-Thoughts</b>, 2025 · [4] Kwon et&nbsp;al. <b>vLLM: PagedAttention</b>, SOSP 2023 · [5] Companion SLR (54 studies, PRISMA 2020) · [6] MMLU, ARC, GSM8K, HellaSwag, TruthfulQA.</p>
+      </div>
+      <div class="qr">
+        <canvas class="code" id="qrAtlas" width="150" height="150"></canvas>
+        <div class="lbl">Code &amp; experiments<br>github.com/DogukanTopcu</div>
+      </div>
+    </footer>
+
+  </div>
+</div>
+
+<script src="col1.js"></script>
+<script src="col2.js"></script>
+<script src="col3.js"></script>
+<script>
+  /* inject column components */
+  document.getElementById('col1').innerHTML = window.COL1 || '';
+  document.getElementById('col2').innerHTML = window.COL2 || '';
+  document.getElementById('col3').innerHTML = window.COL3 || '';
+
+  /* ---- scale poster to fit viewport ---- */
+  function fit(){
+    const p=document.getElementById('poster');
+    const s=Math.min(window.innerWidth/1684, window.innerHeight/2382);
+    p.style.transform='scale('+s+')';
+  }
+  window.addEventListener('resize',fit); fit();
+
+  /* ---- grouped bar chart (SVG) ---- */
+  (function(){
+    const data=[
+      {b:'MMLU', r:0.835, s:0.818, m:0.698},
+      {b:'ARC',  r:0.884, s:0.853, m:0.738},
+      {b:'GSM8K',r:0.560, s:0.513, m:0.660},
+      {b:'HSwag',r:0.869, s:0.856, m:0.665},
+      {b:'TQA',  r:0.844, s:0.817, m:0.577},
+    ];
+    const W=492,H=250,padL=44,padB=30,padT=10,padR=8;
+    const cw=W-padL-padR, ch=H-padB-padT;
+    const groups=data.length, bw=20, gap=6;
+    const gw=cw/groups;
+    let svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" font-family="IBM Plex Mono">`;
+    // gridlines
+    for(let v=0;v<=1;v+=0.25){
+      const y=padT+ch-v*ch;
+      svg+=`<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="#D8D0C6" stroke-width="1"/>`;
+      svg+=`<text x="${padL-8}" y="${y+4}" font-size="12" text-anchor="end" fill="#6A6C7E">${v.toFixed(2)}</text>`;
+    }
+    svg+=`<text x="13" y="${padT+ch/2}" font-size="12" fill="#6A6C7E" transform="rotate(-90 13 ${padT+ch/2})" text-anchor="middle">EATS</text>`;
+    const cols=['#8A1538','#0F7173','#B07F2E'];
+    data.forEach((d,i)=>{
+      const gx=padL+i*gw;
+      const vals=[d.r,d.s,d.m];
+      const totalW=3*bw+2*gap;
+      const startx=gx+(gw-totalW)/2;
+      vals.forEach((v,j)=>{
+        const bh=v*ch, x=startx+j*(bw+gap), y=padT+ch-bh;
+        svg+=`<rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="3" fill="${cols[j]}"/>`;
+        svg+=`<text x="${x+bw/2}" y="${y-4}" font-size="10.5" text-anchor="middle" fill="#2B2D42">${v.toFixed(2)}</text>`;
+      });
+      svg+=`<text x="${gx+gw/2}" y="${H-10}" font-size="13" text-anchor="middle" fill="#2B2D42">${d.b}</text>`;
+    });
+    svg+=`<line x1="${padL}" y1="${padT+ch}" x2="${W-padR}" y2="${padT+ch}" stroke="#2B2D42" stroke-width="1.5"/>`;
+    svg+=`</svg>`;
+    document.getElementById('atlasChart').innerHTML=svg;
+  })();
+
+  /* ---- deterministic QR-style placeholder ---- */
+  function drawQR(id){
+    const c=document.getElementById(id); if(!c)return;
+    const ctx=c.getContext('2d'); const N=21, cell=c.width/N;
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,c.width,c.height);
+    ctx.fillStyle='#2B2D42';
+    let seed=987654321;
+    const rnd=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++){ if(rnd()>0.52) ctx.fillRect(x*cell,y*cell,cell,cell); }
+    // finder patterns
+    function finder(ox,oy){
+      ctx.fillStyle='#2B2D42'; ctx.fillRect(ox,oy,cell*7,cell*7);
+      ctx.fillStyle='#fff'; ctx.fillRect(ox+cell,oy+cell,cell*5,cell*5);
+      ctx.fillStyle='#8A1538'; ctx.fillRect(ox+cell*2,oy+cell*2,cell*3,cell*3);
+    }
+    finder(0,0); finder(cell*14,0); finder(0,cell*14);
+  }
+  drawQR('qrAtlas');
+</script>
+
+<template id="__bundler_thumbnail">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#8A1538"/><rect x="30" y="30" width="40" height="40" rx="6" fill="#fff"/><text x="50" y="58" font-size="22" font-family="serif" font-weight="700" text-anchor="middle" fill="#8A1538">A</text></svg>
+</template>
+</body>
+</html>

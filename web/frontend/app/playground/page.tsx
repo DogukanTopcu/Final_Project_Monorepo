@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { useHosts, useModels } from "@/hooks/useExperiments";
 import { api } from "@/lib/api";
@@ -55,6 +54,10 @@ function formatCo2(g?: number | null): string {
 function formatTimeOfDay(epochMs: number): string {
   return new Date(epochMs).toLocaleTimeString();
 }
+function formatTokenCount(n: number): string {
+  if (n >= 1024 && n % 1024 === 0) return `${n / 1024}K`;
+  return String(n);
+}
 
 export default function PlaygroundPage() {
   const { data: models } = useModels();
@@ -70,7 +73,7 @@ export default function PlaygroundPage() {
   const [systemPrompt, setSystemPrompt] = useState("");
   const [temperature, setTemperature] = useState(0);
   const [maxTokens, setMaxTokens] = useState(512);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -100,6 +103,19 @@ export default function PlaygroundPage() {
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, [modelMenuOpen]);
+
+  // Close settings popover when clicking outside
+  const settingsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (!settingsRef.current?.contains(e.target as Node)) {
+        setSettingsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [settingsOpen]);
 
   const selectedModel = allModels.find((m) => m.id === modelId);
   const hostForSelected = hostStatus?.hosts.find(
@@ -264,42 +280,6 @@ export default function PlaygroundPage() {
 
       {/* Composer */}
       <div className="mt-3 rounded-2xl border border-zinc-300 bg-white shadow-sm focus-within:border-zinc-500">
-        {/* Advanced panel (collapsible) */}
-        {advancedOpen && (
-          <div className="space-y-3 border-b border-zinc-200 px-4 py-3 text-sm">
-            <div>
-              <label className="text-xs font-medium text-zinc-600">System prompt</label>
-              <textarea
-                value={systemPrompt}
-                onChange={(e) => setSystemPrompt(e.target.value)}
-                rows={2}
-                placeholder="You are a concise assistant."
-                className="mt-1 w-full resize-none rounded-md border border-zinc-200 bg-zinc-50 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Slider
-                label="Temperature"
-                min={0}
-                max={2}
-                step={0.05}
-                value={temperature}
-                onChange={(e) => setTemperature(Number(e.target.value))}
-                displayValue={temperature.toFixed(2)}
-              />
-              <Slider
-                label="Max tokens"
-                min={32}
-                max={4096}
-                step={32}
-                value={maxTokens}
-                onChange={(e) => setMaxTokens(Number(e.target.value))}
-                displayValue={String(maxTokens)}
-              />
-            </div>
-          </div>
-        )}
-
         {/* Prompt textarea */}
         <textarea
           value={prompt}
@@ -335,24 +315,36 @@ export default function PlaygroundPage() {
               )}
             </div>
 
-            {/* Advanced toggle */}
-            <button
-              type="button"
-              onClick={() => setAdvancedOpen((v) => !v)}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium",
-                advancedOpen
-                  ? "border-zinc-900 bg-zinc-900 text-white"
-                  : "border-zinc-300 bg-zinc-50 text-zinc-700 hover:border-zinc-500 hover:bg-zinc-100",
+            {/* Settings chip + popover */}
+            <div className="relative" ref={settingsRef}>
+              <button
+                type="button"
+                onClick={() => setSettingsOpen((v) => !v)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium",
+                  settingsOpen
+                    ? "border-zinc-900 bg-zinc-900 text-white"
+                    : "border-zinc-300 bg-zinc-50 text-zinc-700 hover:border-zinc-500 hover:bg-zinc-100",
+                )}
+              >
+                <SlidersIcon />
+                <span>
+                  T {temperature.toFixed(2)} / {formatTokenCount(maxTokens)}
+                  {systemPrompt.trim() ? " / Sys" : ""}
+                </span>
+                <span className={settingsOpen ? "text-zinc-400" : "text-zinc-400"}>▾</span>
+              </button>
+              {settingsOpen && (
+                <SettingsMenu
+                  temperature={temperature}
+                  onTemperature={setTemperature}
+                  maxTokens={maxTokens}
+                  onMaxTokens={setMaxTokens}
+                  systemPrompt={systemPrompt}
+                  onSystemPrompt={setSystemPrompt}
+                />
               )}
-            >
-              Advanced {advancedOpen ? "▴" : "▾"}
-            </button>
-
-            {/* Quick reminders */}
-            <span className="hidden text-xs text-zinc-400 md:inline">
-              T={temperature.toFixed(2)} · max={maxTokens}
-            </span>
+            </div>
           </div>
 
           <button
@@ -377,6 +369,125 @@ export default function PlaygroundPage() {
 // ─────────────────────────────────────────────────────────────────────────────
 // Sub-components
 // ─────────────────────────────────────────────────────────────────────────────
+
+const TEMPERATURE_PRESETS = [0, 0.3, 0.7, 1.0, 1.5];
+const MAX_TOKEN_PRESETS = [256, 512, 1024, 2048, 4096];
+
+function SlidersIcon() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <path d="M2 4.5h12M2 8h12M2 11.5h12" />
+      <circle cx="6" cy="4.5" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="11" cy="8" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="5" cy="11.5" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function SettingsMenu({
+  temperature,
+  onTemperature,
+  maxTokens,
+  onMaxTokens,
+  systemPrompt,
+  onSystemPrompt,
+}: {
+  temperature: number;
+  onTemperature: (v: number) => void;
+  maxTokens: number;
+  onMaxTokens: (v: number) => void;
+  systemPrompt: string;
+  onSystemPrompt: (v: string) => void;
+}) {
+  return (
+    <div className="absolute bottom-full left-0 z-40 mb-2 w-80 rounded-2xl bg-zinc-900/95 p-1 text-zinc-100 shadow-2xl ring-1 ring-white/10 backdrop-blur-md">
+      {/* Temperature */}
+      <div className="px-4 pb-3 pt-4">
+        <div className="text-sm font-medium text-zinc-100">Temperature</div>
+        <div className="mt-3 flex items-center gap-2">
+          {TEMPERATURE_PRESETS.map((t) => {
+            const active = Math.abs(temperature - t) < 1e-9;
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => onTemperature(t)}
+                className={cn(
+                  "flex h-9 flex-1 items-center justify-center rounded-lg text-xs font-medium transition",
+                  active
+                    ? "bg-zinc-600 text-white"
+                    : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200",
+                )}
+              >
+                {t}
+              </button>
+            );
+          })}
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={2}
+          step={0.05}
+          value={temperature}
+          onChange={(e) => onTemperature(Number(e.target.value))}
+          aria-label="Temperature"
+          className="mt-3 w-full accent-zinc-300"
+        />
+      </div>
+
+      <div className="mx-4 border-t border-white/10" />
+
+      {/* Max tokens */}
+      <div className="px-4 pb-3 pt-3">
+        <div className="text-sm font-medium text-zinc-100">Max Tokens</div>
+        <div className="mt-3 flex items-center gap-2">
+          {MAX_TOKEN_PRESETS.map((n) => {
+            const active = maxTokens === n;
+            return (
+              <button
+                key={n}
+                type="button"
+                onClick={() => onMaxTokens(n)}
+                className={cn(
+                  "flex h-9 flex-1 items-center justify-center rounded-lg text-xs font-medium transition",
+                  active
+                    ? "bg-zinc-600 text-white"
+                    : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200",
+                )}
+              >
+                {formatTokenCount(n)}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mx-4 border-t border-white/10" />
+
+      {/* System prompt */}
+      <div className="px-4 pb-4 pt-3">
+        <div className="text-sm font-medium text-zinc-100">System Prompt</div>
+        <textarea
+          value={systemPrompt}
+          onChange={(e) => onSystemPrompt(e.target.value)}
+          rows={2}
+          placeholder="You are a concise assistant."
+          className="mt-2 w-full resize-none rounded-lg bg-zinc-800 p-2 text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
+        />
+      </div>
+    </div>
+  );
+}
 
 function ModelMenu({
   models,
