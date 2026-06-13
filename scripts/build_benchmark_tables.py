@@ -15,6 +15,19 @@ OUTPUT_DIR = os.path.join(RESULTS_DIR, "benchmark_tables")
 CUTOFF = datetime.fromisoformat("2026-05-27T23:59:59+00:00")
 MIN_TOTAL_SAMPLES = 100
 
+# The five benchmarks in scope for the study. Result files for benchmarks
+# outside this set (e.g. the dropped livecodebench/humaneval_plus runs) are
+# ignored so no stray tables are produced.
+STUDY_BENCHMARKS = {"mmlu", "arc", "gsm8k", "hellaswag", "truthfulqa"}
+
+# Principal operating point for the blackboard family. Exploratory runs
+# (the MMLU bid-threshold sweep, 20-sample pilots, and legacy
+# pre-claim-policy runs at bid 0.65 / TTL 1500 ms) are excluded so each
+# reported row is a single matched run; they are discussed in the report
+# prose instead of the tables.
+BLACKBOARD_BID_THRESHOLD = 0.75
+BLACKBOARD_TTL_MS = 3500
+
 METRICS_TO_AVG = [
     "accuracy",
     "llm_call_ratio",
@@ -43,10 +56,21 @@ def get_model_key(config: dict) -> str:
         return slm or llm or "unknown"
     elif arch == "ensemble":
         return "+".join(sorted(ensemble_slms)) if ensemble_slms else (slm or "unknown")
-    elif arch in ("routing", "speculative", "active_oracle"):
+    elif arch in ("routing", "speculative", "active_oracle", "blackboard", "entropy_blackboard"):
         parts = [p for p in [slm, llm] if p]
-        return " → ".join(parts) if parts else "unknown"
+        key = " → ".join(parts) if parts else "unknown"
+        if arch in ("blackboard", "entropy_blackboard"):
+            # Split by claim policy. claim_policy was introduced in 5f48199
+            # (2026-06-07); runs without the field used the legacy
+            # first-to-threshold claiming behaviour.
+            key += f" [{config.get('claim_policy') or 'first_threshold'}]"
+        return key
     elif arch == "pure_swarm":
+        return slm or "unknown"
+    elif arch == "multi_agent":
+        # Split debate (POA) by arbitrator type: SLM-only vs LLM-arbitrated
+        if config.get("arbitrator") == "llm" and llm:
+            return f"{slm} → {llm}"
         return slm or "unknown"
     return slm or llm or "unknown"
 
@@ -67,7 +91,20 @@ def load_valid_experiments():
 
         config = data["config"]
         metrics = data["metrics"]
+
+        if config["benchmark"] not in STUDY_BENCHMARKS:
+            skipped += 1
+            continue
         n_total = metrics.get("n_total", config.get("n_samples", 1)) or 1
+
+        if config["architecture"] in ("blackboard", "entropy_blackboard"):
+            if (
+                config.get("claim_policy") is None
+                or config.get("bid_threshold") != BLACKBOARD_BID_THRESHOLD
+                or config.get("ttl_ms") != BLACKBOARD_TTL_MS
+            ):
+                skipped += 1
+                continue
 
         entry = {
             "experiment_id": data["experiment_id"],
@@ -98,7 +135,7 @@ def load_valid_experiments():
         }
         experiments.append(entry)
 
-    print(f"Loaded {len(experiments)} valid experiments, skipped {skipped} (≤2026-05-27)")
+    print(f"Loaded {len(experiments)} valid experiments, skipped {skipped} (≤2026-05-27 or off the blackboard principal operating point)")
     return experiments
 
 

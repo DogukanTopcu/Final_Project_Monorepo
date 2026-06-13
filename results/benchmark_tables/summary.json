@@ -1,93 +1,92 @@
 {
-  "generated_at": "2026-06-05T19:38:32.845189+00:00",
+  "generated_at": "2026-06-13T03:02:05.159593+00:00",
   "cutoff": "2026-05-27T23:59:59+00:00",
   "min_total_samples_required": 100,
   "benchmarks": {
     "arc": {
-      "n_configs": 12,
+      "n_configs": 18,
       "architectures": [
         "active_oracle",
+        "blackboard",
         "ensemble",
+        "entropy_blackboard",
         "monolithic",
+        "multi_agent",
         "pure_swarm",
         "routing",
         "speculative"
       ],
       "min_total_samples_required": 100,
       "n_skipped_configs_below_min_samples": 0,
-      "output": "/Users/bakiceltik/Documents/GitHub/Final_Project_Monorepo/scripts/../results/benchmark_tables/benchmark_arc.json"
+      "output": "C:\\Users\\Meric\\Documents\\GitHub\\Final_Project_Monorepo\\scripts\\..\\results\\benchmark_tables\\benchmark_arc.json"
     },
     "gsm8k": {
-      "n_configs": 11,
+      "n_configs": 18,
       "architectures": [
+        "active_oracle",
+        "blackboard",
         "ensemble",
+        "entropy_blackboard",
         "monolithic",
+        "multi_agent",
         "pure_swarm",
         "routing",
         "speculative"
       ],
       "min_total_samples_required": 100,
       "n_skipped_configs_below_min_samples": 0,
-      "output": "/Users/bakiceltik/Documents/GitHub/Final_Project_Monorepo/scripts/../results/benchmark_tables/benchmark_gsm8k.json"
+      "output": "C:\\Users\\Meric\\Documents\\GitHub\\Final_Project_Monorepo\\scripts\\..\\results\\benchmark_tables\\benchmark_gsm8k.json"
     },
     "hellaswag": {
-      "n_configs": 12,
+      "n_configs": 18,
       "architectures": [
         "active_oracle",
+        "blackboard",
         "ensemble",
+        "entropy_blackboard",
         "monolithic",
+        "multi_agent",
         "pure_swarm",
         "routing",
         "speculative"
       ],
       "min_total_samples_required": 100,
       "n_skipped_configs_below_min_samples": 0,
-      "output": "/Users/bakiceltik/Documents/GitHub/Final_Project_Monorepo/scripts/../results/benchmark_tables/benchmark_hellaswag.json"
-    },
-    "humaneval_plus": {
-      "n_configs": 1,
-      "architectures": [
-        "ensemble"
-      ],
-      "min_total_samples_required": 100,
-      "n_skipped_configs_below_min_samples": 2,
-      "output": "/Users/bakiceltik/Documents/GitHub/Final_Project_Monorepo/scripts/../results/benchmark_tables/benchmark_humaneval_plus.json"
-    },
-    "livecodebench": {
-      "n_configs": 1,
-      "architectures": [
-        "monolithic"
-      ],
-      "min_total_samples_required": 100,
-      "n_skipped_configs_below_min_samples": 0,
-      "output": "/Users/bakiceltik/Documents/GitHub/Final_Project_Monorepo/scripts/../results/benchmark_tables/benchmark_livecodebench.json"
+      "output": "C:\\Users\\Meric\\Documents\\GitHub\\Final_Project_Monorepo\\scripts\\..\\results\\benchmark_tables\\benchmark_hellaswag.json"
     },
     "mmlu": {
-      "n_configs": 15,
+      "n_configs": 21,
       "architectures": [
         "active_oracle",
+        "blackboard",
         "ensemble",
+        "entropy_blackboard",
         "monolithic",
+        "multi_agent",
         "pure_swarm",
         "routing",
         "speculative"
       ],
       "min_total_samples_required": 100,
       "n_skipped_configs_below_min_samples": 1,
-      "output": "/Users/bakiceltik/Documents/GitHub/Final_Project_Monorepo/scripts/../results/benchmark_tables/benchmark_mmlu.json"
+      "output": "C:\\Users\\Meric\\Documents\\GitHub\\Final_Project_Monorepo\\scripts\\..\\results\\benchmark_tables\\benchmark_mmlu.json"
     },
     "truthfulqa": {
-      "n_configs": 10,
+      "n_configs": 17,
       "architectures": [
+        "active_oracle",
+        "blackboard",
         "ensemble",
+        "entropy_blackboard",
         "monolithic",
+        "multi_agent",
         "pure_swarm",
         "routing",
         "speculative"
       ],
       "min_total_samples_required": 100,
       "n_skipped_configs_below_min_samples": 0,
-      "output": "/Users/bakiceltik/Documents/GitHub/Final_Project_Monorepo/scripts/../results/benchmark_tables/benchmark_truthfulqa.json"
+      "output": "C:\\Users\\Meric\\Documents\\GitHub\\Final_Project_Monorepo\\scripts\\..\\results\\benchmark_tables\\benchmark_truthfulqa.json"
     }
   }
 }

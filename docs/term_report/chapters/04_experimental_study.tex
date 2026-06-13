@@ -1,6 +1,6 @@
 \chapter{EXPERIMENTAL STUDY}
 
-This chapter presents the complete set of experimental results produced by the platform described in Chapter~3. The results cover 88 individual runs across five publicly available benchmarks; runs producing incomplete \texttt{Response} objects were excluded. These 88 runs are reported as 60 unique architecture--model configurations spanning six of the ten architectures defined in the Chapter~3 taxonomy. The three remaining architectures (Debate, Blackboard, and Entropy Blackboard) are implemented but have not yet been benchmarked, as described in Section~\ref{sec:pending}. Section~\ref{sec:eval-env} summarizes the evaluation environment. Section~\ref{sec:bench-suite} defines the benchmark suite and evaluation protocol. Section~\ref{sec:benchmark-results} presents per-benchmark result tables for every evaluated configuration. Section~\ref{sec:arch-analysis} provides an architecture-family analysis synthesizing findings across benchmarks. Section~\ref{sec:cross-bench} reports a cross-benchmark EATS comparison. Section~\ref{sec:exp-discussion} discusses the principal findings and noteworthy observations. Section~\ref{sec:pending} describes planned extensions.
+This chapter presents the complete set of experimental results produced by the platform described in Chapter~3. The results cover 109 individual runs across five publicly available benchmarks; runs producing incomplete \texttt{Response} objects were excluded, as were exploratory blackboard-family runs executed off the principal operating point (Section~\ref{sec:benchmark-results}). These 109 runs are reported as 92 unique architecture--model configurations and now cover the full architecture taxonomy defined in Chapter~3: the three architectures that were pending in the previous evaluation snapshot---Debate (POA), Blackboard, and Entropy Blackboard---have since been benchmarked on all five benchmarks under the same evaluation protocol. Section~\ref{sec:eval-env} summarizes the evaluation environment. Section~\ref{sec:bench-suite} defines the benchmark suite and evaluation protocol. Section~\ref{sec:benchmark-results} presents per-benchmark result tables for every evaluated configuration. Section~\ref{sec:arch-analysis} provides an architecture-family analysis synthesizing findings across benchmarks. Section~\ref{sec:cross-bench} reports a cross-benchmark EATS comparison. Section~\ref{sec:exp-discussion} discusses the principal findings and noteworthy observations. Section~\ref{sec:pending} describes planned extensions.
 
 \section{Evaluation Environment}
 \label{sec:eval-env}
@@ -31,7 +31,7 @@ All model endpoints are exposed through OpenAI-compatible HTTP interfaces so tha
 \section{Benchmark Suite and Evaluation Protocol}
 \label{sec:bench-suite}
 
-Five benchmarks are evaluated in this chapter. All runs use zero temperature. Accuracy is the proportion of samples for which the predicted answer matches the reference. Individual experiment artefacts use the per-experiment normalisation mode described in Section~\ref{sec:normalisation}, which normalises each run against the registry-based full-LLM baseline for the exact same benchmark, sample count, and seed. For the aggregated benchmark tables in this chapter, EATS is recomputed in aggregate mode---using the mean of all standalone monolithic runs on that benchmark as the common reference, as defined in Section~\ref{sec:normalisation}---so that heterogeneous standalone, hybrid, ensemble, and swarm configurations are placed on the same per-benchmark comparison scale. Active Oracle was not evaluated on TruthfulQA or GSM8K in the experiments reported here; those benchmarks therefore contain no Active Oracle rows.
+Five benchmarks are evaluated in this chapter. All runs use zero temperature. Accuracy is the proportion of samples for which the predicted answer matches the reference. Individual experiment artefacts use the per-experiment normalisation mode described in Section~\ref{sec:normalisation}, which normalises each run against the registry-based full-LLM baseline for the exact same benchmark, sample count, and seed. For the aggregated benchmark tables in this chapter, EATS is recomputed in aggregate mode---using the mean of all standalone monolithic runs on that benchmark as the common reference, as defined in Section~\ref{sec:normalisation}---so that heterogeneous standalone, hybrid, ensemble, and swarm configurations are placed on the same per-benchmark comparison scale. For GSM8K, an early version of the numeric answer-extraction heuristic failed to parse the output format of some model families; the extraction logic was subsequently corrected and all affected GSM8K runs were rescored from their stored raw responses, so the GSM8K accuracies reported here reflect the corrected scoring (Section~\ref{sec:exp-discussion}).
 
 \begin{table}[htbp]
     \centering
@@ -54,15 +54,15 @@ Five benchmarks are evaluated in this chapter. All runs use zero temperature. Ac
 \section{Benchmark-Level Results}
 \label{sec:benchmark-results}
 
-The following tables report aggregated results for every evaluated architecture--model combination that meets the reporting threshold of at least 100 total evaluated samples. Rows are sorted alphabetically by architecture, then by model key. The \emph{N} column is the total number of samples evaluated across all runs of that configuration. Column \emph{LLM\,\%} is the fraction of queries that invoked the heavy language model. Single-model ensemble configurations (e.g., \texttt{ensemble\,|\,ministral3-3b}) represent a single SLM processed through the ensemble contract with no voting; they are included as lean efficiency references rather than true multi-model aggregations.
+The following tables report aggregated results for every evaluated architecture--model combination that meets the reporting threshold of at least 100 total evaluated samples. Rows are sorted alphabetically by architecture, then by model key. The \emph{N} column is the total number of samples evaluated across all runs of that configuration. Column \emph{LLM\,\%} is the fraction of queries that invoked the heavy language model. Single-model ensemble configurations (e.g., \texttt{ensemble\,|\,ministral3-3b}) represent a single SLM processed through the ensemble contract with no voting; they are included as lean efficiency references rather than true multi-model aggregations. Debate (POA) configurations are reported separately by arbitrator type: \emph{SLM arb.} denotes an all-SLM debate, while \emph{LLM arb.} denotes a debate whose final arbitration is delegated to the LLM. The label \texttt{entropy\_bb} abbreviates Entropy Blackboard. Blackboard and Entropy Blackboard rows report the SLM-worker\,$\rightarrow$\,LLM-sweeper pair, and their \emph{LLM\,\%} column is the fraction of queries resolved by the LLM sweeper. These rows are further separated by claim policy: under \emph{first threshold}, the first worker whose bid clears the bid threshold claims the task, whereas under \emph{highest bid}, the task is awarded by auction to the top eligible bidder once all workers have posted bids. To keep blackboard-family comparisons fair, every reported Blackboard and Entropy Blackboard row is a single 100-sample run at the principal operating point (bid threshold 0.75, 3.5\,s time-to-live, entropy weight 0.5 where applicable). Exploratory runs off this operating point---a bid-threshold exploration on MMLU and legacy runs executed before the claim policy became configurable, at bid threshold 0.65 and a 1.5\,s time-to-live---are excluded from the tables and summarised in Section~\ref{sec:arch-analysis}. The design--policy matrix of \{Blackboard, Entropy Blackboard\} $\times$ \{first threshold, highest bid\} is now complete on all five benchmarks at the principal operating point.
 
 \subsection{MMLU}
 
-Fifteen configurations meet the reporting threshold on MMLU, covering six architectures. Pure Swarm achieves the highest reported accuracy (89.5\%), narrowly surpassing the best standalone checkpoint \texttt{qwen3.5-27b} at 88.6\%. Among hybrid architectures, speculative decoding reaches 86.0\% accuracy (EATS 0.818), while routing reaches 76.7\% accuracy at EATS 0.835, limiting heavy-model usage to 48.7\% of queries. Routing achieves the highest EATS of any configuration on MMLU, as its low per-query cost and latency outweigh the accuracy gap relative to the best standalone models. Among standalone checkpoints, \texttt{gpt-oss-20b} achieves the highest standalone EATS (0.698), while \texttt{qwen3.5-35b-a3b} remains close behind at 0.674.
+Twenty-one configurations meet the reporting threshold on MMLU, covering all nine architecture families. Pure Swarm achieves the highest reported accuracy (89.7\%), narrowly surpassing the best standalone checkpoint \texttt{qwen3.5-27b} at 88.6\%. Among hybrid architectures, speculative decoding reaches 86.0\% accuracy (EATS 0.818), while routing reaches 76.7\% accuracy at EATS 0.835, limiting heavy-model usage to 48.7\% of queries. Routing achieves the highest EATS of any configuration on MMLU, as its low per-query cost and latency outweigh the accuracy gap relative to the best standalone models. Among standalone checkpoints, \texttt{gpt-oss-20b} achieves the highest standalone EATS (0.698), while \texttt{qwen3.5-35b-a3b} remains close behind at 0.674. The newly benchmarked decentralised architectures land in the middle of the field: Entropy Blackboard reaches 82.0--83.0\% accuracy under its two claim policies (EATS 0.503--0.521), three to six points above the standard Blackboard variants (77.0--79.0\%) at similar escalation rates. LLM-arbitrated Debate reaches 80.0\% accuracy while its all-SLM variant falls to 69.0\%.
 
 \begin{table}[htbp]
 \centering
-\caption{MMLU results across 15 configurations meeting the reporting threshold. Routing and speculative latency values are algorithmic (model-side inference only).}
+\caption{MMLU results across 21 configurations meeting the reporting threshold. Routing and speculative latency values are algorithmic (model-side inference only).}
 \label{tab:result-mmlu}
 \scriptsize
 \renewcommand{\arraystretch}{1.15}
@@ -70,11 +70,20 @@ Fifteen configurations meet the reporting threshold on MMLU, covering six archit
 \toprule
 \textbf{Arch.} & \textbf{Model} & \textbf{N} & \textbf{Acc\,\%} & \textbf{Lat\,(s)} & \textbf{\$/q} & \textbf{g\,CO$_2$/q} & \textbf{LLM\,\%} & \textbf{EATS} \\
 \midrule
-active\_oracle & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 74.0 & 30.6 & 0.00659 & 0.245 & 21 & 0.304 \\
+active\_oracle & gemma4-4b $\rightarrow$ gemma4-31b & 200 & 73.0 & 20.4 & 0.00440 & 0.164 & 37 & 0.392 \\
+blackboard & gemma4-4b $\rightarrow$ gemma4-31b (first threshold) & 100 & 79.0 & 11.4 & 0.00312 & 0.131 & 31 & 0.532 \\
+blackboard & gemma4-4b $\rightarrow$ gemma4-31b (highest bid) & 100 & 77.0 & 12.4 & 0.00344 & 0.145 & 31 & 0.503 \\
+debate & gemma4-4b (SLM arb.) & 100 & 69.0 & 25.6 & 0.00532 & 0.194 & 0 & 0.331 \\
+debate & gemma4-4b $\rightarrow$ gemma4-31b (LLM arb.) & 100 & 80.0 & 17.9 & 0.00714 & 0.337 & 100 & 0.379 \\
 ensemble & gemma4-4b + llama3.2-3b + ministral3-3b & 100 & 59.0 & 26.9 & 0.00561 & 0.205 & 0 & 0.286 \\
 ensemble & gemma4-4b + llama3.2-3b + ministral3-3b + qwen3.5-4b & 100 & 68.0 & 21.6 & 0.00942 & 0.344 & 0 & 0.299 \\
 ensemble & ministral3-3b & 100 & 57.0 & 3.5 & 0.00074 & 0.027 & 0 & 0.747 \\
 ensemble & qwen3.5-4b & 100 & 75.0 & 17.6 & 0.00367 & 0.134 & 0 & 0.438 \\
+entropy\_bb & gemma4-4b $\rightarrow$ gemma4-31b (first threshold) & 100 & 82.0 & 12.3 & 0.00340 & 0.143 & 33 & 0.521 \\
+entropy\_bb & gemma4-4b $\rightarrow$ gemma4-31b (highest bid) & 100 & 83.0 & 13.4 & 0.00369 & 0.155 & 37 & 0.503 \\
+pure\_swarm & gemma4-4b & 120 & 89.7 & 21.1 & 0.00408 & 0.149 & 0 & 0.444 \\
+routing & gemma4-4b $\rightarrow$ gemma4-31b & 220 & 76.7 & 2.3 & 0.00074 & 0.032 & 49 & 0.835 \\
+speculative & gemma4-4b $\rightarrow$ gemma4-31b & 120 & 86.0 & 2.5 & 0.00108 & 0.052 & 100 & 0.818 \\
 standalone & gemma4-26b-a4b & 500 & 86.4 & 5.2 & 0.00341 & 0.176 & 100 & 0.629 \\
 standalone & gemma4-31b & 520 & 79.3 & 9.6 & 0.00627 & 0.324 & 100 & 0.458 \\
 standalone & gpt-oss-120b & 500 & 87.0 & 3.4 & 0.00838 & 0.214 & 100 & 0.530 \\
@@ -82,20 +91,17 @@ standalone & gpt-oss-20b & 520 & 86.6 & 3.4 & 0.00286 & 0.116 & 100 & 0.698 \\
 standalone & llama3.3-70b & 500 & 84.8 & 11.1 & 0.02034 & 0.700 & 100 & 0.289 \\
 standalone & qwen3.5-27b & 510 & 88.6 & 19.5 & 0.01270 & 0.657 & 100 & 0.318 \\
 standalone & qwen3.5-35b-a3b & 500 & 86.2 & 4.3 & 0.00279 & 0.144 & 100 & 0.674 \\
-pure\_swarm & gemma4-4b & 110 & 89.5 & 27.5 & 0.00528 & 0.192 & 0 & 0.379 \\
-routing & gemma4-4b $\rightarrow$ gemma4-31b & 220 & 76.7 & 2.3 & 0.00074 & 0.032 & 49 & 0.835 \\
-speculative & gemma4-4b $\rightarrow$ gemma4-31b & 120 & 86.0 & 2.5 & 0.00108 & 0.052 & 100 & 0.818 \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 \subsection{ARC}
 
-Twelve configurations were evaluated on ARC. Pure Swarm with \texttt{gemma4-4b} achieves the highest accuracy (96.0\%) using no heavy-model calls. Routing achieves 91.0\% accuracy with EATS 0.884---the highest EATS recorded across any configuration on any benchmark in this study---at an algorithmic latency of 1.4 seconds and a per-query cost of \$0.00052. Speculative decoding reaches 94.0\% accuracy at EATS 0.853, with algorithmic latency of 1.7 seconds. Both hybrid results represent a 15--20 EATS-point improvement over the best standalone option (\texttt{qwen3.5-35b-a3b}, EATS 0.738) while operating at 2--5$\times$ lower cost.
+Eighteen configurations were evaluated on ARC. Pure Swarm with \texttt{gemma4-4b} achieves the highest accuracy (96.0\%) using no heavy-model calls. Routing achieves 91.0\% accuracy with EATS 0.884---the highest EATS recorded across any configuration on any benchmark in this study---at an algorithmic latency of 1.4 seconds and a per-query cost of \$0.00052. Speculative decoding reaches 94.0\% accuracy at EATS 0.853, with algorithmic latency of 1.7 seconds. Both hybrid results represent an 11--15 EATS-point improvement over the best standalone option (\texttt{qwen3.5-35b-a3b}, EATS 0.738) while operating at 2--5$\times$ lower cost. ARC is among the strongest benchmarks for the blackboard family: the highest-bid Blackboard reaches 95.0\% accuracy with only 13\% sweeper escalation (EATS 0.621), its first-threshold counterpart reaches 92.0\% at the family's best efficiency (EATS 0.631), and Entropy Blackboard reaches 92.0--93.0\% under its two claim policies at roughly \$0.002 per query (EATS 0.616--0.622). LLM-arbitrated Debate matches the strongest 31B-class standalone accuracy at 95.0\%.
 
 \begin{table}[htbp]
 \centering
-\caption{ARC results across 12 configurations. Routing and speculative latency values are algorithmic (model-side inference only).}
+\caption{ARC results across 18 configurations. Routing and speculative latency values are algorithmic (model-side inference only).}
 \label{tab:result-arc}
 \scriptsize
 \renewcommand{\arraystretch}{1.15}
@@ -103,8 +109,17 @@ Twelve configurations were evaluated on ARC. Pure Swarm with \texttt{gemma4-4b} 
 \toprule
 \textbf{Arch.} & \textbf{Model} & \textbf{N} & \textbf{Acc\,\%} & \textbf{Lat\,(s)} & \textbf{\$/q} & \textbf{g\,CO$_2$/q} & \textbf{LLM\,\%} & \textbf{EATS} \\
 \midrule
-active\_oracle & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 91.0 & 21.4 & 0.00451 & 0.166 & 4 & 0.388 \\
+active\_oracle & gemma4-4b $\rightarrow$ gemma4-31b & 200 & 91.0 & 12.1 & 0.00256 & 0.094 & 5 & 0.529 \\
+blackboard & gemma4-4b $\rightarrow$ gemma4-31b (first threshold) & 100 & 92.0 & 7.7 & 0.00180 & 0.070 & 11 & 0.631 \\
+blackboard & gemma4-4b $\rightarrow$ gemma4-31b (highest bid) & 100 & 95.0 & 8.3 & 0.00194 & 0.075 & 13 & 0.621 \\
+debate & gemma4-4b (SLM arb.) & 100 & 90.0 & 18.3 & 0.00382 & 0.139 & 0 & 0.424 \\
+debate & gemma4-4b $\rightarrow$ gemma4-31b (LLM arb.) & 100 & 95.0 & 12.7 & 0.00521 & 0.248 & 100 & 0.451 \\
 ensemble & gemma4-4b + llama3.2-3b + ministral3-3b + qwen3.5-4b & 100 & 91.0 & 15.9 & 0.00698 & 0.254 & 0 & 0.388 \\
+entropy\_bb & gemma4-4b $\rightarrow$ gemma4-31b (first threshold) & 100 & 92.0 & 8.0 & 0.00200 & 0.080 & 15 & 0.616 \\
+entropy\_bb & gemma4-4b $\rightarrow$ gemma4-31b (highest bid) & 100 & 93.0 & 7.9 & 0.00196 & 0.078 & 15 & 0.622 \\
+pure\_swarm & gemma4-4b & 100 & 96.0 & 21.4 & 0.00401 & 0.146 & 0 & 0.410 \\
+routing & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 91.0 & 1.4 & 0.00052 & 0.024 & 75 & 0.884 \\
+speculative & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 94.0 & 1.7 & 0.00075 & 0.036 & 100 & 0.853 \\
 standalone & gemma4-26b-a4b & 500 & 95.4 & 7.4 & 0.00482 & 0.250 & 100 & 0.519 \\
 standalone & gemma4-31b & 510 & 93.5 & 8.2 & 0.00537 & 0.278 & 100 & 0.487 \\
 standalone & gpt-oss-120b & 500 & 95.4 & 2.7 & 0.00620 & 0.170 & 100 & 0.570 \\
@@ -112,20 +127,17 @@ standalone & gpt-oss-20b & 500 & 93.8 & 2.7 & 0.00210 & 0.091 & 100 & 0.729 \\
 standalone & llama3.3-70b & 100 & 92.0 & 8.9 & 0.01630 & 0.562 & 100 & 0.309 \\
 standalone & qwen3.5-27b & 100 & 95.0 & 13.9 & 0.00905 & 0.468 & 100 & 0.364 \\
 standalone & qwen3.5-35b-a3b & 500 & 95.4 & 2.8 & 0.00185 & 0.096 & 100 & 0.738 \\
-pure\_swarm & gemma4-4b & 100 & 96.0 & 21.4 & 0.00401 & 0.146 & 0 & 0.410 \\
-routing & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 91.0 & 1.4 & 0.00052 & 0.024 & 75 & 0.884 \\
-speculative & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 94.0 & 1.7 & 0.00075 & 0.036 & 100 & 0.853 \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 \subsection{GSM8K}
 
-Eleven configurations were evaluated on GSM8K. The benchmark reveals a notable model-class anomaly: \texttt{gpt-oss-120b} and \texttt{gpt-oss-20b} achieve only 67.8\% and 59.4\% accuracy respectively, substantially below every other configuration, including SLM-only designs. This pattern is discussed in Section~\ref{sec:exp-discussion}. Excluding this anomaly, the remaining standalone models cluster between 85\% and 95.6\%, with \texttt{qwen3.5-35b-a3b} (95.6\%) leading. GSM8K routing escalates only 1\% of queries to the LLM and achieves 95.0\% accuracy at EATS 0.560, indicating that \texttt{gemma4-4b} is self-sufficient on nearly all GSM8K questions at this confidence threshold. The four-SLM ensemble achieves the highest raw accuracy (96.0\%) but EATS is limited to 0.387 by the combined latency of four parallel SLM calls.
+Eighteen configurations were evaluated on GSM8K. After the answer-extraction correction and rescoring described in Section~\ref{sec:bench-suite}, the standalone models cluster tightly between 85.0\% and 96.4\%, with \texttt{qwen3.5-35b-a3b} (96.4\%) and \texttt{gpt-oss-120b} (96.2\%) leading. GSM8K routing escalates only 1\% of queries to the LLM and achieves 95.0\% accuracy at EATS 0.560, indicating that \texttt{gemma4-4b} is self-sufficient on nearly all GSM8K questions at this confidence threshold. The highest-bid Blackboard and the first-threshold Entropy Blackboard both reach 97.0\%---the highest raw accuracy of any configuration in the entire study. The Entropy Blackboard result is also the most efficient non-standalone configuration on this benchmark: with only 7\% sweeper escalation it yields EATS 0.630, ahead of routing (0.560). The first-threshold standard Blackboard is close behind on both counts (96.0\%, EATS 0.626 at 8\% escalation), and the four-SLM ensemble and LLM-arbitrated Debate also reach 96.0\%.
 
 \begin{table}[htbp]
 \centering
-\caption{GSM8K results across 11 configurations. Routing and speculative latency values are algorithmic.}
+\caption{GSM8K results across 18 configurations. Routing and speculative latency values are algorithmic.}
 \label{tab:result-gsm8k}
 \scriptsize
 \renewcommand{\arraystretch}{1.15}
@@ -133,28 +145,35 @@ Eleven configurations were evaluated on GSM8K. The benchmark reveals a notable m
 \toprule
 \textbf{Arch.} & \textbf{Model} & \textbf{N} & \textbf{Acc\,\%} & \textbf{Lat\,(s)} & \textbf{\$/q} & \textbf{g\,CO$_2$/q} & \textbf{LLM\,\%} & \textbf{EATS} \\
 \midrule
+active\_oracle & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 92.0 & 12.9 & 0.00269 & 0.098 & 10 & 0.537 \\
+blackboard & gemma4-4b $\rightarrow$ gemma4-31b (first threshold) & 100 & 96.0 & 9.1 & 0.00205 & 0.078 & 8 & 0.626 \\
+blackboard & gemma4-4b $\rightarrow$ gemma4-31b (highest bid) & 100 & 97.0 & 11.8 & 0.00268 & 0.103 & 17 & 0.564 \\
+debate & gemma4-4b (SLM arb.) & 100 & 95.0 & 24.7 & 0.00514 & 0.187 & 0 & 0.385 \\
+debate & gemma4-4b $\rightarrow$ gemma4-31b (LLM arb.) & 100 & 96.0 & 21.5 & 0.00701 & 0.312 & 100 & 0.376 \\
 ensemble & gemma4-4b + llama3.2-3b + ministral3-3b + qwen3.5-4b & 100 & 96.0 & 16.1 & 0.00912 & 0.333 & 0 & 0.387 \\
-standalone & gemma4-26b-a4b & 500 & 94.8 & 4.6 & 0.00302 & 0.156 & 100 & 0.652 \\
-standalone & gemma4-31b & 510 & 92.7 & 8.7 & 0.00566 & 0.293 & 100 & 0.495 \\
-standalone & gpt-oss-120b & 500 & 67.8 & 4.1 & 0.01052 & 0.261 & 100 & 0.390 \\
-standalone & gpt-oss-20b & 500 & 59.4 & 3.9 & 0.00336 & 0.133 & 100 & 0.551 \\
-standalone & llama3.3-70b & 100 & 85.0 & 9.1 & 0.01673 & 0.577 & 100 & 0.309 \\
-standalone & qwen3.5-27b & 100 & 95.0 & 14.8 & 0.00963 & 0.498 & 100 & 0.371 \\
-standalone & qwen3.5-35b-a3b & 500 & 95.6 & 4.5 & 0.00294 & 0.152 & 100 & 0.660 \\
+entropy\_bb & gemma4-4b $\rightarrow$ gemma4-31b (first threshold) & 100 & 97.0 & 9.2 & 0.00196 & 0.072 & 7 & 0.630 \\
+entropy\_bb & gemma4-4b $\rightarrow$ gemma4-31b (highest bid) & 100 & 95.0 & 12.1 & 0.00269 & 0.102 & 28 & 0.556 \\
 pure\_swarm & gemma4-4b & 100 & 95.0 & 24.1 & 0.00433 & 0.158 & 0 & 0.401 \\
 routing & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 95.0 & 12.1 & 0.00255 & 0.094 & 1 & 0.560 \\
 speculative & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 95.0 & 9.4 & 0.00500 & 0.251 & 100 & 0.513 \\
+standalone & gemma4-26b-a4b & 500 & 94.8 & 4.6 & 0.00302 & 0.156 & 100 & 0.652 \\
+standalone & gemma4-31b & 510 & 92.7 & 8.7 & 0.00566 & 0.293 & 100 & 0.495 \\
+standalone & gpt-oss-120b & 500 & 96.2 & 4.1 & 0.01052 & 0.261 & 100 & 0.476 \\
+standalone & gpt-oss-20b & 500 & 94.8 & 3.9 & 0.00336 & 0.133 & 100 & 0.662 \\
+standalone & llama3.3-70b & 100 & 85.0 & 9.1 & 0.01673 & 0.577 & 100 & 0.309 \\
+standalone & qwen3.5-27b & 100 & 95.0 & 14.8 & 0.00963 & 0.498 & 100 & 0.371 \\
+standalone & qwen3.5-35b-a3b & 500 & 96.4 & 4.5 & 0.00294 & 0.152 & 100 & 0.662 \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 \subsection{HellaSwag}
 
-Twelve configurations were evaluated on HellaSwag. Routing achieves 90.0\% accuracy at EATS 0.869, and speculative decoding achieves 92.0\% at EATS 0.856; both use algorithmic latency under 2 seconds and per-query costs below \$0.001. These results match or exceed the standalone accuracy range of 78.0--92.6\% while reducing cost and latency by factors of 3--15 relative to the most expensive standalone options. Active Oracle reaches only 66.0\% accuracy at EATS 0.294 despite using the same SLM--LLM pair as routing and speculative, because its oracle sub-query mechanism incurs high latency and cost without recovering the answer chain for commonsense completion tasks.
+Eighteen configurations were evaluated on HellaSwag. Routing achieves 90.0\% accuracy at EATS 0.869, and speculative decoding achieves 92.0\% at EATS 0.856; both use algorithmic latency under 2 seconds and per-query costs below \$0.001. These results match or exceed the standalone accuracy range of 78.0--92.6\% while reducing cost and latency by factors of 3--15 relative to the most expensive standalone options. Active Oracle reaches only 66.5\% accuracy at EATS 0.404 despite using the same SLM--LLM pair as routing and speculative, because its oracle sub-query mechanism incurs high latency and cost without recovering the answer chain for commonsense completion tasks. HellaSwag is the benchmark where the entropy-aware bidding rule pays off most clearly: Entropy Blackboard escalates 82\% of queries to the sweeper and reaches 84.0\% accuracy, five to seven points above the two standard Blackboard variants (79.0\% and 77.0\%, both at 41\% escalation) at a nearly identical EATS. Its two claim policies produced identical claim and escalation decisions on every HellaSwag query at zero temperature, so the two rows coincide. LLM-arbitrated Debate reaches 90.0\%, matching routing accuracy, while its all-SLM variant achieves only 72.0\%.
 
 \begin{table}[htbp]
 \centering
-\caption{HellaSwag results across 12 configurations. Routing and speculative latency values are algorithmic.}
+\caption{HellaSwag results across 18 configurations. Routing and speculative latency values are algorithmic.}
 \label{tab:result-hellaswag}
 \scriptsize
 \renewcommand{\arraystretch}{1.15}
@@ -162,8 +181,17 @@ Twelve configurations were evaluated on HellaSwag. Routing achieves 90.0\% accur
 \toprule
 \textbf{Arch.} & \textbf{Model} & \textbf{N} & \textbf{Acc\,\%} & \textbf{Lat\,(s)} & \textbf{\$/q} & \textbf{g\,CO$_2$/q} & \textbf{LLM\,\%} & \textbf{EATS} \\
 \midrule
-active\_oracle & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 66.0 & 24.3 & 0.00508 & 0.185 & 1 & 0.294 \\
+active\_oracle & gemma4-4b $\rightarrow$ gemma4-31b & 200 & 66.5 & 15.1 & 0.00316 & 0.116 & 10 & 0.404 \\
+blackboard & gemma4-4b $\rightarrow$ gemma4-31b (first threshold) & 100 & 77.0 & 8.5 & 0.00286 & 0.129 & 41 & 0.532 \\
+blackboard & gemma4-4b $\rightarrow$ gemma4-31b (highest bid) & 100 & 79.0 & 8.6 & 0.00286 & 0.128 & 41 & 0.536 \\
+debate & gemma4-4b (SLM arb.) & 100 & 72.0 & 21.7 & 0.00452 & 0.165 & 0 & 0.338 \\
+debate & gemma4-4b $\rightarrow$ gemma4-31b (LLM arb.) & 100 & 90.0 & 13.2 & 0.00580 & 0.280 & 100 & 0.426 \\
 ensemble & gemma4-4b + llama3.2-3b + ministral3-3b + qwen3.5-4b & 100 & 68.0 & 17.6 & 0.00691 & 0.252 & 0 & 0.316 \\
+entropy\_bb & gemma4-4b $\rightarrow$ gemma4-31b (first threshold) & 100 & 84.0 & 7.6 & 0.00370 & 0.182 & 82 & 0.531 \\
+entropy\_bb & gemma4-4b $\rightarrow$ gemma4-31b (highest bid) & 100 & 84.0 & 7.6 & 0.00370 & 0.182 & 82 & 0.531 \\
+pure\_swarm & gemma4-4b & 100 & 74.0 & 26.0 & 0.00497 & 0.181 & 0 & 0.310 \\
+routing & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 90.0 & 1.6 & 0.00061 & 0.028 & 91 & 0.869 \\
+speculative & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 92.0 & 1.7 & 0.00072 & 0.034 & 100 & 0.856 \\
 standalone & gemma4-26b-a4b & 500 & 83.2 & 7.3 & 0.00479 & 0.248 & 100 & 0.492 \\
 standalone & gemma4-31b & 510 & 89.4 & 7.0 & 0.00457 & 0.237 & 100 & 0.522 \\
 standalone & gpt-oss-120b & 500 & 80.6 & 3.6 & 0.00901 & 0.225 & 100 & 0.450 \\
@@ -171,20 +199,17 @@ standalone & gpt-oss-20b & 500 & 78.0 & 3.8 & 0.00325 & 0.128 & 100 & 0.609 \\
 standalone & llama3.3-70b & 100 & 89.0 & 7.4 & 0.01380 & 0.472 & 100 & 0.345 \\
 standalone & qwen3.5-27b & 100 & 92.0 & 14.4 & 0.00942 & 0.487 & 100 & 0.353 \\
 standalone & qwen3.5-35b-a3b & 500 & 92.6 & 4.0 & 0.00261 & 0.135 & 100 & 0.665 \\
-pure\_swarm & gemma4-4b & 100 & 74.0 & 26.0 & 0.00497 & 0.181 & 0 & 0.310 \\
-routing & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 90.0 & 1.6 & 0.00061 & 0.028 & 91 & 0.869 \\
-speculative & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 92.0 & 1.7 & 0.00072 & 0.034 & 100 & 0.856 \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 \subsection{TruthfulQA}
 
-Ten configurations were evaluated on TruthfulQA. The highest standalone accuracy is \texttt{gemma4-31b} (93.6\%) at EATS 0.529. Routing achieves 85.0\% accuracy at EATS 0.844 and speculative decoding 88.0\% at EATS 0.817, both at sub-2-second algorithmic latency. The four-SLM ensemble achieves only 64.0\%, substantially lower than on other benchmarks, suggesting that majority-vote coordination among small models is ineffective when individual models' misconceptions are correlated.
+Seventeen configurations were evaluated on TruthfulQA. The highest standalone accuracy is \texttt{gemma4-31b} (93.6\%) at EATS 0.529. Routing achieves 85.0\% accuracy at EATS 0.844 and speculative decoding 88.0\% at EATS 0.817, both at sub-2-second algorithmic latency. The four-SLM ensemble achieves only 64.0\%, substantially lower than on other benchmarks, suggesting that majority-vote coordination among small models is ineffective when individual models' misconceptions are correlated. TruthfulQA is the weakest benchmark for the blackboard family at the principal operating point: standard Blackboard lands at 68.0--69.0\% under both claim policies, while Entropy Blackboard recovers part of that loss (73.0--75.0\% at 83--84\% escalation). The two standard-Blackboard policies are within one point of each other here, confirming that the claim rule is not what limits performance; an exploratory legacy first-threshold run, excluded from the table, reached 83.0\% only by escalating every query to the sweeper---effectively LLM fallback driven by its short time-to-live (Section~\ref{sec:arch-analysis}). All blackboard-family configurations remain below the routing configuration built from the same model pair (85.0\%). LLM-arbitrated Debate performs notably better at 87.0\%, the third-highest accuracy on this benchmark, suggesting that adversarial critique is more effective than task-board escalation at filtering plausible-sounding falsehoods.
 
 \begin{table}[htbp]
 \centering
-\caption{TruthfulQA results across 10 configurations. Routing and speculative latency values are algorithmic.}
+\caption{TruthfulQA results across 17 configurations. Routing and speculative latency values are algorithmic.}
 \label{tab:result-truthfulqa}
 \scriptsize
 \renewcommand{\arraystretch}{1.15}
@@ -192,16 +217,23 @@ Ten configurations were evaluated on TruthfulQA. The highest standalone accuracy
 \toprule
 \textbf{Arch.} & \textbf{Model} & \textbf{N} & \textbf{Acc\,\%} & \textbf{Lat\,(s)} & \textbf{\$/q} & \textbf{g\,CO$_2$/q} & \textbf{LLM\,\%} & \textbf{EATS} \\
 \midrule
+active\_oracle & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 72.0 & 8.6 & 0.00198 & 0.077 & 89 & 0.494 \\
+blackboard & gemma4-4b $\rightarrow$ gemma4-31b (first threshold) & 100 & 68.0 & 11.8 & 0.00333 & 0.141 & 44 & 0.384 \\
+blackboard & gemma4-4b $\rightarrow$ gemma4-31b (highest bid) & 100 & 69.0 & 13.0 & 0.00366 & 0.155 & 46 & 0.365 \\
+debate & gemma4-4b (SLM arb.) & 100 & 72.0 & 18.7 & 0.00389 & 0.142 & 0 & 0.318 \\
+debate & gemma4-4b $\rightarrow$ gemma4-31b (LLM arb.) & 100 & 87.0 & 12.0 & 0.00504 & 0.241 & 100 & 0.394 \\
 ensemble & gemma4-4b + llama3.2-3b + ministral3-3b + qwen3.5-4b & 100 & 64.0 & 15.6 & 0.00639 & 0.233 & 0 & 0.279 \\
+entropy\_bb & gemma4-4b $\rightarrow$ gemma4-31b (first threshold) & 100 & 75.0 & 9.6 & 0.00346 & 0.159 & 83 & 0.431 \\
+entropy\_bb & gemma4-4b $\rightarrow$ gemma4-31b (highest bid) & 100 & 73.0 & 7.8 & 0.00310 & 0.146 & 84 & 0.462 \\
+pure\_swarm & gemma4-4b & 100 & 72.0 & 27.2 & 0.00541 & 0.197 & 0 & 0.245 \\
+routing & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 85.0 & 1.5 & 0.00057 & 0.027 & 81 & 0.844 \\
+speculative & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 88.0 & 1.7 & 0.00076 & 0.036 & 100 & 0.817 \\
 standalone & gemma4-26b-a4b & 500 & 84.8 & 6.7 & 0.00436 & 0.225 & 100 & 0.470 \\
 standalone & gemma4-31b & 510 & 93.6 & 5.8 & 0.00379 & 0.196 & 100 & 0.529 \\
 standalone & gpt-oss-120b & 500 & 82.4 & 3.0 & 0.00710 & 0.189 & 100 & 0.466 \\
 standalone & gpt-oss-20b & 500 & 72.2 & 3.3 & 0.00276 & 0.113 & 100 & 0.577 \\
 standalone & llama3.3-70b & 100 & 80.0 & 7.8 & 0.01440 & 0.496 & 100 & 0.274 \\
 standalone & qwen3.5-35b-a3b & 500 & 83.4 & 4.3 & 0.00280 & 0.145 & 100 & 0.575 \\
-pure\_swarm & gemma4-4b & 100 & 72.0 & 27.2 & 0.00541 & 0.197 & 0 & 0.245 \\
-routing & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 85.0 & 1.5 & 0.00057 & 0.027 & 81 & 0.844 \\
-speculative & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 88.0 & 1.7 & 0.00076 & 0.036 & 100 & 0.817 \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -211,13 +243,13 @@ speculative & gemma4-4b $\rightarrow$ gemma4-31b & 100 & 88.0 & 1.7 & 0.00076 & 
 
 \subsection{Standalone Baselines}
 
-Standalone results confirm that model family, size, and quantization all contribute to benchmark performance in task-dependent ways. The MoE checkpoints \texttt{gemma4-26b-a4b} and \texttt{qwen3.5-35b-a3b} are particularly competitive: they match or exceed larger dense models on several benchmarks while operating at latencies of 2.8--7.4 seconds and costs of \$0.00185--\$0.00482 per query, yielding EATS of 0.519--0.738 across benchmarks. \texttt{llama3.3-70b} consistently achieves the lowest EATS among standalone models (\$0.01630--\$0.02034 per query) because its infrastructure cost dominates the EATS penalty term. \texttt{qwen3.5-27b} and \texttt{gemma4-31b} both achieve strong accuracy (88.6\% and 93.6\% on their respective peaks) but carry higher latency or cost penalties that limit their EATS to 0.317--0.529.
+Standalone results confirm that model family, size, and quantization all contribute to benchmark performance in task-dependent ways. The MoE checkpoints \texttt{gemma4-26b-a4b} and \texttt{qwen3.5-35b-a3b} are particularly competitive: they match or exceed larger dense models on several benchmarks while operating at latencies of 2.8--7.4 seconds and costs of \$0.00185--\$0.00482 per query, yielding EATS of 0.492--0.738 across benchmarks. \texttt{llama3.3-70b} consistently achieves the lowest EATS among standalone models (\$0.01630--\$0.02034 per query) because its infrastructure cost dominates the EATS penalty term. \texttt{qwen3.5-27b} and \texttt{gemma4-31b} both achieve strong accuracy (88.6\% and 93.6\% on their respective peaks) but carry higher latency or cost penalties that limit their EATS to 0.318--0.529.
 
-\texttt{gpt-oss-120b} and \texttt{gpt-oss-20b} perform well on MMLU (87.0\% and 86.6\%), ARC (95.4\% and 93.8\%), and TruthfulQA (82.4\% and 72.2\%) but diverge sharply on GSM8K, where accuracy falls to 67.8\% and 59.4\% respectively. This anomaly is discussed in Section~\ref{sec:exp-discussion}.
+\texttt{gpt-oss-120b} and \texttt{gpt-oss-20b} perform consistently across the suite: MMLU (87.0\% and 86.6\%), ARC (95.4\% and 93.8\%), GSM8K (96.2\% and 94.8\%), and TruthfulQA (82.4\% and 72.2\%). An earlier evaluation snapshot reported sharply lower GSM8K accuracy for both checkpoints; this proved to be an answer-extraction artefact that was corrected by rescoring, as discussed in Section~\ref{sec:exp-discussion}.
 
 \subsection{Routing and Speculative Decoding}
 
-Routing and speculative decoding using the \texttt{gemma4-4b}$\rightarrow$\texttt{gemma4-31b} pair produce the most prominent efficiency findings in this study. On ARC, HellaSwag, and TruthfulQA, routing achieves EATS of 0.884, 0.869, and 0.844 respectively. These values exceed the best standalone EATS on those benchmarks by 15--21 points. The improvement stems from combining near-monolithic accuracy with sub-2-second per-query latency and per-query costs below \$0.001. Speculative decoding achieves 1--5 percentage points higher accuracy than routing on these benchmarks at EATS values of 0.817--0.856, occupying the second-best EATS position in all three cases. Although speculative decoding invokes the LLM on every query (LLM\,\% = 100), it remains efficient because the verifier rewrites only the divergent suffix of the SLM draft rather than regenerating the full answer from scratch; the resulting reduction in output tokens keeps per-query cost and latency substantially below standalone LLM baselines.
+Routing and speculative decoding using the \texttt{gemma4-4b}$\rightarrow$\texttt{gemma4-31b} pair produce the most prominent efficiency findings in this study. On ARC, HellaSwag, and TruthfulQA, routing achieves EATS of 0.884, 0.869, and 0.844 respectively. These values exceed the best standalone EATS on those benchmarks by 15--27 points. The improvement stems from combining near-monolithic accuracy with sub-2-second per-query latency and per-query costs below \$0.001. Speculative decoding achieves 1--5 percentage points higher accuracy than routing on these benchmarks at EATS values of 0.817--0.856, occupying the second-best EATS position in all three cases. Although speculative decoding invokes the LLM on every query (LLM\,\% = 100), it remains efficient because the verifier rewrites only the divergent suffix of the SLM draft rather than regenerating the full answer from scratch; the resulting reduction in output tokens keeps per-query cost and latency substantially below standalone LLM baselines.
 
 The LLM-invocation rate of routing varies considerably across benchmarks---49\% on MMLU, 75\% on ARC, 81\% on TruthfulQA, 91\% on HellaSwag, and only 1\% on GSM8K---reflecting task-dependent differences in SLM confidence at the fixed threshold of 0.8. Tasks such as GSM8K, where \texttt{gemma4-4b} produces high-confidence arithmetic traces, rarely trigger escalation; commonsense continuation tasks such as HellaSwag, where confidence calibration is weaker, escalate the majority of queries. This variation confirms that the LLM-call ratio is governed by the interaction between task format, SLM capability, and the confidence threshold, rather than being a fixed property of the routing architecture.
 
@@ -227,15 +259,31 @@ On GSM8K, routing escalates only 1\% of queries to the LLM and achieves 95.0\% a
 
 \subsection{Active Oracle}
 
-Active Oracle is evaluated on MMLU, ARC, and HellaSwag, achieving 74.0\%, 91.0\%, and 66.0\% accuracy with EATS of 0.304, 0.388, and 0.294. In all three cases it underperforms both routing and speculative decoding in accuracy and EATS, despite using the same SLM--LLM pair. The sub-query mechanism---which targets LLM consultation at specific knowledge gaps---incurs high wall-clock latency (21.4--30.6 seconds) and non-trivial sub-query costs that outweigh the benefit for multiple-choice benchmarks. A key structural reason is that the sub-question is generated from the SLM's current, partially incorrect intermediate state; the oracle response therefore frequently addresses a mis-specified query and fails to redirect the SLM's reasoning chain toward the correct answer.
+Active Oracle is now evaluated on all five benchmarks, achieving 73.0\% (MMLU), 91.0\% (ARC), 92.0\% (GSM8K), 66.5\% (HellaSwag), and 72.0\% (TruthfulQA) accuracy with EATS of 0.392--0.537. In every case it underperforms both routing and speculative decoding in accuracy and EATS, despite using the same SLM--LLM pair. The sub-query mechanism---which targets LLM consultation at specific knowledge gaps---incurs high wall-clock latency (8.6--20.4 seconds) and non-trivial sub-query costs that outweigh the benefit for multiple-choice benchmarks. A key structural reason is that the sub-question is generated from the SLM's current, partially incorrect intermediate state; the oracle response therefore frequently addresses a mis-specified query and fails to redirect the SLM's reasoning chain toward the correct answer.
+
+\subsection{Debate (POA)}
+
+Debate is evaluated in two configurations on every benchmark: an all-SLM variant in which a \texttt{gemma4-4b} arbitrator decides between the Proponent and Opponent, and a hybrid variant in which arbitration is delegated to \texttt{gemma4-31b}. The arbitrator choice dominates the outcome. The LLM-arbitrated variant reaches 80.0--96.0\% accuracy and outperforms the all-SLM variant on every benchmark, with the largest gaps on HellaSwag (90.0\% vs.\ 72.0\%) and TruthfulQA (87.0\% vs.\ 72.0\%)---precisely the tasks where small-model judgement is least reliable. On structured reasoning tasks the gap narrows to one to five points (96.0\% vs.\ 95.0\% on GSM8K), indicating that adversarial critique among SLMs is largely self-sufficient when answers are objectively verifiable. Because every debate requires at least three model calls, EATS remains in the 0.318--0.451 range for both variants, below the leaner hybrid designs.
+
+\subsection{Blackboard and Entropy Blackboard}
+
+The two decentralised task-board architectures are evaluated on all five benchmarks using \texttt{gemma4-4b} workers and a \texttt{gemma4-31b} sweeper. Every reported row is a single 100-sample run at the principal operating point, so each design--policy comparison is a fair, setting-matched pair, and the 2$\times$2 matrix is complete for both architectures on all five benchmarks.
+
+Standard Blackboard is strongest on structured reasoning. Under the highest-bid policy it reaches 95.0\% on ARC (EATS 0.621) and 97.0\% on GSM8K---the highest raw accuracy of any configuration in the study, matched only by the first-threshold Entropy Blackboard---while resolving 83--87\% of queries on the SLM workers alone. With the matrix now complete, the claim-policy effect proves modest on every benchmark: highest-bid claiming wins narrowly on ARC (95.0\% vs.\ 92.0\%), GSM8K (97.0\% vs.\ 96.0\%), HellaSwag (79.0\% vs.\ 77.0\%), and TruthfulQA (69.0\% vs.\ 68.0\%), while first-threshold claiming wins on MMLU (79.0\% vs.\ 77.0\%) and is the more efficient of the two standard-Blackboard policies on ARC and GSM8K (EATS 0.631 and 0.626, the ARC figure the best of any blackboard-family configuration); the gap never exceeds three points. TruthfulQA is the principal failure case at this operating point---both policies land at 68.0--69.0\%, well below the routing pair---but the near-tie between policies shows the limitation is the task-board contract on factual calibration, not the claim rule. This corrects an earlier reading based on legacy runs: an exploratory first-threshold run at the old settings (bid threshold 0.65, 1.5-second time-to-live) reached 83.0\% on TruthfulQA by escalating every query to the sweeper, effectively LLM fallback, and a matching legacy run reached 95.0\% on GSM8K; both conflate the claim policy with the legacy threshold and time-to-live and are excluded from the tables, with the matched runs above now providing the controlled comparison.
+
+The bid threshold itself was explored on MMLU before the principal operating point was fixed. Under the highest-bid policy, three otherwise identical 100-sample runs at bid thresholds of 0.65, 0.75, and 0.85 produced accuracies of 74.0\%, 77.0\%, and 79.0\%, with sweeper escalation rising from 20\% to 30\% to 42\%; a set of 20-sample pilot runs at threshold 0.8 (80.0--85.0\% accuracy) was consistent with this trend. Raising the bid threshold makes workers more reluctant to claim tasks, shifting work to the sweeper and trading cost for accuracy---a monotone relationship that motivates the systematic parameter sweep planned in Section~\ref{sec:pending}. The 0.75 setting was adopted as the principal operating point for all subsequent Blackboard and Entropy Blackboard runs; only the 0.75 run from this exploration appears in the MMLU table, the off-point runs being reported here.
+
+Entropy Blackboard isolates the effect of the entropy penalty, since it differs from standard Blackboard only in the bidding rule. The penalty pays off most clearly where worker confidence is poorly calibrated: on HellaSwag it raises sweeper escalation from 41\% to 82\% and lifts accuracy five to seven points (84.0\% vs.\ 77.0--79.0\%), on MMLU it adds three to six points (82.0--83.0\% vs.\ 77.0--79.0\%), and on TruthfulQA it recovers four to seven points over standard Blackboard (73.0--75.0\% vs.\ 68.0--69.0\%), though all blackboard-family variants remain below routing there. On GSM8K, the first-threshold Entropy Blackboard reaches 97.0\% with only 7\% escalation, tying the highest-bid Blackboard for the highest raw accuracy in the study while yielding EATS 0.630---essentially tied with the first-threshold standard Blackboard on ARC (0.631) and GSM8K (0.626) as the most efficient multi-step orchestration results recorded in this evaluation. ARC is the one benchmark where the penalty gives nothing back, costing two points under the highest-bid policy (93.0\% vs.\ 95.0\%) and matching the standard design under first-threshold claiming (92.0\%).
+
+A consistent picture emerges across the complete matrix: at the principal operating point, the claim policy is a minor knob for both architectures---standard Blackboard varies by at most three points between policies and Entropy Blackboard by at most two, and on HellaSwag the two Entropy Blackboard policies produced identical claim and escalation decisions on all 100 queries at zero temperature. The large policy-dependent swings seen earlier were artefacts of the legacy time-to-live, not of the claim rule. What the entropy penalty contributes is therefore accuracy on poorly calibrated tasks rather than policy robustness: by suppressing overconfident bids before the claim decision is resolved, it escalates the right queries on HellaSwag, MMLU, and TruthfulQA, where standard Blackboard's workers are most likely to claim tasks they cannot answer.
 
 \subsection{Ensemble}
 
-The four-SLM ensemble (\texttt{gemma4-4b + llama3.2-3b + ministral3-3b + qwen3.5-4b}) is evaluated on all five benchmarks. Accuracy ranges from 64.0\% (TruthfulQA) to 96.0\% (GSM8K). The GSM8K result is the highest raw accuracy of any single configuration in the entire study, consistent with ensemble-diversity findings in the literature. However, EATS is limited to 0.279--0.387 across benchmarks because four parallel SLM calls generate latency of 15.6--21.6 seconds and combined energy that heavily penalizes the composite score. Single-SLM ensemble variants on MMLU (\texttt{ministral3-3b} at EATS 0.747, \texttt{qwen3.5-4b} at 0.438) show that a lean single-model ensemble can be highly efficient if the model has low latency and cost, though accuracy is limited.
+The four-SLM ensemble (\texttt{gemma4-4b + llama3.2-3b + ministral3-3b + qwen3.5-4b}) is evaluated on all five benchmarks. Accuracy ranges from 64.0\% (TruthfulQA) to 96.0\% (GSM8K). The GSM8K result trails only the two 97.0\% blackboard-family configurations among coordination-based designs and the strongest standalone checkpoint (\texttt{qwen3.5-35b-a3b}, 96.4\%) by less than half a point, consistent with ensemble-diversity findings in the literature. However, EATS is limited to 0.279--0.387 across benchmarks because four parallel SLM calls generate latency of 15.6--21.6 seconds and combined energy that heavily penalizes the composite score. Single-SLM ensemble variants on MMLU (\texttt{ministral3-3b} at EATS 0.747, \texttt{qwen3.5-4b} at 0.438) show that a lean single-model ensemble can be highly efficient if the model has low latency and cost, though accuracy is limited.
 
 \subsection{Pure Swarm}
 
-Pure Swarm with \texttt{gemma4-4b} uses no heavy-model calls at inference time. It achieves 96.0\% on ARC, 95.0\% on GSM8K, 89.5\% on MMLU, 74.0\% on HellaSwag, and 72.0\% on TruthfulQA. The ARC result (96.0\%) is the highest accuracy of any configuration on that benchmark, exceeding every standalone model. The strong performance on ARC and GSM8K suggests that compact peer-agent consensus is effective for structured reasoning tasks with clear verifiable answers. EATS values of 0.245--0.410 are penalized by high wall-clock latency (21.4--27.5 seconds), which dominates the efficiency penalty term. Pure Swarm's lower scores on HellaSwag and TruthfulQA reflect that commonsense completion and factual calibration are harder for compact peer-agent coordination than science-knowledge or arithmetic tasks.
+Pure Swarm with \texttt{gemma4-4b} uses no heavy-model calls at inference time. It achieves 96.0\% on ARC, 95.0\% on GSM8K, 89.7\% on MMLU, 74.0\% on HellaSwag, and 72.0\% on TruthfulQA. The ARC result (96.0\%) is the highest accuracy of any configuration on that benchmark, exceeding every standalone model. The strong performance on ARC and GSM8K suggests that compact peer-agent consensus is effective for structured reasoning tasks with clear verifiable answers. EATS values of 0.245--0.444 are penalized by high wall-clock latency (21.1--27.2 seconds), which dominates the efficiency penalty term. Pure Swarm's lower scores on HellaSwag and TruthfulQA reflect that commonsense completion and factual calibration are harder for compact peer-agent coordination than science-knowledge or arithmetic tasks.
 
 \section{Cross-Benchmark EATS Comparison}
 \label{sec:cross-bench}
@@ -260,9 +308,9 @@ ARC & routing --- gemma4-4b $\rightarrow$ gemma4-31b & 91.0 & 0.884 & 1 \\
 ARC & speculative --- gemma4-4b $\rightarrow$ gemma4-31b & 94.0 & 0.853 & 2 \\
 ARC & standalone --- qwen3.5-35b-a3b & 95.4 & 0.738 & 3 \\
 \midrule
-GSM8K & standalone --- qwen3.5-35b-a3b & 95.6 & 0.660 & 1 \\
-GSM8K & standalone --- gemma4-26b-a4b & 94.8 & 0.652 & 2 \\
-GSM8K & routing --- gemma4-4b $\rightarrow$ gemma4-31b & 95.0 & 0.560 & 3 \\
+GSM8K & standalone --- gpt-oss-20b & 94.8 & 0.662 & 1 \\
+GSM8K & standalone --- qwen3.5-35b-a3b & 96.4 & 0.662 & 2 \\
+GSM8K & standalone --- gemma4-26b-a4b & 94.8 & 0.652 & 3 \\
 \midrule
 HellaSwag & routing --- gemma4-4b $\rightarrow$ gemma4-31b & 90.0 & 0.869 & 1 \\
 HellaSwag & speculative --- gemma4-4b $\rightarrow$ gemma4-31b & 92.0 & 0.856 & 2 \\
@@ -275,7 +323,7 @@ TruthfulQA & standalone --- gpt-oss-20b & 72.2 & 0.577 & 3 \\
 \end{tabularx}
 \end{table}
 
-The table reveals a consistent cross-benchmark pattern. Routing and speculative decoding occupy the top two EATS positions on ARC, HellaSwag, and TruthfulQA. On GSM8K, compact MoE standalone checkpoints take the top two positions because the routing LLM call ratio is 1\%---low enough that the SLM overhead from the initial draft pass adds latency without meaningful cost reduction relative to a lean MoE checkpoint. On MMLU, routing and speculative decoding also take the top two EATS positions, indicating that the benchmark-local normalization favours the lower-cost hybrid pair---even though Pure Swarm and the best standalone checkpoints retain higher raw accuracy---because the hybrid pair's substantial cost and latency advantages are weighted heavily in the EATS penalty term.
+The table reveals a consistent cross-benchmark pattern. Routing and speculative decoding occupy the top two EATS positions on ARC, HellaSwag, and TruthfulQA. On GSM8K, lean standalone checkpoints (\texttt{gpt-oss-20b} and the compact MoE models) take all three top positions: the routing LLM call ratio there is 1\%---low enough that the SLM overhead from the initial draft pass adds latency without meaningful cost reduction relative to a lean checkpoint---and the long arithmetic reasoning traces penalise every coordination-based design. On MMLU, routing and speculative decoding also take the top two EATS positions, indicating that the benchmark-local normalization favours the lower-cost hybrid pair---even though Pure Swarm and the best standalone checkpoints retain higher raw accuracy---because the hybrid pair's substantial cost and latency advantages are weighted heavily in the EATS penalty term.
 
 \section{Discussion}
 \label{sec:exp-discussion}
@@ -283,18 +331,21 @@ The table reveals a consistent cross-benchmark pattern. Routing and speculative 
 \subsection{Hybrid architectures on the efficiency--quality frontier}
 The ARC, HellaSwag, and TruthfulQA results provide strong empirical support for the central hypothesis that routing and speculative decoding can achieve accuracy close to or matching the best standalone models while reducing per-query cost, latency, and CO$_2$ emission by factors of 2--15 relative to the same LLM running in standalone mode. This directly addresses RQ1 (can collaborative architectures match standalone LLM accuracy?) and RQ2 (what are the efficiency trade-offs?). EATS as a composite signal (RQ3) confirms the joint finding: hybrid architectures dominate the top two EATS positions on ARC, HellaSwag, and TruthfulQA, with values in the 0.817--0.884 range compared to 0.665--0.738 for the best standalone options.
 
-\subsection{GSM8K GPT-family anomaly}
-The low accuracy of \texttt{gpt-oss-120b} (67.8\%) and \texttt{gpt-oss-20b} (59.4\%) on GSM8K is inconsistent with their performance on all other benchmarks. One plausible explanation is answer-extraction sensitivity: GSM8K answers require identifying a numeric value from a free-form response, and GPT-family models may format their reasoning and final answers in ways that defeat the platform's numeric extraction heuristic. This is a suspected measurement artefact rather than a confirmed capability finding; dedicated output-parsing improvements and re-evaluation are required before any capability claims regarding these models on GSM8K can be advanced in the final thesis.
+\subsection{GSM8K GPT-family anomaly: resolved}
+An earlier evaluation snapshot reported \texttt{gpt-oss-120b} at 67.8\% and \texttt{gpt-oss-20b} at 59.4\% on GSM8K, sharply inconsistent with their performance on every other benchmark. The suspected cause---answer-extraction sensitivity---was confirmed: GSM8K answers require identifying a numeric value from a free-form response, and the GPT-family models format their reasoning and final answers in ways that defeated the platform's original numeric extraction heuristic. The extraction logic and the answer-format prompt instructions were corrected, and all affected GSM8K runs were rescored from their stored raw responses without re-running inference. Under the corrected scoring, \texttt{gpt-oss-120b} reaches 96.2\% and \texttt{gpt-oss-20b} 94.8\%, in line with their results elsewhere in the suite. The episode illustrates a methodological point relevant to the final thesis: free-form benchmarks couple model capability to harness-side parsing, so capability claims on such benchmarks require validating the extraction path per model family.
+
+\subsection{Decentralised coordination and uncertainty-aware bidding}
+The newly benchmarked Blackboard family provides the first empirical evidence for the two novel decentralised architectures introduced in Chapter~3. Bid-based task allocation with an LLM sweeper is clearly viable: on ARC and GSM8K the family reaches 92.0--97.0\% accuracy while resolving 72--93\% of queries on SLM workers alone, and the 97.0\% on GSM8K---reached by both the highest-bid Blackboard and the first-threshold Entropy Blackboard---is the highest raw accuracy recorded in the study. Because every reported configuration is a single run at the principal operating point and the design--policy matrix is now complete, two fair comparisons emerge. First, the claim policy is a minor knob: standard Blackboard varies by at most three points between first-threshold and highest-bid claiming on every benchmark, and Entropy Blackboard by at most two. The dramatic policy swings reported in an earlier snapshot---most notably an 83.0\% first-threshold result on TruthfulQA against 69.0\% for highest-bid---turned out to be artefacts of the legacy short time-to-live, which forced near-universal sweeper escalation; under matched settings both policies land at 68.0--69.0\% there. Second, the entropy penalty---the only difference between the two architectures---is what actually moves accuracy: it recovers three to seven points on the benchmarks where confidence is least trustworthy (HellaSwag, MMLU, and TruthfulQA) by escalating the queries that overconfident workers would otherwise claim. The preliminary MMLU bid-threshold exploration points the same way: escalation and accuracy respond monotonically to the bid threshold (74.0\% to 79.0\% as the threshold rises from 0.65 to 0.85), confirming that the bidding rule, not the task board itself, is the architecture's principal tuning surface. This is direct evidence for the design hypothesis, drawn from the uncertainty-aware inference literature, that the practical challenge is deciding when a small model should abstain rather than merely measuring its confidence. The strength of LLM-arbitrated Debate on TruthfulQA (87.0\%) relative to every task-board variant suggests that factual calibration benefits from adversarial critique of a candidate answer more than from reallocating the question to a stronger model.
 
 \subsection{Pure Swarm capability ceiling}
 Pure Swarm demonstrates that compact SLM peer coordination can reach 96.0\% on ARC and 95.0\% on GSM8K with zero LLM calls, partially addressing RQ4 by matching multi-SLM collaboration findings from the reviewed literature. The design's wall-clock latency (21--27 seconds) currently prevents it from competing on EATS with well-instrumented hybrid architectures. Reducing swarm coordination latency is a natural optimisation direction for future work.
 
 \subsection{Ensemble accuracy ceiling}
-The four-SLM ensemble achieves 96.0\% on GSM8K, the highest raw accuracy of any configuration, consistent with ensemble-diversity findings in the literature. EATS is limited to 0.387 because four parallel SLM calls carry a latency and energy penalty that the EATS formulation weights heavily. This result illustrates the fundamental trade-off the EATS metric is designed to quantify: accuracy gains from coordination are real but arrive at a cost that may not be acceptable in latency-sensitive deployments.
+The four-SLM ensemble achieves 96.0\% on GSM8K, jointly with LLM-arbitrated Debate and one point behind the two blackboard-family configurations at 97.0\%, consistent with ensemble-diversity findings in the literature. EATS is limited to 0.387 because four parallel SLM calls carry a latency and energy penalty that the EATS formulation weights heavily. This result illustrates the fundamental trade-off the EATS metric is designed to quantify: accuracy gains from coordination are real but arrive at a cost that may not be acceptable in latency-sensitive deployments.
 
 \section{Planned Extensions}
 \label{sec:pending}
 
-The current results cover all five benchmarks in the evaluation suite (MMLU, ARC-Challenge, GSM8K, HellaSwag, and TruthfulQA). One principal extension is planned before the final thesis submission.
+The current results cover all five benchmarks in the evaluation suite (MMLU, ARC-Challenge, GSM8K, HellaSwag, and TruthfulQA), every architecture defined in the Chapter~3 taxonomy, and the complete blackboard-family design--policy matrix of \{Blackboard, Entropy Blackboard\} $\times$ \{first threshold, highest bid\} at the principal operating point. Two extensions are planned before the final thesis submission.
 
-Three architectures defined in the taxonomy---Debate (POA), Blackboard, and Entropy Blackboard---have not yet been benchmarked. These architectures are implemented in the repository but have not been included in the present evaluation. Incorporating them will complete the taxonomy comparison and provide empirical coverage for the full set of architectures introduced in Chapter~3. All three will be evaluated on the same five benchmarks under the same evaluation protocol used in this chapter.
+First, the sample counts for the newly benchmarked architectures will be deepened: the Debate, Blackboard, and Entropy Blackboard configurations currently rest on a single 100-sample run each, compared with 500 or more samples for the principal standalone baselines; additional runs will tighten confidence intervals and allow seed-level variance to be reported. Second, the sensitivity of the blackboard family to its orchestration parameters---the bid threshold, the time-to-live before sweeper fallback, and the entropy-penalty weight---will be characterised systematically. The preliminary MMLU bid-threshold exploration (Section~\ref{sec:arch-analysis}) already shows a monotone escalation--accuracy response to the bid threshold, and the time-to-live has proven consequential enough to have confounded an earlier reading of the TruthfulQA results; extending the sweep to all five benchmarks, to the time-to-live, and to the entropy-penalty weight will map the accuracy--efficiency balance these parameters govern.

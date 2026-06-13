@@ -1,10 +1,85 @@
 {
   "benchmark": "truthfulqa",
-  "generated_at": "2026-06-05T19:38:32.844850+00:00",
+  "generated_at": "2026-06-13T03:02:05.158504+00:00",
   "min_total_samples_required": 100,
-  "n_unique_configs": 10,
+  "n_unique_configs": 17,
   "skipped_configs_below_min_samples": [],
   "entries": [
+    {
+      "architecture": "active_oracle",
+      "model_key": "gemma4-4b \u2192 gemma4-31b",
+      "slm": "gemma4-4b",
+      "llm": "gemma4-31b",
+      "ensemble_slms": [],
+      "n_experiments": 1,
+      "experiment_ids": [
+        "exp_e6edffe7"
+      ],
+      "total_samples_evaluated": 100,
+      "accuracy": 0.72,
+      "llm_call_ratio": 0.89,
+      "avg_latency_ms": 8621.9946,
+      "latency_p50_ms": 6119.53,
+      "latency_p95_ms": 27176.23,
+      "avg_slm_confidence": 0.83572,
+      "escalation_rate": 0.72,
+      "avg_cost_per_sample_usd": 0.001985,
+      "avg_api_cost_per_sample_usd": 0.0,
+      "avg_infra_cost_per_sample_usd": 0.001985,
+      "avg_energy_per_sample_kwh": 0.000202,
+      "avg_co2_per_sample_g": 0.076658,
+      "eats": 0.49376
+    },
+    {
+      "architecture": "blackboard",
+      "model_key": "gemma4-4b \u2192 gemma4-31b [first_threshold]",
+      "slm": "gemma4-4b",
+      "llm": "gemma4-31b",
+      "ensemble_slms": [],
+      "n_experiments": 1,
+      "experiment_ids": [
+        "exp_17189328"
+      ],
+      "total_samples_evaluated": 100,
+      "accuracy": 0.68,
+      "llm_call_ratio": 0.44,
+      "avg_latency_ms": 11763.5288,
+      "latency_p50_ms": 7947.6,
+      "latency_p95_ms": 35781.53,
+      "avg_slm_confidence": 0.786417,
+      "escalation_rate": 0.33,
+      "avg_cost_per_sample_usd": 0.003331,
+      "avg_api_cost_per_sample_usd": 0.0,
+      "avg_infra_cost_per_sample_usd": 0.003331,
+      "avg_energy_per_sample_kwh": 0.000372,
+      "avg_co2_per_sample_g": 0.141269,
+      "eats": 0.383655
+    },
+    {
+      "architecture": "blackboard",
+      "model_key": "gemma4-4b \u2192 gemma4-31b [highest_bid]",
+      "slm": "gemma4-4b",
+      "llm": "gemma4-31b",
+      "ensemble_slms": [],
+      "n_experiments": 1,
+      "experiment_ids": [
+        "exp_a8769d2f"
+      ],
+      "total_samples_evaluated": 100,
+      "accuracy": 0.69,
+      "llm_call_ratio": 0.46,
+      "avg_latency_ms": 12967.9517,
+      "latency_p50_ms": 9832.85,
+      "latency_p95_ms": 36251.81,
+      "avg_slm_confidence": 0.787499,
+      "escalation_rate": 0.39,
+      "avg_cost_per_sample_usd": 0.00366,
+      "avg_api_cost_per_sample_usd": 0.0,
+      "avg_infra_cost_per_sample_usd": 0.00366,
+      "avg_energy_per_sample_kwh": 0.000408,
+      "avg_co2_per_sample_g": 0.155014,
+      "eats": 0.364588
+    },
     {
       "architecture": "ensemble",
       "model_key": "gemma4-4b+llama3.2-3b+ministral3-3b+qwen3.5-4b",
@@ -34,6 +109,56 @@
       "avg_energy_per_sample_kwh": 0.000614,
       "avg_co2_per_sample_g": 0.233168,
       "eats": 0.278533
+    },
+    {
+      "architecture": "entropy_blackboard",
+      "model_key": "gemma4-4b \u2192 gemma4-31b [first_threshold]",
+      "slm": "gemma4-4b",
+      "llm": "gemma4-31b",
+      "ensemble_slms": [],
+      "n_experiments": 1,
+      "experiment_ids": [
+        "exp_077ad200"
+      ],
+      "total_samples_evaluated": 100,
+      "accuracy": 0.75,
+      "llm_call_ratio": 0.83,
+      "avg_latency_ms": 9552.0942,
+      "latency_p50_ms": 4953.25,
+      "latency_p95_ms": 28607.68,
+      "avg_slm_confidence": 0.817107,
+      "escalation_rate": 0.65,
+      "avg_cost_per_sample_usd": 0.00346,
+      "avg_api_cost_per_sample_usd": 0.0,
+      "avg_infra_cost_per_sample_usd": 0.00346,
+      "avg_energy_per_sample_kwh": 0.000419,
+      "avg_co2_per_sample_g": 0.159177,
+      "eats": 0.430921
+    },
+    {
+      "architecture": "entropy_blackboard",
+      "model_key": "gemma4-4b \u2192 gemma4-31b [highest_bid]",
+      "slm": "gemma4-4b",
+      "llm": "gemma4-31b",
+      "ensemble_slms": [],
+      "n_experiments": 1,
+      "experiment_ids": [
+        "exp_589dd0a4"
+      ],
+      "total_samples_evaluated": 100,
+      "accuracy": 0.73,
+      "llm_call_ratio": 0.84,
+      "avg_latency_ms": 7839.3198,
+      "latency_p50_ms": 4959.18,
+      "latency_p95_ms": 22057.92,
+      "avg_slm_confidence": 0.828446,
+      "escalation_rate": 0.66,
+      "avg_cost_per_sample_usd": 0.003104,
+      "avg_api_cost_per_sample_usd": 0.0,
+      "avg_infra_cost_per_sample_usd": 0.003104,
+      "avg_energy_per_sample_kwh": 0.000385,
+      "avg_co2_per_sample_g": 0.146183,
+      "eats": 0.462281
     },
     {
       "architecture": "monolithic",
@@ -68,8 +193,8 @@
       "ensemble_slms": [],
       "n_experiments": 2,
       "experiment_ids": [
-        "exp_db60849b",
-        "exp_a89e96f9"
+        "exp_a89e96f9",
+        "exp_db60849b"
       ],
       "total_samples_evaluated": 510,
       "accuracy": 0.936,
@@ -185,6 +310,56 @@
       "avg_energy_per_sample_kwh": 0.000382,
       "avg_co2_per_sample_g": 0.145015,
       "eats": 0.575104
+    },
+    {
+      "architecture": "multi_agent",
+      "model_key": "gemma4-4b",
+      "slm": "gemma4-4b",
+      "llm": "gemma4-31b",
+      "ensemble_slms": [],
+      "n_experiments": 1,
+      "experiment_ids": [
+        "exp_637f05c4"
+      ],
+      "total_samples_evaluated": 100,
+      "accuracy": 0.72,
+      "llm_call_ratio": 0.0,
+      "avg_latency_ms": 18651.5256,
+      "latency_p50_ms": 18429.14,
+      "latency_p95_ms": 31923.02,
+      "avg_slm_confidence": 0.85,
+      "escalation_rate": 0.0,
+      "avg_cost_per_sample_usd": 0.003886,
+      "avg_api_cost_per_sample_usd": 0.0,
+      "avg_infra_cost_per_sample_usd": 0.003886,
+      "avg_energy_per_sample_kwh": 0.000373,
+      "avg_co2_per_sample_g": 0.141752,
+      "eats": 0.318475
+    },
+    {
+      "architecture": "multi_agent",
+      "model_key": "gemma4-4b \u2192 gemma4-31b",
+      "slm": "gemma4-4b",
+      "llm": "gemma4-31b",
+      "ensemble_slms": [],
+      "n_experiments": 1,
+      "experiment_ids": [
+        "exp_abf962fe"
+      ],
+      "total_samples_evaluated": 100,
+      "accuracy": 0.87,
+      "llm_call_ratio": 1.0,
+      "avg_latency_ms": 12021.9839,
+      "latency_p50_ms": 12086.07,
+      "latency_p95_ms": 19388.7,
+      "avg_slm_confidence": 0.85,
+      "escalation_rate": 1.0,
+      "avg_cost_per_sample_usd": 0.005037,
+      "avg_api_cost_per_sample_usd": 0.0,
+      "avg_infra_cost_per_sample_usd": 0.005037,
+      "avg_energy_per_sample_kwh": 0.000633,
+      "avg_co2_per_sample_g": 0.240525,
+      "eats": 0.393668
     },
     {
       "architecture": "pure_swarm",
