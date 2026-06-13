@@ -30,6 +30,8 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from core.model_catalog import get_model_spec
+from evaluation.metrics import _normalize_metric, compute_eats
+from experiments.runner import resolve_recommended_baseline
 
 RESULTS_DIR = REPO_ROOT / "results"
 OUTPUT_DIR = RESULTS_DIR / "benchmark_tables"
@@ -115,6 +117,66 @@ def get_canonical_eats(metrics: dict) -> float | None:
     return round(float(eats), 6)
 
 
+def harmonize_metrics_with_web_rule(config: dict, metrics: dict) -> dict:
+    """Mirror the web layer's baseline backfill + EATS recomputation logic."""
+    harmonized = dict(metrics)
+    llm = config.get("llm")
+
+    baseline_cost = harmonized.get("baseline_cost_usd", 0.0) or 0.0
+    baseline_latency = harmonized.get("baseline_algorithmic_latency_ms", 0.0) or 0.0
+    baseline_energy = harmonized.get("baseline_energy_kwh", 0.0) or 0.0
+
+    if harmonized.get("baseline_accuracy") is None or baseline_cost == 0.0:
+        baseline = resolve_recommended_baseline(
+            config.get("benchmark", "mmlu"),
+            llm,
+            n_samples=int(config.get("n_samples", 500)),
+        )
+        if baseline:
+            harmonized["baseline_cost_usd"] = baseline.get("total_cost_usd", 0.0) or 0.0
+            harmonized["baseline_algorithmic_latency_ms"] = (
+                baseline.get("avg_algorithmic_latency_ms", 0.0) or 0.0
+            )
+            harmonized["baseline_energy_kwh"] = baseline.get("total_energy_kwh", 0.0) or 0.0
+            if baseline.get("accuracy") is not None:
+                harmonized["baseline_accuracy"] = baseline.get("accuracy")
+            if baseline.get("eats_score") is not None:
+                harmonized["baseline_eats_score"] = baseline.get("eats_score")
+            if baseline.get("ece") is not None:
+                harmonized["baseline_ece"] = baseline.get("ece")
+
+    baseline_cost = harmonized.get("baseline_cost_usd", 0.0) or 0.0
+    baseline_latency = harmonized.get("baseline_algorithmic_latency_ms", 0.0) or 0.0
+    baseline_energy = harmonized.get("baseline_energy_kwh", 0.0) or 0.0
+
+    if baseline_cost > 0.0 and baseline_latency > 0.0 and baseline_energy > 0.0:
+        harmonized["normalized_cost"] = _normalize_metric(
+            harmonized.get("total_cost_usd", 0.0) or 0.0,
+            baseline_cost,
+        )
+        harmonized["normalized_algorithmic_latency"] = _normalize_metric(
+            harmonized.get("avg_algorithmic_latency_ms", harmonized.get("avg_latency_ms", 0.0)) or 0.0,
+            baseline_latency,
+        )
+        harmonized["normalized_energy"] = _normalize_metric(
+            harmonized.get("total_energy_kwh", 0.0) or 0.0,
+            baseline_energy,
+        )
+        harmonized["normalized_efficiency_penalty"] = (
+            0.5 * harmonized["normalized_cost"]
+            + 0.3 * harmonized["normalized_algorithmic_latency"]
+            + 0.2 * harmonized["normalized_energy"]
+        )
+        harmonized["eats_score"] = compute_eats(
+            accuracy=harmonized.get("accuracy", 0.0) or 0.0,
+            normalized_cost=harmonized["normalized_cost"],
+            normalized_algorithmic_latency=harmonized["normalized_algorithmic_latency"],
+            normalized_energy=harmonized["normalized_energy"],
+        )
+
+    return harmonized
+
+
 def load_latest_qualified_runs() -> tuple[dict[str, list[dict]], list[dict]]:
     latest_by_key: dict[tuple[str, str], dict] = {}
     skipped: list[dict] = []
@@ -125,7 +187,7 @@ def load_latest_qualified_runs() -> tuple[dict[str, list[dict]], list[dict]]:
             data = json.load(handle)
 
         config = data.get("config", {})
-        metrics = data.get("metrics", {})
+        metrics = harmonize_metrics_with_web_rule(config, data.get("metrics", {}))
         benchmark = config.get("benchmark")
         architecture = config.get("architecture")
         created_at = data.get("created_at")

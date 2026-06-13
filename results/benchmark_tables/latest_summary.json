@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-13T23:06:28.850540+00:00",
+  "generated_at": "2026-06-13T23:36:06.921627+00:00",
   "selection_rule": "latest run per benchmark x architecture with n_total >= 100",
   "scoring_rule": "canonical runner/web EATS from experiment metrics",
   "min_total_samples_required": 100,
