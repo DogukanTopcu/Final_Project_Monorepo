@@ -176,14 +176,14 @@
   .benchmark-strip:first-child{border-top:none;padding-top:0;}
   .benchmark-strip-layout{
     display:grid;
-    grid-template-columns:74px 250px 1fr;
-    gap:8px;
+    grid-template-columns:96px 232px minmax(0, 1fr);
+    gap:10px;
     align-items:start;
   }
   .benchmark-name h4{
     font-family:'IBM Plex Mono',monospace;
-    font-size:16px;
-    line-height:1.05;
+    font-size:15px;
+    line-height:1.08;
     color:var(--claret-deep);
     letter-spacing:.03em;
   }
@@ -195,9 +195,10 @@
     display:flex;
     flex-direction:column;
     gap:5px;
+    min-width:0;
   }
   .benchmark-role{
-    font-size:13.5px;
+    font-size:13px;
     line-height:1.24;
     color:var(--ink);
   }
@@ -361,10 +362,10 @@
     const palette = ['#8A1538', '#0F7173', '#B07F2E'];
 
     function miniChart(panel){
-      const W = 250, H = 122;
+      const W = 232, H = 122;
       const padL = 22, padR = 10, padT = 8, padB = 18;
       const ch = H - padT - padB;
-      const bw = 30, gap = 32, startX = 62;
+      const bw = 28, gap = 26, startX = 56;
       const labels = ['E', 'A', 'N'];
       const values = [
         panel.eatsLeader.accuracy,
