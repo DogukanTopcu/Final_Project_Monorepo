@@ -3,12 +3,24 @@ window.S4 = `
   <div class="bhead"><div class="num">4</div><div class="btitle">EATS · Efficiency–Accuracy Trade-off Score</div><div class="line"></div></div>
   <p>A single score comparing any architecture against the standalone-LLM baseline.</p>
   <div class="card accent">
-    <div class="eq">EATS =
-      <span class="frac"><span class="t"><i>Accuracy</i></span><span class="b"><i>Accuracy</i> + <i>Penalty</i></span></span>
+    <div class="eats-formula">
+      <div class="eats-main">
+        <span class="lhs">EATS</span> =
+        <span class="frac">
+          <span class="t"><i>Accuracy</i></span>
+          <span class="b"><i>Accuracy</i> + <span class="sig">λ</span>·<i>P</i><sub>efficiency</sub> + <span class="sig">β</span>·<i>P</i><sub>accuracy</sub></span>
+        </span>
+      </div>
+      <div class="eats-defs">
+        <div class="eats-def"><i>P</i><sub>efficiency</sub> = 0.65·<i>Cost</i> + 0.20·<i>Latency</i> + 0.15·<i>Energy</i></div>
+        <div class="eats-def"><i>P</i><sub>accuracy</sub> = 1 − <i>Accuracy</i></div>
+      </div>
+      <div class="eats-params">
+        <span>β = 0.60</span>
+        <span>λ = 0.40</span>
+      </div>
     </div>
-    <div class="eq" style="padding-top:4px;font-size:19px;white-space:nowrap"><i>Penalty</i> = 0.5·<i>Cost</i> + 0.3·<i>Latency</i> + 0.2·<i>Energy</i></div>
-    <div class="eqnote">each ÷ standalone-LLM baseline → LLM = 1</div>
+    <div class="eqnote">each / standalone-LLM baseline</div>
   </div>
-  <p style="margin-top:10px;font-size:14px;color:var(--mut);text-align:center">0.5 is the theoretical ceiling for the standalone LLM.</p>
 </section>
 `;
