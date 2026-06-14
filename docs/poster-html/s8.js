@@ -88,7 +88,7 @@ window.BENCHMARK_PANELS = [
 
 window.S8 = `
 <section class="block">
-  <div class="bhead"><div class="num">8</div><div class="btitle">Benchmark Readouts</div><div class="line"></div></div>
+  <div class="bhead"><div class="num">9</div><div class="btitle">Benchmark Readouts</div><div class="line"></div></div>
   <p>Each mini-plot shows accuracy against efficiency penalty, so the strongest trade-offs appear toward the upper-left. <b>E</b> = EATS winner, <b>A</b> = accuracy leader, <b>N</b> = best novel result.</p>
   <div class="benchmark-panels" id="benchmarkPanels"></div>
 </section>

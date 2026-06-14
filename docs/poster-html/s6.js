@@ -1,7 +1,7 @@
 window.S6 = `
 <section class="block">
   <div class="bhead"><div class="num">6</div><div class="btitle">Benchmarks &amp; Protocol</div><div class="line"></div></div>
-  <p>Five benchmarks span the <strong>capability dimensions most cited in our companion SLR</strong>, letting us test whether efficiency gains persist as tasks shift from knowledge retrieval to chain-of-thought math and adversarial fact-checking.</p>
+  <p>Five benchmarks span the <strong>capability dimensions most cited in our companion SLR</strong>, letting us test whether efficiency gains persist as tasks shift from knowledge retrieval to chain-of-thought math and adversarial fact-checking [5][6][7][8][9].</p>
   <table>
     <thead><tr><th>Benchmark</th><th>What it measures</th></tr></thead>
     <tbody>

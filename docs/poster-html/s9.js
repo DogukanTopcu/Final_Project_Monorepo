@@ -15,7 +15,7 @@ window.EATS_MATRIX = {
 
 window.S9 = `
 <section class="block">
-  <div class="bhead"><div class="num">9</div><div class="btitle">EATS Landscape</div><div class="line"></div></div>
+  <div class="bhead"><div class="num">10</div><div class="btitle">EATS Landscape</div><div class="line"></div></div>
   <p>Canonical EATS for the latest qualified run of each architecture; the standalone row shows the best MoE baseline on each benchmark.</p>
   <div class="frontier-fig" style="margin-top:6px">
     <div id="eatsMatrix"></div>

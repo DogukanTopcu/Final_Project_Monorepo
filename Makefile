@@ -60,4 +60,4 @@ web:
 	open http://localhost:3000
 
 poster-pdf:
-	$(PYTHON) scripts/export_poster_pdf.py
+	$(PYTHON) scripts/export_poster_pdf.py --output docs/poster-html/Atlas.pdf

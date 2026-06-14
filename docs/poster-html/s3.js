@@ -1,7 +1,7 @@
 window.S3 = `
 <section class="block">
   <div class="bhead"><div class="num">3</div><div class="btitle">Measurement-First Platform</div><div class="line"></div></div>
-  <p>Every architecture consumes the same <span class="mono">Query</span> and returns the same <span class="mono">Response</span> carrying <strong>accuracy, latency, tokens, cost, energy &amp; CO₂</strong> per query. The architecture layer is the <em>only</em> interchangeable component.</p>
+  <p>Every architecture consumes the same <span class="mono">Query</span> and returns the same <span class="mono">Response</span> carrying <strong>accuracy, latency, tokens, cost, energy &amp; CO₂</strong> per query. The architecture layer is the <em>only</em> interchangeable component, so differences are attributable to orchestration logic rather than model API shape [4].</p>
   <div class="diagram" style="margin-top:6px">
     <div class="dnode"><div class="t">Experiment Config</div><div class="s">architecture · benchmark · seed · models</div></div>
     <div class="darrow"><svg width="18" height="22"><path d="M9 0V16M9 22L2 14M9 22L16 14" stroke="currentColor" stroke-width="2.5" fill="none"/></svg></div>
