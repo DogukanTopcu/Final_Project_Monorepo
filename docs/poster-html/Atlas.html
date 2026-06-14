@@ -318,6 +318,7 @@
   .refs p{font-size:11.5px;line-height:1.22;color:var(--mut);margin:0;text-align:left;}
   .refs p b{color:var(--slate);font-weight:600;}
   .qr{text-align:center;}
+  .qr a{display:block;color:inherit;text-decoration:none;}
   .qr .code{width:96px;height:96px;margin:0 auto;display:block;border:4px solid #fff;outline:1px solid var(--line);}
   .qr .lbl{font-family:var(--font-mono);font-size:10.5px;color:var(--mut);margin-top:3px;line-height:1.18;}
   /* ---------- Abstract band ---------- */
@@ -386,8 +387,10 @@
         <p>[1] Hao et&nbsp;al. <b>Hybrid SLM–LLM Inference</b>, 2024 · [2] Oh&nbsp;&amp;&nbsp;Kim, <b>Uncertainty-Aware Hybrid Inference</b>, 2025 · [3] Shao et&nbsp;al. <b>Division-of-Thoughts</b>, 2025 · [4] Kwon et&nbsp;al. <b>vLLM: PagedAttention</b>, SOSP 2023 · [5] Companion SLR (54 studies, PRISMA 2020) · [6] MMLU, ARC, GSM8K, HellaSwag, TruthfulQA.</p>
       </div>
       <div class="qr">
-        <canvas class="code" id="qrAtlas" width="150" height="150"></canvas>
-        <div class="lbl">Code &amp; experiments</div>
+        <a href="https://github.com/DogukanTopcu/Final_Project_Monorepo" target="_blank" rel="noopener noreferrer">
+          <img class="code" src="final-project-monorepo-qr.png" alt="QR code linking to DogukanTopcu Final Project Monorepo on GitHub">
+          <div class="lbl">Code &amp; experiments</div>
+        </a>
       </div>
     </footer>
 
@@ -541,24 +544,6 @@
     host.innerHTML = h;
   })();
 
-  /* ---- deterministic QR-style placeholder ---- */
-  function drawQR(id){
-    const c=document.getElementById(id); if(!c)return;
-    const ctx=c.getContext('2d'); const N=21, cell=c.width/N;
-    ctx.fillStyle='#fff'; ctx.fillRect(0,0,c.width,c.height);
-    ctx.fillStyle='#2B2D42';
-    let seed=987654321;
-    const rnd=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
-    for(let y=0;y<N;y++)for(let x=0;x<N;x++){ if(rnd()>0.52) ctx.fillRect(x*cell,y*cell,cell,cell); }
-    // finder patterns
-    function finder(ox,oy){
-      ctx.fillStyle='#2B2D42'; ctx.fillRect(ox,oy,cell*7,cell*7);
-      ctx.fillStyle='#fff'; ctx.fillRect(ox+cell,oy+cell,cell*5,cell*5);
-      ctx.fillStyle='#8A1538'; ctx.fillRect(ox+cell*2,oy+cell*2,cell*3,cell*3);
-    }
-    finder(0,0); finder(cell*14,0); finder(0,cell*14);
-  }
-  drawQR('qrAtlas');
 </script>
 
 <template id="__bundler_thumbnail">
