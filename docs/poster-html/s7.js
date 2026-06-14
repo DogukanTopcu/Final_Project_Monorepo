@@ -23,8 +23,8 @@ window.S7 = `
       <img src="../term_report/sources/active_oracle_simplified.png" alt="Active Oracle flowchart">
     </div>
     <div class="archcard">
-      <h4>Pure Swarm</h4>
-      <img src="../term_report/sources/blackboard_slms_simplified.png" alt="Pure Swarm flowchart">
+      <h4>Blackboard</h4>
+      <img src="../term_report/sources/blackboard_simplified.png" alt="Blackboard flowchart">
     </div>
   </div>
 </section>
@@ -38,8 +38,8 @@ window.S7B = `
       <img src="../term_report/sources/blackboard_entropy_based_simplified.png" alt="Entropy Blackboard flowchart">
     </div>
     <div class="archcard">
-      <h4>Blackboard</h4>
-      <img src="../term_report/sources/blackboard_simplified.png" alt="Blackboard flowchart">
+      <h4>Pure Swarm</h4>
+      <img src="../term_report/sources/blackboard_slms_simplified.png" alt="Pure Swarm flowchart">
     </div>
   </div>
 </section>
