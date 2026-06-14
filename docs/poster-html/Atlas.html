@@ -126,10 +126,12 @@
   table.heat th{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:11px;text-transform:uppercase;
     letter-spacing:.03em;color:var(--mut);border-bottom:none;padding:3px 5px;}
   table.heat th.num-c{text-align:center;}
-  table.heat td{padding:5px 6px;border-bottom:none;border-radius:4px;}
+  table.heat td{padding:6px 6px;height:30px;border-bottom:none;border-radius:4px;vertical-align:middle;}
   table.heat td.num-c{text-align:center;font-variant-numeric:tabular-nums;}
   table.heat td:first-child{font-family:'IBM Plex Sans',sans-serif;font-weight:500;font-size:12.5px;
     color:var(--slate);text-align:left;padding-left:0;}
+  table.heat tr.novel td{box-shadow:inset 0 0 0 1px rgba(138,21,56,.12);}
+  table.heat tr.novel td:first-child{background:rgba(138,21,56,.08);padding-left:6px;}
 
   /* stat cards */
   .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;}
@@ -201,11 +203,19 @@
     font-size:13px;
     line-height:1.24;
     color:var(--ink);
+    padding:3px 8px;
+    border-left:3px solid transparent;
+    border-radius:6px;
   }
   .benchmark-role b{
     color:var(--claret-deep);
     font-weight:700;
   }
+  .benchmark-role.metric-eats{background:rgba(15,113,115,.08);border-left-color:var(--teal);}
+  .benchmark-role.metric-eats b{color:var(--teal);}
+  .benchmark-role.metric-acc{background:rgba(138,21,56,.07);border-left-color:var(--claret);}
+  .benchmark-role.metric-novel{background:rgba(176,127,46,.10);border-left-color:var(--gold);}
+  .benchmark-role.metric-novel b{color:#8A5E1A;}
   .benchmark-note{
     margin-top:5px;
     font-size:12.5px;
@@ -399,9 +409,9 @@
           </div>
           <div class="benchmark-chart">${miniChart(panel)}</div>
           <div class="benchmark-summary">
-            <div class="benchmark-role"><b>EATS</b> ${panel.eatsLeader.label} · ${panel.eatsLeader.eats.toFixed(3)}</div>
-            <div class="benchmark-role"><b>ACC</b> ${panel.accuracyLeader.label} · ${panel.accuracyLeader.accuracy.toFixed(1)}%</div>
-            <div class="benchmark-role"><b>NOVEL</b> ${panel.novelLeader.label} · ${panel.novelLeader.accuracy.toFixed(1)}% / ${panel.novelLeader.eats.toFixed(3)}</div>
+            <div class="benchmark-role metric-eats"><b>EATS winner</b> ${panel.eatsLeader.label}</div>
+            <div class="benchmark-role metric-acc"><b>ACC leader</b> ${panel.accuracyLeader.label} · ${panel.accuracyLeader.accuracy.toFixed(1)}%</div>
+            <div class="benchmark-role metric-novel"><b>NOVEL best</b> ${panel.novelLeader.label} · ${panel.novelLeader.accuracy.toFixed(1)}%</div>
             ${panel.insight ? `<p class="benchmark-note">${panel.insight}</p>` : ''}
           </div>
         </div>
@@ -428,7 +438,7 @@
     m.benchmarks.forEach(b => { h += `<th class="num-c">${b}</th>`; });
     h += '</tr></thead><tbody>';
     m.rows.forEach(r => {
-      h += `<tr><td>${r.arch}${r.novel ? ' <span class="dag">†</span>' : ''}</td>`;
+      h += `<tr class="${r.novel ? 'novel' : ''}"><td>${r.arch}${r.novel ? ' <span class="dag">†</span>' : ''}</td>`;
       r.eats.forEach((v, c) => {
         const win = v === colMax[c];
         h += `<td class="num-c" style="${shade(v)}${win ? ';font-weight:700' : ''}">${v.toFixed(2)}</td>`;
