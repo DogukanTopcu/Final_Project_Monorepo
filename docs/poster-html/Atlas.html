@@ -318,6 +318,16 @@
     color:var(--claret-deep);margin-bottom:3px;}
   .refs p{font-size:11.5px;line-height:1.26;color:var(--mut);margin:0;text-align:left;}
   .refs p b{color:var(--slate);font-weight:600;}
+  .refs .ack{
+    margin-top:5px;
+    padding-top:4px;
+    border-top:1px solid var(--line);
+    font-size:11.5px;
+    line-height:1.3;
+    color:var(--ink);
+    text-align:left;
+  }
+  .refs .ack b{color:var(--claret-deep);}
   .qr{text-align:center;}
   .qr a{display:block;color:inherit;text-decoration:none;}
   .qr .code{width:80px;height:80px;margin:0 auto;display:block;border:3px solid #fff;outline:1px solid var(--line);}
@@ -386,6 +396,7 @@
       <div class="refs">
         <h5>Selected references</h5>
         <p>[1] Hao et&nbsp;al. <b>Hybrid SLM–LLM Inference</b>, 2024 · [2] Oh&nbsp;&amp;&nbsp;Kim, <b>Uncertainty-Aware Hybrid Inference</b>, 2025 · [3] Shao et&nbsp;al. <b>Division-of-Thoughts</b>, 2025 · [4] Kwon et&nbsp;al. <b>vLLM: PagedAttention</b>, SOSP 2023 · [5] Companion SLR (54 studies, PRISMA 2020) · [6] MMLU, ARC, GSM8K, HellaSwag, TruthfulQA.</p>
+        <p class="ack"><b>Acknowledgement.</b> We thank <b>HubX</b> for supporting this study with access to the virtual machine infrastructure used in our experiments.</p>
       </div>
       <div class="qr">
         <a href="https://github.com/DogukanTopcu/Final_Project_Monorepo" target="_blank" rel="noopener noreferrer">
@@ -479,16 +490,30 @@
           point.label === panel.accuracyLeader.label ? 'A' : '',
           point.label === panel.novelLeader.label ? 'N' : ''
         ].join('');
-        const pillW = 8 + shortLabel.length * 7;
-        const pillH = 13;
-        let lx = x + 7;
-        let ly = y - 18;
+        const pillW = 14 + shortLabel.length * 9;
+        const pillH = 18;
+        const isE = point.label === panel.eatsLeader.label;
+        const isA = point.label === panel.accuracyLeader.label;
+        const isN = point.label === panel.novelLeader.label;
+        let lx = x + 10;
+        let ly = y - 24;
+        if (isE) {
+          lx = x - pillW - 12;
+          ly = y - 26;
+        } else if (isA) {
+          lx = x + 10;
+          ly = y - 30;
+        } else if (isN) {
+          lx = x + 10;
+          ly = y + 12;
+        }
         if (lx + pillW > W - padR) lx = x - pillW - 7;
         if (lx < padL + 2) lx = padL + 2;
-        if (ly < padT + 1) ly = y + 7;
+        if (ly < padT + 1) ly = y + 12;
         if (ly + pillH > padT + ch - 1) ly = padT + ch - pillH - 1;
+        svg += `<line x1="${x}" y1="${y}" x2="${lx + pillW / 2}" y2="${ly + pillH / 2}" stroke="rgba(43,45,66,0.35)" stroke-width="1.2"/>`;
         svg += `<rect x="${lx}" y="${ly}" width="${pillW}" height="${pillH}" rx="4" fill="rgba(255,255,255,0.92)" stroke="#D8D0C6" stroke-width="0.8"/>`;
-        svg += `<text x="${lx + pillW / 2}" y="${ly + 9.5}" font-size="9.8" font-weight="700" text-anchor="middle" fill="#2B2D42">${shortLabel}</text>`;
+        svg += `<text x="${lx + pillW / 2}" y="${ly + 13}" font-size="12.5" font-weight="700" text-anchor="middle" fill="#2B2D42">${shortLabel}</text>`;
       });
       svg += `<line x1="${padL}" y1="${padT + ch}" x2="${W - padR}" y2="${padT + ch}" stroke="#2B2D42" stroke-width="1.2"/>`;
       svg += `<line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + ch}" stroke="#2B2D42" stroke-width="1.2"/>`;
