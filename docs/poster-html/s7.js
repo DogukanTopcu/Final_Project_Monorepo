@@ -19,38 +19,27 @@ window.S7 = `
   </table>
   <div class="archmini">
     <div class="archcard">
-      <h4>Routing</h4>
-      <svg viewBox="0 0 220 120" width="100%">
-        <rect x="6" y="46" width="58" height="30" rx="6" fill="#EDE8E1" stroke="#8A1538" stroke-width="2"/>
-        <text x="35" y="65" font-size="13" font-family="IBM Plex Mono" text-anchor="middle" fill="#2B2D42">SLM</text>
-        <path d="M64 61H110" stroke="#2B2D42" stroke-width="2" fill="none" marker-end="url(#aR)"/>
-        <circle cx="118" cy="61" r="13" fill="#0F7173"/>
-        <text x="118" y="65" font-size="11" font-family="IBM Plex Mono" text-anchor="middle" fill="#fff">τ?</text>
-        <path d="M131 61H180" stroke="#B07F2E" stroke-width="2" stroke-dasharray="4 3" fill="none" marker-end="url(#aR)"/>
-        <rect x="180" y="46" width="34" height="30" rx="6" fill="#8A1538"/>
-        <text x="197" y="65" font-size="12" font-family="IBM Plex Mono" text-anchor="middle" fill="#fff">LLM</text>
-        <text x="118" y="36" font-size="11" font-family="IBM Plex Mono" text-anchor="middle" fill="#6A6C7E">confident → answer</text>
-        <text x="155" y="96" font-size="11" font-family="IBM Plex Mono" text-anchor="middle" fill="#B07F2E">escalate</text>
-        <defs><marker id="aR" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0 0L8 4.5L0 9z" fill="#2B2D42"/></marker></defs>
-      </svg>
+      <h4>Active Oracle</h4>
+      <img src="../term_report/sources/active_oracle_simplified.png" alt="Active Oracle flowchart">
+    </div>
+    <div class="archcard">
+      <h4>Pure Swarm</h4>
+      <img src="../term_report/sources/blackboard_slms_simplified.png" alt="Pure Swarm flowchart">
+    </div>
+  </div>
+</section>
+`;
+
+window.S7B = `
+<section class="block">
+  <div class="archmini">
+    <div class="archcard">
+      <h4>Entropy Blackboard</h4>
+      <img src="../term_report/sources/blackboard_entropy_based_simplified.png" alt="Entropy Blackboard flowchart">
     </div>
     <div class="archcard">
       <h4>Blackboard</h4>
-      <svg viewBox="0 0 220 120" width="100%">
-        <rect x="60" y="8" width="100" height="26" rx="6" fill="#2B2D42"/>
-        <text x="110" y="25" font-size="12" font-family="IBM Plex Mono" text-anchor="middle" fill="#fff">shared board</text>
-        <g stroke="#0F7173" stroke-width="2" fill="none">
-          <path d="M40 80V46H95V38" marker-end="url(#aB)"/>
-          <path d="M110 80V40" marker-end="url(#aB)"/>
-          <path d="M180 80V46H125V38" marker-end="url(#aB)"/>
-        </g>
-        <g font-size="12" font-family="IBM Plex Mono" text-anchor="middle">
-          <rect x="18" y="80" width="44" height="26" rx="6" fill="#EDE8E1" stroke="#0F7173" stroke-width="2"/><text x="40" y="97" fill="#2B2D42">SLM</text>
-          <rect x="88" y="80" width="44" height="26" rx="6" fill="#EDE8E1" stroke="#0F7173" stroke-width="2"/><text x="110" y="97" fill="#2B2D42">SLM</text>
-          <rect x="158" y="80" width="44" height="26" rx="6" fill="#EDE8E1" stroke="#0F7173" stroke-width="2"/><text x="180" y="97" fill="#2B2D42">SLM</text>
-        </g>
-        <defs><marker id="aB" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0 0L8 4.5L0 9z" fill="#0F7173"/></marker></defs>
-      </svg>
+      <img src="../term_report/sources/blackboard_simplified.png" alt="Blackboard flowchart">
     </div>
   </div>
 </section>

@@ -240,21 +240,22 @@
   .reading-note strong{color:var(--claret-deep);}
 
   /* mini arch sketches */
-  .archmini{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px;}
-  .archcard{border:1px solid var(--line);border-radius:10px;padding:11px;background:#fff;}
-  .archcard h4{font-family:'IBM Plex Mono',monospace;font-size:14px;text-transform:uppercase;letter-spacing:.05em;
-    color:var(--claret-deep);margin-bottom:10px;}
+  .archmini{display:grid;grid-template-columns:1fr;gap:10px;margin-top:8px;}
+  .archcard{border:1px solid var(--line);border-radius:10px;padding:8px 10px 10px;background:#fff;}
+  .archcard h4{font-family:'IBM Plex Mono',monospace;font-size:12px;text-transform:uppercase;letter-spacing:.05em;
+    color:var(--claret-deep);margin-bottom:6px;}
+  .archcard img{display:block;width:100%;height:auto;}
 
   /* footer / refs + qr */
-  .foot{background:var(--paper-2);border-top:3px solid var(--claret);padding:10px 60px 8px;
-    display:grid;grid-template-columns:1fr 184px;gap:22px;align-items:center;}
+  .foot{background:var(--paper-2);border-top:3px solid var(--claret);padding:8px 60px 6px;
+    display:grid;grid-template-columns:1fr 164px;gap:16px;align-items:center;}
   .refs h5{font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.08em;text-transform:uppercase;
-    color:var(--claret-deep);margin-bottom:6px;}
-  .refs p{font-size:12.5px;line-height:1.32;color:var(--mut);margin:0;}
+    color:var(--claret-deep);margin-bottom:4px;}
+  .refs p{font-size:11.5px;line-height:1.22;color:var(--mut);margin:0;}
   .refs p b{color:var(--slate);font-weight:600;}
   .qr{text-align:center;}
-  .qr .code{width:112px;height:112px;margin:0 auto;display:block;border:5px solid #fff;outline:1px solid var(--line);}
-  .qr .lbl{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--mut);margin-top:4px;line-height:1.25;}
+  .qr .code{width:96px;height:96px;margin:0 auto;display:block;border:4px solid #fff;outline:1px solid var(--line);}
+  .qr .lbl{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--mut);margin-top:3px;line-height:1.18;}
   /* ---------- Abstract band ---------- */
   .abstract-band{
     background:var(--paper);border-top:3px solid var(--gold);border-bottom:1px solid var(--line);
@@ -307,6 +308,7 @@
 
       <!-- ============ COLUMN 3 ============ -->
       <div class="col">
+        <div id="s7b"></div>
         <div id="s8"></div>
         <div id="s9"></div>
         <div id="s10"></div>
@@ -321,7 +323,7 @@
       </div>
       <div class="qr">
         <canvas class="code" id="qrAtlas" width="150" height="150"></canvas>
-        <div class="lbl">Code &amp; experiments<br>github.com/DogukanTopcu</div>
+        <div class="lbl">Code &amp; experiments</div>
       </div>
     </footer>
 
@@ -344,6 +346,8 @@
     var el = document.getElementById('s' + i);
     if (el) el.innerHTML = window['S' + i] || '';
   }
+  var s7b = document.getElementById('s7b');
+  if (s7b) s7b.innerHTML = window.S7B || '';
 
   /* ---- scale poster to fit viewport ---- */
   function fit(){
