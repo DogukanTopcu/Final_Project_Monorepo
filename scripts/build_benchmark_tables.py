@@ -10,6 +10,14 @@ import os
 from datetime import datetime, timezone
 from collections import defaultdict
 
+from evaluation.metrics import (
+    EATS_QUALITY_DEFICIT_SCALE,
+    EATS_PENALTY_SCALE,
+    EATS_W_COST,
+    EATS_W_ENERGY,
+    EATS_W_LATENCY,
+)
+
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "..", "results")
 OUTPUT_DIR = os.path.join(RESULTS_DIR, "benchmark_tables")
 CUTOFF = datetime.fromisoformat("2026-05-27T23:59:59+00:00")
@@ -176,17 +184,20 @@ def compute_eats(
     normalized_cost: float = 1.0,
     normalized_latency: float = 1.0,
     normalized_energy: float = 1.0,
-    w_cost: float = 0.5,
-    w_latency: float = 0.3,
-    w_energy: float = 0.2,
+    w_cost: float = EATS_W_COST,
+    w_latency: float = EATS_W_LATENCY,
+    w_energy: float = EATS_W_ENERGY,
+    penalty_scale: float = EATS_PENALTY_SCALE,
+    quality_deficit_scale: float = EATS_QUALITY_DEFICIT_SCALE,
 ) -> float:
-    acc = max(accuracy, 0.0)
+    acc = min(max(accuracy, 0.0), 1.0)
     penalty = (
         w_cost * max(normalized_cost, 0.0)
         + w_latency * max(normalized_latency, 0.0)
         + w_energy * max(normalized_energy, 0.0)
     )
-    denom = acc + penalty
+    quality_penalty = quality_deficit_scale * (1.0 - acc)
+    denom = acc + penalty_scale * penalty + quality_penalty
     return round(acc / denom, 6) if denom > 0 else 0.0
 
 

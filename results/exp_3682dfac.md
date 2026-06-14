@@ -1,5 +1,5 @@
 # Experiment Report — exp_3682dfac
-**Date:** 2026-06-10T22:25:56.053874+00:00  
+**Date:** 2026-06-10T22:25:56.058639+00:00  
 
 ## Configuration
 | Parameter | Value |
@@ -61,21 +61,9 @@
 | Normalized energy (vs baseline) | 0.1858 |
 
 ## EATS Score
-**EATS = 0.6692**  
-Normalized efficiency penalty: 0.4449  
+**EATS = 0.8135**  
+Normalized efficiency penalty: 0.3659  
+Accuracy deficit penalty: 0.0600  
 
-> EATS = accuracy / (accuracy + efficiency penalty).  
-> Efficiency penalty = 0.5 × normalized cost + 0.3 × normalized latency + 0.2 × normalized energy.
-
-## Accuracy by Subject
-| Subject | Accuracy | N |
-|---|---|---|
-| business_ethics | 100.00% | 1 |
-| conceptual_physics | 100.00% | 1 |
-| econometrics | 100.00% | 1 |
-| elementary_mathematics | 100.00% | 1 |
-| high_school_government_and_politics | 100.00% | 1 |
-| high_school_macroeconomics | 100.00% | 1 |
-| high_school_microeconomics | 100.00% | 1 |
-| professional_accounting | 100.00% | 1 |
-| professional_law | 50.00% | 2 |
+> EATS = accuracy / (accuracy + 0.40 × efficiency penalty + 0.60 × (1 - accuracy)).  
+> Efficiency penalty = 0.65 × normalized cost + 0.20 × normalized latency + 0.15 × normalized energy.

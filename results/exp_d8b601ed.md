@@ -29,13 +29,12 @@
 | Metric | Value |
 |--------|-------|
 | Throughput (output tok/s) | 260.4 |
-| Wall-clock avg (ms) | 19139.4 |
-| Algorithmic avg (ms) | 23339.0 |
-| Wall-clock p50 (ms) | 18131.5 |
-| Wall-clock p95 (ms) | 33340.6 |
+| Model avg (ms) | 19139.4 |
+| Summed model avg (ms) | 23339.0 |
+| Model p50 (ms) | 18131.5 |
+| Model p95 (ms) | 33340.6 |
 
-> **Wall-clock**: observed end-to-end time including network and queue.  
-> **Algorithmic**: intrinsic inference + orchestration time summed across steps.
+> Latency metrics use model-reported inference time when available and fall back to observed timing otherwise.
 
 ## Cost
 | Metric | Value |
@@ -62,11 +61,12 @@
 | Normalized energy (vs baseline) | 1.0000 |
 
 ## EATS Score
-**EATS = 0.3333**  
+**EATS = 0.4167**  
 Normalized efficiency penalty: 1.0000  
+Accuracy deficit penalty: 0.3000  
 
-> EATS = accuracy² / (accuracy² + cost^0.5 × latency^0.3 × energy^0.2).  
-> Range [0, 1]; higher is better. Penalties are relative to the monolithic LLM baseline.
+> EATS = accuracy / (accuracy + 0.40 × efficiency penalty + 0.60 × (1 - accuracy)).  
+> Efficiency penalty = 0.65 × normalized cost + 0.20 × normalized latency + 0.15 × normalized energy.
 
 ## Ensemble Breakdown
 | Path | Accuracy | N queries |
@@ -74,16 +74,3 @@ Normalized efficiency penalty: 1.0000
 | Majority vote (no tiebreak) | 50.00% | 10 |
 | LLM tiebreak | 0.00% | 0 |
 | Tiebreak rate | 0.00% | — |
-
-## Accuracy by Subject
-| Subject | Accuracy | N |
-|---|---|---|
-| business_ethics | 0.00% | 1 |
-| conceptual_physics | 100.00% | 1 |
-| econometrics | 100.00% | 1 |
-| elementary_mathematics | 0.00% | 1 |
-| high_school_government_and_politics | 100.00% | 1 |
-| high_school_macroeconomics | 100.00% | 1 |
-| high_school_microeconomics | 100.00% | 1 |
-| professional_accounting | 0.00% | 1 |
-| professional_law | 0.00% | 2 |

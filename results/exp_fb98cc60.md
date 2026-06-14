@@ -1,5 +1,5 @@
 # Experiment Report — exp_fb98cc60
-**Date:** 2026-06-04T10:14:47.130564+00:00  
+**Date:** 2026-06-04T10:14:47.168871+00:00  
 
 ## Configuration
 | Parameter | Value |
@@ -29,13 +29,12 @@
 | Metric | Value |
 |--------|-------|
 | Throughput (output tok/s) | 3819.7 |
-| Wall-clock avg (ms) | 15608.9 |
-| Algorithmic avg (ms) | 30680.0 |
-| Wall-clock p50 (ms) | 12073.9 |
-| Wall-clock p95 (ms) | 44951.8 |
+| Model avg (ms) | 15608.9 |
+| Summed model avg (ms) | 30680.0 |
+| Model p50 (ms) | 12073.9 |
+| Model p95 (ms) | 44951.8 |
 
-> **Wall-clock**: observed end-to-end time including network and queue.  
-> **Algorithmic**: intrinsic inference + orchestration time summed across steps.
+> Latency metrics use model-reported inference time when available and fall back to observed timing otherwise.
 
 ## Cost
 | Metric | Value |
@@ -62,11 +61,12 @@
 | Normalized energy (vs baseline) | 1.0000 |
 
 ## EATS Score
-**EATS = 0.3902**  
+**EATS = 0.5096**  
 Normalized efficiency penalty: 1.0000  
+Accuracy deficit penalty: 0.2160  
 
-> EATS = accuracy² / (accuracy² + cost^0.5 × latency^0.3 × energy^0.2).  
-> Range [0, 1]; higher is better. Penalties are relative to the monolithic LLM baseline.
+> EATS = accuracy / (accuracy + 0.40 × efficiency penalty + 0.60 × (1 - accuracy)).  
+> Efficiency penalty = 0.65 × normalized cost + 0.20 × normalized latency + 0.15 × normalized energy.
 
 ## Ensemble Breakdown
 | Path | Accuracy | N queries |

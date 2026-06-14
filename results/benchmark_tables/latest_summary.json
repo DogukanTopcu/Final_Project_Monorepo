@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-13T23:36:06.921627+00:00",
+  "generated_at": "2026-06-14T11:32:38.544858+00:00",
   "selection_rule": "latest run per benchmark x architecture with n_total >= 100",
   "scoring_rule": "canonical runner/web EATS from experiment metrics",
   "min_total_samples_required": 100,
@@ -7,167 +7,31 @@
     "mmlu": {
       "benchmark_display_name": "MMLU",
       "n_architectures": 9,
-      "output": "/home/berkhan/Desktop/okul ya/D\u00f6nem 8/tez/Final_Project_Monorepo/results/benchmark_tables/latest_benchmark_mmlu.json"
+      "output": "/Users/dogukantopcu/Desktop/Final Project/Final_Project_Monorepo/results/benchmark_tables/latest_benchmark_mmlu.json"
     },
     "arc": {
       "benchmark_display_name": "ARC",
       "n_architectures": 9,
-      "output": "/home/berkhan/Desktop/okul ya/D\u00f6nem 8/tez/Final_Project_Monorepo/results/benchmark_tables/latest_benchmark_arc.json"
+      "output": "/Users/dogukantopcu/Desktop/Final Project/Final_Project_Monorepo/results/benchmark_tables/latest_benchmark_arc.json"
     },
     "gsm8k": {
       "benchmark_display_name": "GSM8K",
       "n_architectures": 9,
-      "output": "/home/berkhan/Desktop/okul ya/D\u00f6nem 8/tez/Final_Project_Monorepo/results/benchmark_tables/latest_benchmark_gsm8k.json"
+      "output": "/Users/dogukantopcu/Desktop/Final Project/Final_Project_Monorepo/results/benchmark_tables/latest_benchmark_gsm8k.json"
     },
     "hellaswag": {
       "benchmark_display_name": "HellaSwag",
       "n_architectures": 9,
-      "output": "/home/berkhan/Desktop/okul ya/D\u00f6nem 8/tez/Final_Project_Monorepo/results/benchmark_tables/latest_benchmark_hellaswag.json"
+      "output": "/Users/dogukantopcu/Desktop/Final Project/Final_Project_Monorepo/results/benchmark_tables/latest_benchmark_hellaswag.json"
     },
     "truthfulqa": {
       "benchmark_display_name": "TruthfulQA",
       "n_architectures": 9,
-      "output": "/home/berkhan/Desktop/okul ya/D\u00f6nem 8/tez/Final_Project_Monorepo/results/benchmark_tables/latest_benchmark_truthfulqa.json"
+      "output": "/Users/dogukantopcu/Desktop/Final Project/Final_Project_Monorepo/results/benchmark_tables/latest_benchmark_truthfulqa.json"
     }
   },
   "n_skipped_below_min_samples": 23,
   "skipped_below_min_samples_preview": [
-    {
-      "experiment_id": "exp_6d35e6d9",
-      "benchmark": "mmlu",
-      "architecture": "routing",
-      "created_at": "2026-06-04T23:20:46.413446+00:00",
-      "n_total": 20.0,
-      "reason": "n_total < 100"
-    },
-    {
-      "experiment_id": "exp_7c300c59",
-      "benchmark": "arc",
-      "architecture": "monolithic",
-      "created_at": "2026-05-28T17:58:02.943463+00:00",
-      "n_total": 10.0,
-      "reason": "n_total < 100"
-    },
-    {
-      "experiment_id": "exp_3682dfac",
-      "benchmark": "mmlu",
-      "architecture": "pure_swarm",
-      "created_at": "2026-06-10T22:19:25.980694+00:00",
-      "n_total": 10.0,
-      "reason": "n_total < 100"
-    },
-    {
-      "experiment_id": "exp_8e6d351b",
-      "benchmark": "mmlu",
-      "architecture": "pure_swarm",
-      "created_at": "2026-06-12T18:44:05.887893+00:00",
-      "n_total": 50.0,
-      "reason": "n_total < 100"
-    },
-    {
-      "experiment_id": "exp_94251988",
-      "benchmark": "mmlu",
-      "architecture": "speculative",
-      "created_at": "2026-06-04T22:49:17.430932+00:00",
-      "n_total": 20.0,
-      "reason": "n_total < 100"
-    },
-    {
-      "experiment_id": "exp_cb8c7193",
-      "benchmark": "mmlu",
-      "architecture": "blackboard",
-      "created_at": "2026-06-08T18:27:45.421296+00:00",
-      "n_total": 20.0,
-      "reason": "n_total < 100"
-    },
-    {
-      "experiment_id": "exp_e1e8d014",
-      "benchmark": "mmlu",
-      "architecture": "blackboard",
-      "created_at": "2026-06-07T21:23:47.820162+00:00",
-      "n_total": 10.0,
-      "reason": "n_total < 100"
-    },
-    {
-      "experiment_id": "exp_c6a6a943",
-      "benchmark": "gsm8k",
-      "architecture": "monolithic",
-      "created_at": "2026-05-28T20:46:52.172705+00:00",
-      "n_total": 10.0,
-      "reason": "n_total < 100"
-    },
-    {
-      "experiment_id": "exp_3d15e23b",
-      "benchmark": "mmlu",
-      "architecture": "pure_swarm",
-      "created_at": "2026-06-04T13:09:38.206417+00:00",
-      "n_total": 10.0,
-      "reason": "n_total < 100"
-    },
-    {
-      "experiment_id": "exp_37fef351",
-      "benchmark": "hellaswag",
-      "architecture": "monolithic",
-      "created_at": "2026-05-28T19:30:10.710570+00:00",
-      "n_total": 10.0,
-      "reason": "n_total < 100"
-    },
-    {
-      "experiment_id": "exp_0bd43cb7",
-      "benchmark": "mmlu",
-      "architecture": "blackboard",
-      "created_at": "2026-06-08T17:35:01.182611+00:00",
-      "n_total": 20.0,
-      "reason": "n_total < 100"
-    },
-    {
-      "experiment_id": "exp_3a953bad",
-      "benchmark": "mmlu",
-      "architecture": "monolithic",
-      "created_at": "2026-05-28T14:01:37.198834+00:00",
-      "n_total": 10.0,
-      "reason": "n_total < 100"
-    },
-    {
-      "experiment_id": "exp_157c6ea7",
-      "benchmark": "mmlu",
-      "architecture": "pure_swarm",
-      "created_at": "2026-06-12T18:01:35.053182+00:00",
-      "n_total": 50.0,
-      "reason": "n_total < 100"
-    },
-    {
-      "experiment_id": "exp_9ac8149f",
-      "benchmark": "mmlu",
-      "architecture": "blackboard",
-      "created_at": "2026-06-08T18:35:32.542048+00:00",
-      "n_total": 20.0,
-      "reason": "n_total < 100"
-    },
-    {
-      "experiment_id": "exp_a89e96f9",
-      "benchmark": "truthfulqa",
-      "architecture": "monolithic",
-      "created_at": "2026-05-28T22:44:20.161997+00:00",
-      "n_total": 10.0,
-      "reason": "n_total < 100"
-    },
-    {
-      "experiment_id": "exp_f73a0c0a",
-      "benchmark": "mmlu",
-      "architecture": "monolithic",
-      "created_at": "2026-05-29T15:49:23.078676+00:00",
-      "n_total": 10.0,
-      "reason": "n_total < 100"
-    },
-    {
-      "experiment_id": "exp_6040fcf0",
-      "benchmark": "mmlu",
-      "architecture": "blackboard",
-      "created_at": "2026-06-08T17:41:12.336937+00:00",
-      "n_total": 20.0,
-      "reason": "n_total < 100"
-    },
     {
       "experiment_id": "exp_f7dd168e",
       "benchmark": "mmlu",
@@ -185,11 +49,147 @@
       "reason": "n_total < 100"
     },
     {
+      "experiment_id": "exp_8e6d351b",
+      "benchmark": "mmlu",
+      "architecture": "pure_swarm",
+      "created_at": "2026-06-12T18:44:05.887893+00:00",
+      "n_total": 50.0,
+      "reason": "n_total < 100"
+    },
+    {
+      "experiment_id": "exp_3a953bad",
+      "benchmark": "mmlu",
+      "architecture": "monolithic",
+      "created_at": "2026-05-28T14:01:37.198834+00:00",
+      "n_total": 10.0,
+      "reason": "n_total < 100"
+    },
+    {
+      "experiment_id": "exp_3682dfac",
+      "benchmark": "mmlu",
+      "architecture": "pure_swarm",
+      "created_at": "2026-06-10T22:19:25.980694+00:00",
+      "n_total": 10.0,
+      "reason": "n_total < 100"
+    },
+    {
+      "experiment_id": "exp_37fef351",
+      "benchmark": "hellaswag",
+      "architecture": "monolithic",
+      "created_at": "2026-05-28T19:30:10.710570+00:00",
+      "n_total": 10.0,
+      "reason": "n_total < 100"
+    },
+    {
+      "experiment_id": "exp_e1e8d014",
+      "benchmark": "mmlu",
+      "architecture": "blackboard",
+      "created_at": "2026-06-07T21:23:47.820162+00:00",
+      "n_total": 10.0,
+      "reason": "n_total < 100"
+    },
+    {
+      "experiment_id": "exp_94251988",
+      "benchmark": "mmlu",
+      "architecture": "speculative",
+      "created_at": "2026-06-04T22:49:17.430932+00:00",
+      "n_total": 20.0,
+      "reason": "n_total < 100"
+    },
+    {
       "experiment_id": "exp_5c0dacaf",
       "benchmark": "mmlu",
       "architecture": "pure_swarm",
       "created_at": "2026-06-12T19:17:46.676682+00:00",
       "n_total": 50.0,
+      "reason": "n_total < 100"
+    },
+    {
+      "experiment_id": "exp_6040fcf0",
+      "benchmark": "mmlu",
+      "architecture": "blackboard",
+      "created_at": "2026-06-08T17:41:12.336937+00:00",
+      "n_total": 20.0,
+      "reason": "n_total < 100"
+    },
+    {
+      "experiment_id": "exp_f73a0c0a",
+      "benchmark": "mmlu",
+      "architecture": "monolithic",
+      "created_at": "2026-05-29T15:49:23.078676+00:00",
+      "n_total": 10.0,
+      "reason": "n_total < 100"
+    },
+    {
+      "experiment_id": "exp_7c300c59",
+      "benchmark": "arc",
+      "architecture": "monolithic",
+      "created_at": "2026-05-28T17:58:02.943463+00:00",
+      "n_total": 10.0,
+      "reason": "n_total < 100"
+    },
+    {
+      "experiment_id": "exp_157c6ea7",
+      "benchmark": "mmlu",
+      "architecture": "pure_swarm",
+      "created_at": "2026-06-12T18:01:35.053182+00:00",
+      "n_total": 50.0,
+      "reason": "n_total < 100"
+    },
+    {
+      "experiment_id": "exp_c6a6a943",
+      "benchmark": "gsm8k",
+      "architecture": "monolithic",
+      "created_at": "2026-05-28T20:46:52.172705+00:00",
+      "n_total": 10.0,
+      "reason": "n_total < 100"
+    },
+    {
+      "experiment_id": "exp_8a1076b5",
+      "benchmark": "mmlu",
+      "architecture": "monolithic",
+      "created_at": "2026-05-29T11:55:43.324939+00:00",
+      "n_total": 10.0,
+      "reason": "n_total < 100"
+    },
+    {
+      "experiment_id": "exp_cb8c7193",
+      "benchmark": "mmlu",
+      "architecture": "blackboard",
+      "created_at": "2026-06-08T18:27:45.421296+00:00",
+      "n_total": 20.0,
+      "reason": "n_total < 100"
+    },
+    {
+      "experiment_id": "exp_9ac8149f",
+      "benchmark": "mmlu",
+      "architecture": "blackboard",
+      "created_at": "2026-06-08T18:35:32.542048+00:00",
+      "n_total": 20.0,
+      "reason": "n_total < 100"
+    },
+    {
+      "experiment_id": "exp_0bd43cb7",
+      "benchmark": "mmlu",
+      "architecture": "blackboard",
+      "created_at": "2026-06-08T17:35:01.182611+00:00",
+      "n_total": 20.0,
+      "reason": "n_total < 100"
+    },
+    {
+      "experiment_id": "exp_2f4b3002",
+      "benchmark": "mmlu",
+      "architecture": "ensemble",
+      "created_at": "2026-06-03T21:26:45.855049+00:00",
+      "n_total": 10.0,
+      "reason": "n_total < 100"
+    },
+    {
+      "experiment_id": "exp_3d15e23b",
+      "benchmark": "mmlu",
+      "architecture": "pure_swarm",
+      "created_at": "2026-06-04T13:09:38.206417+00:00",
+      "n_total": 10.0,
       "reason": "n_total < 100"
     }
   ]

@@ -1,5 +1,5 @@
 # Experiment Report — exp_0fcbc737
-**Date:** 2026-06-05T18:54:34.430853+00:00  
+**Date:** 2026-06-05T18:54:34.451770+00:00  
 
 ## Configuration
 | Parameter | Value |
@@ -61,11 +61,12 @@
 | Normalized energy (vs baseline) | 0.0827 |
 
 ## EATS Score
-**EATS = 0.8260**  
-Normalized efficiency penalty: 0.1916  
+**EATS = 0.8857**  
+Normalized efficiency penalty: 0.1587  
+Accuracy deficit penalty: 0.0540  
 
-> EATS = accuracy / (accuracy + efficiency penalty).  
-> Efficiency penalty = 0.5 × normalized cost + 0.3 × normalized latency + 0.2 × normalized energy.
+> EATS = accuracy / (accuracy + 0.40 × efficiency penalty + 0.60 × (1 - accuracy)).  
+> Efficiency penalty = 0.65 × normalized cost + 0.20 × normalized latency + 0.15 × normalized energy.
 
 ## Active Oracle Breakdown
 | Metric | Value |

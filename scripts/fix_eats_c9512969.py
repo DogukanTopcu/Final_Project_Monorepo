@@ -17,7 +17,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from core.types import ExperimentConfig, ExperimentResult
-from evaluation.metrics import compute_eats
+from evaluation.metrics import (
+    compute_accuracy_deficit_penalty,
+    compute_eats,
+    compute_efficiency_penalty,
+)
 from evaluation.reporter import Reporter
 
 RESULTS = Path(__file__).resolve().parent.parent / "results"
@@ -34,7 +38,11 @@ def main() -> None:
     nc = m.get("normalized_cost") if m.get("normalized_cost") is not None else 1.0
     nl = 1.0
     ne = 1.0
-    penalty = 0.5 * nc + 0.3 * nl + 0.2 * ne
+    penalty = compute_efficiency_penalty(
+        normalized_cost=nc,
+        normalized_algorithmic_latency=nl,
+        normalized_energy=ne,
+    )
     eats = compute_eats(
         accuracy=m["accuracy"],
         normalized_cost=nc,
@@ -46,11 +54,13 @@ def main() -> None:
     print(f"normalized_algorithmic_latency: {m.get('normalized_algorithmic_latency')} -> {nl}")
     print(f"normalized_energy: {m.get('normalized_energy')} -> {ne}")
     print(f"normalized_efficiency_penalty: {m.get('normalized_efficiency_penalty')} -> {penalty}")
+    print(f"accuracy_deficit_penalty: {m.get('accuracy_deficit_penalty')} -> {compute_accuracy_deficit_penalty(m['accuracy'])}")
 
     m["normalized_cost"] = nc
     m["normalized_algorithmic_latency"] = nl
     m["normalized_energy"] = ne
     m["normalized_efficiency_penalty"] = penalty
+    m["accuracy_deficit_penalty"] = compute_accuracy_deficit_penalty(m["accuracy"])
     m["eats_score"] = eats
 
     BACKUP.mkdir(parents=True, exist_ok=True)

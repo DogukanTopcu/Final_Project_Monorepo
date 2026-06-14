@@ -52,7 +52,7 @@
     "n_correct": 361.0,
     "accuracy_ci_low_95": 0.6811506232701695,
     "accuracy_ci_high_95": 0.7594640461021093,
-    "eats_score": 0.41927990708478513,
+    "eats_score": 0.5602110490378647,
     "normalized_cost": 1.0,
     "normalized_algorithmic_latency": 1.0,
     "normalized_energy": 1.0,
@@ -82,7 +82,8 @@
     "accuracy_llm_handled": 0.722,
     "accuracy_majority_vote": 0.0,
     "llm_tiebreak_rate": 1.0,
-    "oracle_query_rate": 0.0
+    "oracle_query_rate": 0.0,
+    "accuracy_deficit_penalty": 0.1668
   },
   "subject_accuracy": {},
   "samples": [

@@ -1,5 +1,5 @@
 # Experiment Report — exp_6d35e6d9
-**Date:** 2026-06-04T23:22:53.650073+00:00  
+**Date:** 2026-06-04T23:22:53.663947+00:00  
 
 ## Configuration
 | Parameter | Value |
@@ -61,11 +61,12 @@
 | Normalized energy (vs baseline) | 0.1046 |
 
 ## EATS Score
-**EATS = 0.8372**  
-Normalized efficiency penalty: 0.1555  
+**EATS = 0.8211**  
+Normalized efficiency penalty: 0.1357  
+Accuracy deficit penalty: 0.1200  
 
-> EATS = accuracy / (accuracy + efficiency penalty).  
-> Efficiency penalty = 0.5 × normalized cost + 0.3 × normalized latency + 0.2 × normalized energy.
+> EATS = accuracy / (accuracy + 0.40 × efficiency penalty + 0.60 × (1 - accuracy)).  
+> Efficiency penalty = 0.65 × normalized cost + 0.20 × normalized latency + 0.15 × normalized energy.
 
 ## Routing Breakdown
 | Path | Accuracy | N queries |
@@ -73,23 +74,3 @@ Normalized efficiency penalty: 0.1555
 | SLM-handled (no escalation) | 66.67% | 9 |
 | LLM-handled (escalated) | 90.91% | 11 |
 | Escalation rate | 55.00% | — |
-
-## Accuracy by Subject
-| Subject | Accuracy | N |
-|---|---|---|
-| business_ethics | 100.00% | 1 |
-| clinical_knowledge | 100.00% | 2 |
-| college_physics | 100.00% | 1 |
-| computer_security | 100.00% | 1 |
-| conceptual_physics | 100.00% | 1 |
-| econometrics | 100.00% | 1 |
-| elementary_mathematics | 100.00% | 1 |
-| high_school_geography | 0.00% | 1 |
-| high_school_government_and_politics | 100.00% | 1 |
-| high_school_macroeconomics | 100.00% | 1 |
-| high_school_microeconomics | 100.00% | 1 |
-| machine_learning | 100.00% | 1 |
-| moral_scenarios | 0.00% | 1 |
-| nutrition | 100.00% | 1 |
-| professional_accounting | 0.00% | 1 |
-| professional_law | 75.00% | 4 |

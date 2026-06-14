@@ -29,13 +29,12 @@
 | Metric | Value |
 |--------|-------|
 | Throughput (output tok/s) | 1999.2 |
-| Wall-clock avg (ms) | 7446.3 |
-| Algorithmic avg (ms) | 7446.3 |
-| Wall-clock p50 (ms) | 6128.2 |
-| Wall-clock p95 (ms) | 13632.5 |
+| Model avg (ms) | 7446.3 |
+| Summed model avg (ms) | 7446.3 |
+| Model p50 (ms) | 6128.2 |
+| Model p95 (ms) | 13632.5 |
 
-> **Wall-clock**: observed end-to-end time including network and queue.  
-> **Algorithmic**: intrinsic inference + orchestration time summed across steps.
+> Latency metrics use model-reported inference time when available and fall back to observed timing otherwise.
 
 ## Cost
 | Metric | Value |
@@ -62,8 +61,9 @@
 | Normalized energy (vs baseline) | 1.0000 |
 
 ## EATS Score
-**EATS = 0.4709**  
+**EATS = 0.6563**  
 Normalized efficiency penalty: 1.0000  
+Accuracy deficit penalty: 0.0660  
 
-> EATS = accuracy² / (accuracy² + cost^0.5 × latency^0.3 × energy^0.2).  
-> Range [0, 1]; higher is better. Penalties are relative to the monolithic LLM baseline.
+> EATS = accuracy / (accuracy + 0.40 × efficiency penalty + 0.60 × (1 - accuracy)).  
+> Efficiency penalty = 0.65 × normalized cost + 0.20 × normalized latency + 0.15 × normalized energy.

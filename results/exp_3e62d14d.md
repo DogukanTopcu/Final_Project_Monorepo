@@ -1,5 +1,5 @@
 # Experiment Report — exp_3e62d14d
-**Date:** 2026-06-09T20:10:08.507810+00:00  
+**Date:** 2026-06-09T20:10:17.027981+00:00  
 
 ## Configuration
 | Parameter | Value |
@@ -61,8 +61,9 @@
 | Normalized energy (vs baseline) | 0.2769 |
 
 ## EATS Score
-**EATS = 0.6191**  
-Normalized efficiency penalty: 0.5844  
+**EATS = 0.8082**  
+Normalized efficiency penalty: 0.4888  
+Accuracy deficit penalty: 0.0300  
 
-> EATS = accuracy / (accuracy + efficiency penalty).  
-> Efficiency penalty = 0.5 × normalized cost + 0.3 × normalized latency + 0.2 × normalized energy.
+> EATS = accuracy / (accuracy + 0.40 × efficiency penalty + 0.60 × (1 - accuracy)).  
+> Efficiency penalty = 0.65 × normalized cost + 0.20 × normalized latency + 0.15 × normalized energy.
