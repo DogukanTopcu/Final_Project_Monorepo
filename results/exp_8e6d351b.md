@@ -1,5 +1,5 @@
 # Experiment Report — exp_8e6d351b
-**Date:** 2026-06-12T19:02:58.747379+00:00  
+**Date:** 2026-06-12T19:02:58.757359+00:00  
 
 ## Configuration
 | Parameter | Value |
@@ -61,39 +61,9 @@
 | Normalized energy (vs baseline) | 0.2793 |
 
 ## EATS Score
-**EATS = 0.5184**  
-Normalized efficiency penalty: 0.6689  
+**EATS = 0.6498**  
+Normalized efficiency penalty: 0.5501  
+Accuracy deficit penalty: 0.1680  
 
-> EATS = accuracy / (accuracy + efficiency penalty).  
-> Efficiency penalty = 0.5 × normalized cost + 0.3 × normalized latency + 0.2 × normalized energy.
-
-## Accuracy by Subject
-| Subject | Accuracy | N |
-|---|---|---|
-| anatomy | 100.00% | 1 |
-| business_ethics | 100.00% | 2 |
-| clinical_knowledge | 50.00% | 2 |
-| college_physics | 100.00% | 1 |
-| computer_security | 100.00% | 2 |
-| conceptual_physics | 100.00% | 2 |
-| econometrics | 100.00% | 1 |
-| elementary_mathematics | 100.00% | 1 |
-| formal_logic | 0.00% | 1 |
-| global_facts | 0.00% | 1 |
-| high_school_computer_science | 100.00% | 1 |
-| high_school_geography | 33.33% | 3 |
-| high_school_government_and_politics | 100.00% | 2 |
-| high_school_macroeconomics | 100.00% | 1 |
-| high_school_microeconomics | 100.00% | 3 |
-| high_school_statistics | 50.00% | 2 |
-| machine_learning | 100.00% | 3 |
-| medical_genetics | 100.00% | 1 |
-| moral_disputes | 0.00% | 1 |
-| moral_scenarios | 33.33% | 3 |
-| nutrition | 100.00% | 2 |
-| philosophy | 0.00% | 1 |
-| professional_accounting | 100.00% | 1 |
-| professional_law | 75.00% | 8 |
-| professional_medicine | 100.00% | 1 |
-| professional_psychology | 0.00% | 1 |
-| security_studies | 50.00% | 2 |
+> EATS = accuracy / (accuracy + 0.40 × efficiency penalty + 0.60 × (1 - accuracy)).  
+> Efficiency penalty = 0.65 × normalized cost + 0.20 × normalized latency + 0.15 × normalized energy.

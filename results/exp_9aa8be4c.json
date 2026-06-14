@@ -49,7 +49,7 @@
     "total_co2_g": 116.00463482771468,
     "n_total": 500.0,
     "n_correct": 444.0,
-    "eats_score": 0.4703389830508475,
+    "eats_score": 0.6552538370720189,
     "normalized_cost": 1.0,
     "latency_p50_ms": 6887.048680997395,
     "latency_p95_ms": 8706.359837000491,
@@ -65,7 +65,8 @@
     "avg_co2_per_sample_g": 0.23200926965542937,
     "normalized_algorithmic_latency": 1.0,
     "normalized_energy": 1.0,
-    "normalized_efficiency_penalty": 1.0
+    "normalized_efficiency_penalty": 1.0,
+    "accuracy_deficit_penalty": 0.0672
   },
   "samples": [
     {

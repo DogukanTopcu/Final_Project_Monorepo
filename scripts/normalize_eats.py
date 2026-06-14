@@ -28,7 +28,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from core.types import ExperimentConfig, ExperimentResult
-from evaluation.metrics import compute_eats
+from evaluation.metrics import (
+    compute_accuracy_deficit_penalty,
+    compute_eats,
+    compute_efficiency_penalty,
+)
 from evaluation.reporter import Reporter
 
 RESULTS = Path(__file__).resolve().parent.parent / "results"
@@ -90,7 +94,12 @@ def apply_fix(rec: dict) -> None:
     m["normalized_cost"] = nc
     m["normalized_algorithmic_latency"] = nl
     m["normalized_energy"] = ne
-    m["normalized_efficiency_penalty"] = 0.5 * nc + 0.3 * nl + 0.2 * ne
+    m["normalized_efficiency_penalty"] = compute_efficiency_penalty(
+        normalized_cost=nc,
+        normalized_algorithmic_latency=nl,
+        normalized_energy=ne,
+    )
+    m["accuracy_deficit_penalty"] = compute_accuracy_deficit_penalty(rec["acc"])
     m["eats_score"] = rec["recomputed"]
 
     BACKUP.mkdir(parents=True, exist_ok=True)

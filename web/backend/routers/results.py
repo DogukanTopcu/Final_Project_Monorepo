@@ -189,14 +189,14 @@ async def get_result(result_id: str, settings: Settings = Depends(get_settings))
                         metrics["baseline_ece"] = baseline.get("ece")
                     
                     # Recompute normalized metrics and EATS score
-                    from evaluation.metrics import compute_eats, _normalize_metric
+                    from evaluation.metrics import compute_eats, compute_efficiency_penalty, _normalize_metric
                     metrics["normalized_cost"] = _normalize_metric(metrics.get("total_cost_usd", 0.0), metrics["baseline_cost_usd"])
                     metrics["normalized_algorithmic_latency"] = _normalize_metric(metrics.get("avg_algorithmic_latency_ms", 0.0), metrics["baseline_algorithmic_latency_ms"])
                     metrics["normalized_energy"] = _normalize_metric(metrics.get("total_energy_kwh", 0.0), metrics["baseline_energy_kwh"])
-                    metrics["normalized_efficiency_penalty"] = (
-                        0.5 * metrics["normalized_cost"] +
-                        0.3 * metrics["normalized_algorithmic_latency"] +
-                        0.2 * metrics["normalized_energy"]
+                    metrics["normalized_efficiency_penalty"] = compute_efficiency_penalty(
+                        normalized_cost=metrics["normalized_cost"],
+                        normalized_algorithmic_latency=metrics["normalized_algorithmic_latency"],
+                        normalized_energy=metrics["normalized_energy"],
                     )
                     metrics["eats_score"] = compute_eats(
                         accuracy=metrics.get("accuracy", 0.0),

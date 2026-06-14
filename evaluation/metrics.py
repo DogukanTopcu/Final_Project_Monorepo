@@ -8,11 +8,12 @@ Defined to fill the gap identified in SLR RQ2:
 
 Formula:
     efficiency_penalty = (
-        0.5 × normalized_cost +
-        0.3 × normalized_algorithmic_latency +
-        0.2 × normalized_energy
+        0.65 × normalized_cost +
+        0.20 × normalized_algorithmic_latency +
+        0.15 × normalized_energy
     )
-    EATS = accuracy / (accuracy + efficiency_penalty)
+    quality_penalty = 0.60 × (1 − accuracy)
+    EATS = accuracy / (accuracy + 0.40 × efficiency_penalty + quality_penalty)
 
 Where:
     - accuracy        : fraction of correct answers
@@ -22,16 +23,16 @@ Where:
                         avg_algorithmic_latency_ms / full_llm_avg_algorithmic_latency_ms
     - normalized_energy  : total_energy_kwh / total_energy_kwh_full_llm_baseline
 
-Weights (sum to 1): cost 50%, latency 30%, energy 20%.
+Weights (sum to 1): cost 65%, latency 20%, energy 15%.
 The additive form avoids multiplicative collapse when any single dimension
 is unmeasured (e.g. energy ≈ 0 for API-only architectures): those missing
 dimensions simply contribute zero to the penalty rather than zeroing out all
 other penalties.
 
-The form accuracy / (accuracy + penalty) is structurally analogous to the
-F-score precision-recall harmonic mean. When penalty = 0 (infinitely efficient)
-EATS → 1.0; when penalty = 1 (baseline LLM efficiency) EATS ≈ accuracy / 2
-for typical accuracy values. Score is bounded in [0, 1].
+The form accuracy / (accuracy + λ × penalty + β × error) is structurally
+analogous to an F-score-like trade-off, but with an explicit accuracy-deficit
+term so low-accuracy systems cannot score near 1.0 simply by being cheap.
+This revision uses λ = 0.40 and β = 0.60. Score is bounded in [0, 1].
 
 Interpretation: Higher EATS is better. A system with 0.75 accuracy that only
 uses low cost, low algorithmic latency, and low energy will score higher than
@@ -42,6 +43,35 @@ from __future__ import annotations
 import math
 
 from core.types import ExperimentResult
+
+EATS_W_COST = 0.65
+EATS_W_LATENCY = 0.20
+EATS_W_ENERGY = 0.15
+EATS_PENALTY_SCALE = 0.40
+EATS_QUALITY_DEFICIT_SCALE = 0.60
+
+
+def compute_efficiency_penalty(
+    normalized_cost: float = 1.0,
+    normalized_algorithmic_latency: float = 1.0,
+    normalized_energy: float = 1.0,
+    w_cost: float = EATS_W_COST,
+    w_latency: float = EATS_W_LATENCY,
+    w_energy: float = EATS_W_ENERGY,
+) -> float:
+    return (
+        w_cost * max(normalized_cost, 0.0) +
+        w_latency * max(normalized_algorithmic_latency, 0.0) +
+        w_energy * max(normalized_energy, 0.0)
+    )
+
+
+def compute_accuracy_deficit_penalty(
+    accuracy: float,
+    quality_deficit_scale: float = EATS_QUALITY_DEFICIT_SCALE,
+) -> float:
+    acc = min(max(accuracy, 0.0), 1.0)
+    return quality_deficit_scale * (1.0 - acc)
 
 
 def aggregate_runs(runs: list[dict[str, float]]) -> dict[str, float]:
@@ -159,17 +189,26 @@ def compute_eats(
     normalized_cost: float = 1.0,
     normalized_algorithmic_latency: float = 1.0,
     normalized_energy: float = 1.0,
-    w_cost: float = 0.5,
-    w_latency: float = 0.3,
-    w_energy: float = 0.2,
+    w_cost: float = EATS_W_COST,
+    w_latency: float = EATS_W_LATENCY,
+    w_energy: float = EATS_W_ENERGY,
+    penalty_scale: float = EATS_PENALTY_SCALE,
+    quality_deficit_scale: float = EATS_QUALITY_DEFICIT_SCALE,
 ) -> float:
-    acc = max(accuracy, 0.0)
-    penalty = (
-        w_cost * max(normalized_cost, 0.0) +
-        w_latency * max(normalized_algorithmic_latency, 0.0) +
-        w_energy * max(normalized_energy, 0.0)
+    acc = min(max(accuracy, 0.0), 1.0)
+    penalty = compute_efficiency_penalty(
+        normalized_cost=normalized_cost,
+        normalized_algorithmic_latency=normalized_algorithmic_latency,
+        normalized_energy=normalized_energy,
+        w_cost=w_cost,
+        w_latency=w_latency,
+        w_energy=w_energy,
     )
-    denom = acc + penalty
+    quality_penalty = compute_accuracy_deficit_penalty(
+        accuracy=acc,
+        quality_deficit_scale=quality_deficit_scale,
+    )
+    denom = acc + penalty_scale * penalty + quality_penalty
     return (acc / denom) if denom > 0 else 0.0
 
 
@@ -198,11 +237,12 @@ def compute_metrics(
         full_llm_avg_algorithmic_latency_ms,
     )
     normalized_energy = _normalize_metric(base["total_energy_kwh"], full_llm_energy_kwh)
-    efficiency_penalty = (
-        0.5 * normalized_cost +
-        0.3 * normalized_algorithmic_latency +
-        0.2 * normalized_energy
+    efficiency_penalty = compute_efficiency_penalty(
+        normalized_cost=normalized_cost,
+        normalized_algorithmic_latency=normalized_algorithmic_latency,
+        normalized_energy=normalized_energy,
     )
+    accuracy_deficit_penalty = compute_accuracy_deficit_penalty(base["accuracy"])
 
     eats = compute_eats(
         accuracy=base["accuracy"],
@@ -367,6 +407,7 @@ def compute_metrics(
         "normalized_algorithmic_latency": normalized_algorithmic_latency,
         "normalized_energy": normalized_energy,
         "normalized_efficiency_penalty": efficiency_penalty,
+        "accuracy_deficit_penalty": accuracy_deficit_penalty,
         "latency_p50_ms": p50,
         "latency_p95_ms": p95,
         "total_tokens": base["n_total"] and sum(

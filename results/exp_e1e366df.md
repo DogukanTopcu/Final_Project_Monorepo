@@ -29,13 +29,12 @@
 | Metric | Value |
 |--------|-------|
 | Throughput (output tok/s) | 2244.3 |
-| Wall-clock avg (ms) | 24323.2 |
-| Algorithmic avg (ms) | 24323.2 |
-| Wall-clock p50 (ms) | 24067.4 |
-| Wall-clock p95 (ms) | 36206.3 |
+| Model avg (ms) | 24323.2 |
+| Summed model avg (ms) | 24323.2 |
+| Model p50 (ms) | 24067.4 |
+| Model p95 (ms) | 36206.3 |
 
-> **Wall-clock**: observed end-to-end time including network and queue.  
-> **Algorithmic**: intrinsic inference + orchestration time summed across steps.
+> Latency metrics use model-reported inference time when available and fall back to observed timing otherwise.
 
 ## Cost
 | Metric | Value |
@@ -62,11 +61,12 @@
 | Normalized energy (vs baseline) | 0.7993 |
 
 ## EATS Score
-**EATS = 0.2696**  
-Normalized efficiency penalty: 1.7884  
+**EATS = 0.4431**  
+Normalized efficiency penalty: 1.5642  
+Accuracy deficit penalty: 0.2040  
 
-> EATS = accuracy² / (accuracy² + cost^0.5 × latency^0.3 × energy^0.2).  
-> Range [0, 1]; higher is better. Penalties are relative to the monolithic LLM baseline.
+> EATS = accuracy / (accuracy + 0.40 × efficiency penalty + 0.60 × (1 - accuracy)).  
+> Efficiency penalty = 0.65 × normalized cost + 0.20 × normalized latency + 0.15 × normalized energy.
 
 ## Active Oracle Breakdown
 | Metric | Value |

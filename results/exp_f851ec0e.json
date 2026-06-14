@@ -58,11 +58,11 @@
     "n_correct": 83.0,
     "accuracy_ci_low_95": 0.7445181876635703,
     "accuracy_ci_high_95": 0.8910652394022684,
-    "eats_score": 0.5025646029630184,
+    "eats_score": 0.6849129228702087,
     "normalized_cost": 0.455219871672499,
     "normalized_algorithmic_latency": 1.6699996045016725,
     "normalized_energy": 0.4645957532221372,
-    "normalized_efficiency_penalty": 0.8215289678311787,
+    "normalized_efficiency_penalty": 0.6995822004707795,
     "latency_p50_ms": 9812.93,
     "latency_p95_ms": 34960.97,
     "total_tokens": 122103,
@@ -91,7 +91,8 @@
     "oracle_query_rate": 0.0,
     "baseline_cost_usd": 0.8106597856883607,
     "baseline_algorithmic_latency_ms": 8046.701187099918,
-    "baseline_energy_kwh": 0.08756404208765475
+    "baseline_energy_kwh": 0.08756404208765475,
+    "accuracy_deficit_penalty": 0.10200000000000002
   },
   "subject_accuracy": {
     "subject": {

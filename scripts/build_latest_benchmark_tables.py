@@ -30,7 +30,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from core.model_catalog import get_model_spec
-from evaluation.metrics import _normalize_metric, compute_eats
+from evaluation.metrics import _normalize_metric, compute_eats, compute_efficiency_penalty
 from experiments.runner import resolve_recommended_baseline
 
 RESULTS_DIR = REPO_ROOT / "results"
@@ -162,10 +162,10 @@ def harmonize_metrics_with_web_rule(config: dict, metrics: dict) -> dict:
             harmonized.get("total_energy_kwh", 0.0) or 0.0,
             baseline_energy,
         )
-        harmonized["normalized_efficiency_penalty"] = (
-            0.5 * harmonized["normalized_cost"]
-            + 0.3 * harmonized["normalized_algorithmic_latency"]
-            + 0.2 * harmonized["normalized_energy"]
+        harmonized["normalized_efficiency_penalty"] = compute_efficiency_penalty(
+            normalized_cost=harmonized["normalized_cost"],
+            normalized_algorithmic_latency=harmonized["normalized_algorithmic_latency"],
+            normalized_energy=harmonized["normalized_energy"],
         )
         harmonized["eats_score"] = compute_eats(
             accuracy=harmonized.get("accuracy", 0.0) or 0.0,

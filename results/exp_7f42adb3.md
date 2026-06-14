@@ -1,5 +1,5 @@
 # Experiment Report — exp_7f42adb3
-**Date:** 2026-06-05T15:48:17.840083+00:00  
+**Date:** 2026-06-05T15:48:17.875937+00:00  
 
 ## Configuration
 | Parameter | Value |
@@ -61,11 +61,12 @@
 | Normalized energy (vs baseline) | 0.1030 |
 
 ## EATS Score
-**EATS = 0.8690**  
-Normalized efficiency penalty: 0.1356  
+**EATS = 0.8927**  
+Normalized efficiency penalty: 0.1205  
+Accuracy deficit penalty: 0.0600  
 
-> EATS = accuracy / (accuracy + efficiency penalty).  
-> Efficiency penalty = 0.5 × normalized cost + 0.3 × normalized latency + 0.2 × normalized energy.
+> EATS = accuracy / (accuracy + 0.40 × efficiency penalty + 0.60 × (1 - accuracy)).  
+> Efficiency penalty = 0.65 × normalized cost + 0.20 × normalized latency + 0.15 × normalized energy.
 
 ## Routing Breakdown
 | Path | Accuracy | N queries |

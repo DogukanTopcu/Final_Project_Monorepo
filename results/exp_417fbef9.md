@@ -1,5 +1,5 @@
 # Experiment Report — exp_417fbef9
-**Date:** 2026-06-07T16:39:07.427903+00:00  
+**Date:** 2026-06-07T16:39:16.776050+00:00  
 
 ## Configuration
 | Parameter | Value |
@@ -61,54 +61,9 @@
 | Normalized energy (vs baseline) | 0.7896 |
 
 ## EATS Score
-**EATS = 0.3597**  
-Normalized efficiency penalty: 1.4064  
+**EATS = 0.5665**  
+Normalized efficiency penalty: 1.1965  
+Accuracy deficit penalty: 0.1260  
 
-> EATS = accuracy / (accuracy + efficiency penalty).  
-> Efficiency penalty = 0.5 × normalized cost + 0.3 × normalized latency + 0.2 × normalized energy.
-
-## Accuracy by Subject
-| Subject | Accuracy | N |
-|---|---|---|
-| anatomy | 100.00% | 1 |
-| business_ethics | 100.00% | 2 |
-| clinical_knowledge | 50.00% | 4 |
-| college_mathematics | 100.00% | 2 |
-| college_medicine | 50.00% | 2 |
-| college_physics | 100.00% | 1 |
-| computer_security | 100.00% | 2 |
-| conceptual_physics | 100.00% | 4 |
-| econometrics | 100.00% | 1 |
-| electrical_engineering | 100.00% | 1 |
-| elementary_mathematics | 0.00% | 1 |
-| formal_logic | 100.00% | 1 |
-| global_facts | 50.00% | 2 |
-| high_school_chemistry | 100.00% | 1 |
-| high_school_computer_science | 100.00% | 1 |
-| high_school_european_history | 100.00% | 1 |
-| high_school_geography | 33.33% | 3 |
-| high_school_government_and_politics | 75.00% | 4 |
-| high_school_macroeconomics | 100.00% | 1 |
-| high_school_mathematics | 100.00% | 2 |
-| high_school_microeconomics | 100.00% | 4 |
-| high_school_physics | 50.00% | 2 |
-| high_school_statistics | 66.67% | 3 |
-| high_school_us_history | 100.00% | 1 |
-| high_school_world_history | 75.00% | 4 |
-| human_aging | 100.00% | 3 |
-| machine_learning | 100.00% | 3 |
-| medical_genetics | 100.00% | 1 |
-| miscellaneous | 100.00% | 2 |
-| moral_disputes | 100.00% | 1 |
-| moral_scenarios | 80.00% | 5 |
-| nutrition | 100.00% | 3 |
-| philosophy | 100.00% | 2 |
-| prehistory | 0.00% | 2 |
-| professional_accounting | 66.67% | 3 |
-| professional_law | 71.43% | 14 |
-| professional_medicine | 100.00% | 1 |
-| professional_psychology | 50.00% | 2 |
-| security_studies | 66.67% | 3 |
-| sociology | 100.00% | 1 |
-| us_foreign_policy | 100.00% | 1 |
-| world_religions | 100.00% | 2 |
+> EATS = accuracy / (accuracy + 0.40 × efficiency penalty + 0.60 × (1 - accuracy)).  
+> Efficiency penalty = 0.65 × normalized cost + 0.20 × normalized latency + 0.15 × normalized energy.

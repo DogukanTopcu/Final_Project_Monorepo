@@ -221,9 +221,10 @@ class Reporter:
             "## EATS Score",
             f"**EATS = {metrics.get('eats_score', 0):.4f}**  ",
             f"Normalized efficiency penalty: {metrics.get('normalized_efficiency_penalty', 0):.4f}  ",
+            f"Accuracy deficit penalty: {metrics.get('accuracy_deficit_penalty', 0):.4f}  ",
             "",
-            "> EATS = accuracy / (accuracy + efficiency penalty).  ",
-            "> Efficiency penalty = 0.5 × normalized cost + 0.3 × normalized latency + 0.2 × normalized energy.",
+            "> EATS = accuracy / (accuracy + 0.40 × efficiency penalty + 0.60 × (1 - accuracy)).  ",
+            "> Efficiency penalty = 0.65 × normalized cost + 0.20 × normalized latency + 0.15 × normalized energy.",
         ]
 
         arch = cfg.architecture

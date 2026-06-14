@@ -64,12 +64,15 @@ The project-specific EATS metric is defined as:
 \text{EATS} =
 \frac{\text{accuracy}}
 {\text{accuracy} +
- 0.5\,\text{normalized\_cost} +
- 0.3\,\text{normalized\_algorithmic\_latency} +
- 0.2\,\text{normalized\_energy}}
+ 0.40\left(
+ 0.65\,\text{normalized\_cost} +
+ 0.20\,\text{normalized\_algorithmic\_latency} +
+ 0.15\,\text{normalized\_energy}
+ \right)
+ + 0.60\left(1 - \text{accuracy}\right)}
 \]
 
-Its purpose is to reward architectures that preserve useful answer quality while reducing normalized cost, algorithmic latency, and energy relative to a full-LLM baseline. The weighted additive penalty (weights summing to 1: cost 50\%, latency 30\%, energy 20\%) avoids multiplicative collapse when any single efficiency dimension is unmeasured. The form $\text{accuracy} / (\text{accuracy} + \text{penalty})$ is structurally reminiscent of the F-score formulation, where the penalty acts as a resource-consumption counterpart to accuracy. Two normalisation modes (per-experiment and aggregate) are defined in Section~3.4.5 of the main text; the result tables in Chapter~4 use aggregate mode.
+Its purpose is to reward architectures that preserve useful answer quality while reducing normalized cost, algorithmic latency, and energy relative to a full-LLM baseline. The weighted additive efficiency penalty (weights summing to 1: cost 65\%, latency 20\%, energy 15\%) makes total cost the dominant efficiency dimension, while the explicit accuracy-deficit term $1-\text{accuracy}$ prevents low-accuracy systems from scoring near 1.0 solely because they are cheap. The present revision uses an efficiency scale of $\lambda = 0.40$ and an accuracy-deficit scale of $\beta = 0.60$. Two normalisation modes (per-experiment and aggregate) are defined in Section~3.4.5 of the main text; the result tables in Chapter~4 use aggregate mode.
 
 \section{Example Experiment Configuration Placeholder}
 
