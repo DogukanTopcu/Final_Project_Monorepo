@@ -20,11 +20,11 @@ window.S7 = `
   <div class="archmini">
     <div class="archcard">
       <h4>Active Oracle</h4>
-      <img src="../term_report/sources/active_oracle_simplified.png" alt="Active Oracle flowchart">
+      <img src="figures/active_oracle.svg" alt="Active Oracle flowchart">
     </div>
     <div class="archcard">
       <h4>Blackboard</h4>
-      <img src="../term_report/sources/blackboard_simplified.png" alt="Blackboard flowchart">
+      <img src="figures/blackboard.svg" alt="Blackboard flowchart">
     </div>
   </div>
 </section>
@@ -35,11 +35,11 @@ window.S7B = `
   <div class="archmini">
     <div class="archcard">
       <h4>Entropy Blackboard</h4>
-      <img src="../term_report/sources/blackboard_entropy_based_simplified.png" alt="Entropy Blackboard flowchart">
+      <img src="figures/entropy_blackboard.svg" alt="Entropy Blackboard flowchart">
     </div>
     <div class="archcard">
       <h4>Pure Swarm</h4>
-      <img src="../term_report/sources/blackboard_slms_simplified.png" alt="Pure Swarm flowchart">
+      <img src="figures/pure_swarm.svg" alt="Pure Swarm flowchart">
     </div>
   </div>
 </section>
