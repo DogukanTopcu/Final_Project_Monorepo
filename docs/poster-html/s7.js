@@ -3,22 +3,22 @@ window.S7 = `
   <div class="bhead"><div class="num">7</div><div class="btitle">Architecture Taxonomy</div><div class="line"></div></div>
   <p>Ten architectures in three families. <span class="dag">†</span> marks novel project contributions introduced in the current study.</p>
   <table class="zebra">
-    <thead><tr><th>Family</th><th>Architecture</th><th>Type</th><th>Key mechanism</th></tr></thead>
+    <thead><tr><th>Family</th><th>Architecture</th><th>Key mechanism</th></tr></thead>
     <tbody>
-      <tr><td><span class="fam">Stand</span></td><td>Single-Model</td><td>Baseline</td><td>direct inference</td></tr>
-      <tr><td><span class="fam">Stand</span></td><td>MoE</td><td>Baseline</td><td>internal sparse expert activation</td></tr>
-      <tr><td><span class="fam hy">Hybrid</span></td><td>Routing</td><td>Literature</td><td>confidence SLM→LLM escalation</td></tr>
-      <tr><td><span class="fam hy">Hybrid</span></td><td>Speculative</td><td>Literature</td><td>SLM drafts; LLM rewrites suffix</td></tr>
-      <tr><td><span class="fam hy">Hybrid</span></td><td>Debate (POA)</td><td>Literature</td><td>proponent–opponent–arbitrator</td></tr>
-      <tr><td><span class="fam hy">Hybrid</span></td><td>Active Oracle <span class="dag">†</span></td><td>Novel</td><td>targeted LLM sub-queries</td></tr>
-      <tr><td><span class="fam hy">Hybrid</span></td><td>Blackboard <span class="dag">†</span></td><td>Novel</td><td>bid-based task board; LLM sweeper fallback</td></tr>
-      <tr><td><span class="fam hy">Hybrid</span></td><td>Entropy Blackboard <span class="dag">†</span></td><td>Novel</td><td>uncertainty-penalised bidding</td></tr>
-      <tr><td><span class="fam ms">Multi</span></td><td>Ensemble</td><td>Literature</td><td>majority or confidence-weighted voting</td></tr>
-      <tr><td><span class="fam ms">Multi</span></td><td>Pure Swarm <span class="dag">†</span></td><td>Novel</td><td>SLM-only peer coordination; no LLM online</td></tr>
+      <tr><td><span class="fam">Stand</span></td><td>Single-Model</td><td>direct inference</td></tr>
+      <tr><td><span class="fam">Stand</span></td><td>MoE</td><td>internal sparse expert activation</td></tr>
+      <tr><td><span class="fam hy">Hybrid</span></td><td>Routing</td><td>confidence SLM→LLM escalation</td></tr>
+      <tr><td><span class="fam hy">Hybrid</span></td><td>Speculative</td><td>SLM drafts; LLM rewrites suffix</td></tr>
+      <tr><td><span class="fam hy">Hybrid</span></td><td>Debate (POA)</td><td>proponent–opponent–arbitrator</td></tr>
+      <tr><td><span class="fam hy">Hybrid</span></td><td>Active Oracle <span class="dag">†</span></td><td>targeted LLM sub-queries</td></tr>
+      <tr><td><span class="fam hy">Hybrid</span></td><td>Blackboard <span class="dag">†</span></td><td>bid-based task board; LLM sweeper fallback</td></tr>
+      <tr><td><span class="fam hy">Hybrid</span></td><td>Entropy Blackboard <span class="dag">†</span></td><td>uncertainty-penalised bidding</td></tr>
+      <tr><td><span class="fam ms">Multi</span></td><td>Ensemble</td><td>majority or confidence-weighted voting</td></tr>
+      <tr><td><span class="fam ms">Multi</span></td><td>Pure Swarm <span class="dag">†</span></td><td>SLM-only peer coordination; no LLM online</td></tr>
     </tbody>
   </table>
   <div class="archmini">
-    <div class="ms">
+    <div class="archcard">
       <h4>Routing</h4>
       <svg viewBox="0 0 220 120" width="100%">
         <rect x="6" y="46" width="58" height="30" rx="6" fill="#EDE8E1" stroke="#8A1538" stroke-width="2"/>
@@ -34,7 +34,7 @@ window.S7 = `
         <defs><marker id="aR" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0 0L8 4.5L0 9z" fill="#2B2D42"/></marker></defs>
       </svg>
     </div>
-    <div class="ms">
+    <div class="archcard">
       <h4>Blackboard</h4>
       <svg viewBox="0 0 220 120" width="100%">
         <rect x="60" y="8" width="100" height="26" rx="6" fill="#2B2D42"/>
