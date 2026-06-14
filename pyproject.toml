@@ -76,12 +76,18 @@ stats = [
     "pandas>=2.2",
 ]
 
+# Poster / static export
+poster = [
+    "playwright>=1.53",
+]
+
 # Development
 dev = [
     "thesis[runner]",
     "thesis[backend]",
     "thesis[energy]",
     "thesis[stats]",
+    "thesis[poster]",
     "pytest>=8.2",
     "pytest-asyncio>=0.23",
     "ruff>=0.4",

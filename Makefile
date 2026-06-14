@@ -1,5 +1,7 @@
 .PHONY: dev dev-down tf-init tf-plan tf-apply tf-destroy ecr-login push-api push-runner mlflow-ui web poster-pdf
 
+PYTHON ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python)
+
 # ──────────────────────────────────────────────
 # Local development
 # ──────────────────────────────────────────────
@@ -58,4 +60,4 @@ web:
 	open http://localhost:3000
 
 poster-pdf:
-	python scripts/export_poster_pdf.py
+	$(PYTHON) scripts/export_poster_pdf.py
