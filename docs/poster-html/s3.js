@@ -16,9 +16,9 @@ window.S3 = `
   <table style="margin-top:16px">
     <thead><tr><th>Tier</th><th>Host</th><th class="num-c">VRAM</th><th>Models</th></tr></thead>
     <tbody>
-      <tr><td>SLM</td><td>NVIDIA L4</td><td class="num-c">24 GB</td><td>Gemma/Qwen/LLaMA 3–4B</td></tr>
-      <tr><td>Mid LLM</td><td>NVIDIA RTX PRO6000</td><td class="num-c">96 GB</td><td>20–35B dense + MoE</td></tr>
-      <tr><td>Heavy LLM</td><td>NVIDIA H200</td><td class="num-c">141 GB</td><td>LLaMA-70B, gpt-oss-120B</td></tr>
+      <tr><td>SLM</td><td>NVIDIA L4</td><td class="num-c">24 GB</td><td>gemma4, qwen3.5, llama3.2 (3–4B)</td></tr>
+      <tr><td>Mid LLM</td><td>NVIDIA RTX PRO6000</td><td class="num-c">96 GB</td><td>gpt-oss, gemma4, qwen3.5 (20–35B dense + MoE)</td></tr>
+      <tr><td>Heavy LLM</td><td>NVIDIA H200</td><td class="num-c">141 GB</td><td>gpt-oss, llama3.3 (70–120B)</td></tr>
     </tbody>
   </table>
 </section>
