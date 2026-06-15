@@ -25,7 +25,7 @@ window.S7 = `
     </div>
     <div class="archcard">
       <h4>Blackboard</h4>
-      <img src="figures/blackboard.svg" alt="Blackboard flowchart">
+      <img src="figures/black.svg" alt="Blackboard flowchart">
     </div>
   </div>
 </section>
@@ -35,10 +35,10 @@ window.S7B = `
 <div class="section-stack">
   <section class="block">
     <div class="archmini" style="margin-top:16px;">
-      <div class="archcard">
-        <h4>Entropy Blackboard</h4>
-        <img src="figures/entropy_blackboard.svg" alt="Entropy Blackboard flowchart">
-      </div>
+    <div class="archcard">
+      <h4>Entropy Blackboard</h4>
+        <img src="figures/entropy_black.svg" alt="Entropy Blackboard flowchart">
+    </div>
       <div class="archcard">
         <h4>Pure Swarm</h4>
         <img src="figures/pure_swarm.svg" alt="Pure Swarm flowchart">
