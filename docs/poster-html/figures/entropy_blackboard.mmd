@@ -1,0 +1,43 @@
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'IBM Plex Sans, Segoe UI, sans-serif','lineColor':'#8A1538','edgeLabelBackground':'#ffffff','primaryColor':'#F4F1ED','primaryTextColor':'#23253A','primaryBorderColor':'#D8D0C6','tertiaryColor':'#F9F6F1'}}}%%
+flowchart LR
+    Board[("Shared Blackboard<br/>OPEN Tasks")]
+    subgraph Workers["SLM Workers (top-k probe)"]
+        direction TB
+        A["Primary SLM<br/>Probes & Bids"]
+        B["Secondary SLM<br/>Probes & Bids"]
+    end
+    Auction{"Highest bid ≥ Threshold?<br/>bid = Confidence − Entropy − Penalty"}
+    Claim["Top Bidder Claims<br/>& Attempts to Solve"]
+    Sweeper["Heavy Sweeper (70B LLM)<br/>Takes Over"]
+    Solve{"Can Solve<br/>Independently?"}
+    Sub["Spawns Subtask"]
+    Resolve["Resolves & Posts"]
+    Final(["Final Answer"])
+
+    Board --> A
+    Board --> B
+    A --> Auction
+    B --> Auction
+    Auction -- Yes --> Claim
+    Auction -- No --> Sweeper
+    Claim --> Solve
+    Sweeper --> Solve
+    Solve -- No --> Sub --> Board
+    Solve -- Yes --> Resolve --> Board
+    Resolve -. "If root task resolved" .-> Final
+
+    classDef board fill:#E6E8EF,stroke:#2B2D42,color:#2B2D42,stroke-width:2px;
+    classDef slm fill:#EDE8E1,stroke:#0F7173,color:#2B2D42,stroke-width:2px;
+    classDef llm fill:#F6E7EB,stroke:#8A1538,color:#6E1029,stroke-width:2px;
+    classDef dec fill:#F4E9D4,stroke:#B07F2E,color:#6E1029,stroke-width:2px;
+    classDef proc fill:#F4F1ED,stroke:#D8D0C6,color:#23253A,stroke-width:1.5px;
+    classDef final fill:#DCEBEB,stroke:#0F7173,color:#0F5557,stroke-width:2px;
+
+    class Board board;
+    class A,B slm;
+    class Auction,Solve dec;
+    class Claim,Sub,Resolve proc;
+    class Sweeper llm;
+    class Final final;
+
+    style Workers fill:#F9F6F1,stroke:#0F7173,stroke-dasharray:4 3,color:#0F7173;
