@@ -2,7 +2,7 @@ window.S7 = `
 <section class="block">
   <div class="bhead"><div class="num">7</div><div class="btitle">Architecture Taxonomy</div><div class="line"></div></div>
   <p>Ten architectures in three families. <span class="dag">†</span> marks novel project contributions introduced in the current study.</p>
-  <p>The taxonomy moves from <strong>internal sparsity</strong> and direct inference to <strong>explicit coordination</strong>, making it possible to ask whether efficiency comes from the model itself, from selective escalation, or from multi-step collaboration [1][2][3].</p>
+  <p>The family progression runs from <strong>internal sparsity</strong> to <strong>explicit coordination</strong> [1][2][3].</p>
   <table class="zebra">
     <thead><tr><th>Family</th><th>Architecture</th><th>Key mechanism</th></tr></thead>
     <tbody>
@@ -48,27 +48,35 @@ window.S7B = `
 
   <section class="block">
     <div class="bhead"><div class="num">8</div><div class="btitle">Model Selection &amp; Architecture Pairing</div><div class="line"></div></div>
-    <p>We keep the comparison focused on <strong>architecture behavior</strong> by holding the core hybrid pair mostly fixed: a cheap <strong>Gemma4-4B</strong> worker and a stronger <strong>Gemma4-31B</strong> verifier/sweeper.</p>
+    <p>We keep the comparison focused on <strong>architecture behavior</strong> by mostly fixing the core hybrid pair: <strong>Gemma4-4B</strong> as worker and <strong>Gemma4-31B</strong> as verifier/sweeper.</p>
     <div class="models-grid">
       <article class="model-card">
         <h4>Selection Rule</h4>
-        <p>Models were chosen for <strong>family diversity</strong>, <strong>open-weight reproducibility</strong>, and <strong>MoE coverage</strong>, so sparse-expert baselines can be compared against external orchestration.</p>
+        <p>Models were chosen for <strong>family diversity</strong>, <strong>open-weight reproducibility</strong>, and <strong>MoE coverage</strong>.</p>
       </article>
       <article class="model-card">
         <h4>Best-Working Pairings</h4>
-        <p><strong>Routing</strong> and <strong>Speculative</strong> with <strong>Gemma4-4B → Gemma4-31B</strong> gave the strongest EATS on <strong>ARC, HellaSwag, and TruthfulQA</strong>. The most efficient standalone baselines were the <strong>Qwen3.5-35B-A3B</strong> and <strong>Gemma4-26B-A4B</strong> MoE checkpoints.</p>
+        <p><strong>Routing</strong> and <strong>Speculative</strong> with <strong>Gemma4-4B → Gemma4-31B</strong> gave the strongest EATS on <strong>ARC, HellaSwag, and TruthfulQA</strong>.</p>
       </article>
     </div>
-  <table class="model-table zebra">
-      <thead><tr><th>Architecture</th><th>Models online</th><th>Purpose</th></tr></thead>
-      <tbody>
-        <tr><td>Routing / Speculative</td><td><b>gemma4-4b → gemma4-31b</b></td><td>Cheap draft/router + stronger verifier for the best quality-efficiency frontier.</td></tr>
-        <tr><td>Oracle / Blackboard family</td><td><b>gemma4-4b</b> workers + <b>gemma4-31b</b> sweeper</td><td>Controls for model family while changing only orchestration logic.</td></tr>
-        <tr><td>Debate / Ensemble / Pure Swarm</td><td><b>gemma4-4b</b>, <b>qwen3.5-4b</b>, <b>llama3.2-3b</b>, <b>ministral3-3b</b></td><td>Tests whether compact-model diversity and coordination can replace online LLM use.</td></tr>
-        <tr><td>Standalone baselines</td><td><b>qwen3.5-35b-a3b</b>, <b>gemma4-26b-a4b</b>, <b>gpt-oss-120b</b>, <b>llama3.3-70b</b></td><td>Separates MoE efficiency from dense-model raw capability.</td></tr>
-      </tbody>
-    </table>
-    <p>Placing the same <strong>Gemma4-4B → Gemma4-31B</strong> pair inside routing, speculative, oracle, and blackboard-style designs is deliberate: the poster compares <strong>control strategies</strong> under a mostly fixed capability pair, while MoE baselines test whether external orchestration still adds value against sparse-expert standalone models [1][2][4].</p>
+    <div class="reading-notes" style="margin-top:10px;">
+      <div class="reading-note"><span>P1</span><p><strong>Routing / Speculative:</strong> <strong>Gemma4-4B → Gemma4-31B</strong> for the strongest quality-efficiency frontier.</p></div>
+      <div class="reading-note"><span>P2</span><p><strong>Oracle / Blackboard:</strong> <strong>Gemma4-4B</strong> workers + <strong>Gemma4-31B</strong> sweeper.</p></div>
+      <div class="reading-note"><span>P3</span><p><strong>Standalone MoE:</strong> <strong>Qwen3.5-35B-A3B</strong> and <strong>Gemma4-26B-A4B</strong> were the strongest efficient baselines.</p></div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="bhead"><div class="num">9</div><div class="btitle">UN SDGs</div><div class="line"></div></div>
+    <p>The thesis supports selected <strong>UN Sustainable Development Goals</strong> by making <strong>cost, energy, carbon, and auditability</strong> first-class outputs of architecture evaluation rather than afterthoughts.</p>
+    <div class="reading-notes" style="margin-top:6px;">
+      <div class="reading-note" style="grid-template-columns:84px 1fr;"><span>SDG 8</span><p><strong>Economic efficiency:</strong> cost-aware comparisons show when smaller or hybrid systems are sufficient, reducing unnecessary frontier-model spend.</p></div>
+      <div class="reading-note" style="grid-template-columns:84px 1fr;"><span>SDG 9</span><p><strong>Open infrastructure:</strong> the shared <span class="mono">Query/Response</span> contract and common reporting schema create reusable evaluation infrastructure.</p></div>
+      <div class="reading-note" style="grid-template-columns:84px 1fr;"><span>SDG 10</span><p><strong>Reduced inequalities:</strong> hybrid and multi-SLM results show that competitive AI quality can be approached without frontier-scale hardware or cloud budgets.</p></div>
+      <div class="reading-note" style="grid-template-columns:84px 1fr;"><span>SDG 12/13</span><p><strong>Responsible energy use:</strong> EATS includes energy and carbon in the main ranking, so wasteful paths are penalised directly.</p></div>
+      <div class="reading-note" style="grid-template-columns:84px 1fr;"><span>SDG 16</span><p><strong>Accountable evaluation:</strong> versioned benchmarks, host logs, and transparent metrics make architecture claims easier to audit.</p></div>
+    </div>
+    <p style="margin-top:10px;">The contribution is therefore <strong>infrastructural</strong>: it helps teams choose capable systems with clearer evidence about <strong>quality, cost, and sustainability</strong>.</p>
   </section>
 </div>
 `;

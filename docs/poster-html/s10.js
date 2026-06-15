@@ -1,6 +1,6 @@
 window.S10 = `
 <section class="block">
-  <div class="bhead"><div class="num">11</div><div class="btitle">Conclusions</div><div class="line"></div></div>
+  <div class="bhead"><div class="num">12</div><div class="btitle">Conclusions</div><div class="line"></div></div>
   <p>The main synthesis is not that one model wins everywhere, but that <strong>the best architecture depends on how much capability you can afford to escalate online</strong>. That is why the poster reports both raw accuracy and EATS rather than collapsing the study into a single leaderboard.</p>
   <div class="rqs">
     <div class="rq"><div class="tag">RQ1</div><div class="txt">Collaborative systems are competitive with standalone LLMs; the strongest results come from routing, speculative decoding, and novel coordination on reasoning-heavy tasks.</div></div>
