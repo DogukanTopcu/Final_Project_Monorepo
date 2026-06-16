@@ -2,6 +2,7 @@
 
 Grouping is done by ``(architecture, benchmark)``. Retention policy:
 
+  * ``monolithic``: never touched
   * ``multi_agent``: keep latest 2
   * ``blackboard``: keep latest 2
   * ``entropy_blackboard``: keep latest 2
@@ -30,6 +31,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 RESULTS_DIR = REPO_ROOT / "results"
 DEFAULT_ARCHIVE_DIR = RESULTS_DIR / "_removed_old_experiments"
 KEEP_TWO_ARCHITECTURES = {"multi_agent", "blackboard", "entropy_blackboard"}
+SKIP_ARCHITECTURES = {"monolithic"}
 
 
 @dataclass
@@ -148,6 +150,8 @@ def main() -> None:
 
     removals: list[tuple[ExperimentRecord, int]] = []
     for (architecture, _benchmark), records in grouped.items():
+        if architecture in SKIP_ARCHITECTURES:
+            continue
         keep_count = _retention_for_architecture(architecture)
         ranked = sorted(
             records,
@@ -164,7 +168,7 @@ def main() -> None:
     mode = "APPLY" if args.apply else "DRY RUN"
     action = "delete" if args.delete else f"archive to {archive_dir}"
     print(f"\n=== Remove old experiments by architecture — {mode} ===")
-    print("Policy: multi_agent/blackboard/entropy_blackboard keep latest 2 per benchmark; others keep latest 1")
+    print("Policy: monolithic is skipped; multi_agent/blackboard/entropy_blackboard keep latest 2 per benchmark; others keep latest 1")
     print(f"Action: {action if args.apply else 'none (preview only)'}\n")
 
     if not removals:
