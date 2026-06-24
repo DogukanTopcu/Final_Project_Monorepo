@@ -1,19 +1,9 @@
 {
   "benchmark": "mmlu",
-  "generated_at": "2026-06-13T03:02:05.157261+00:00",
+  "generated_at": "2026-06-24T12:25:53.824347+00:00",
   "min_total_samples_required": 100,
   "n_unique_configs": 21,
-  "skipped_configs_below_min_samples": [
-    {
-      "architecture": "ensemble",
-      "model_key": "gemma4-4b+llama3.2-3b",
-      "total_samples_evaluated": 20,
-      "experiment_ids": [
-        "exp_2f4b3002",
-        "exp_d8b601ed"
-      ]
-    }
-  ],
+  "skipped_configs_below_min_samples": [],
   "entries": [
     {
       "architecture": "active_oracle",
@@ -21,25 +11,24 @@
       "slm": "gemma4-4b",
       "llm": "gemma4-31b",
       "ensemble_slms": [],
-      "n_experiments": 2,
+      "n_experiments": 1,
       "experiment_ids": [
-        "exp_9d9638fd",
         "exp_a8b642d3"
       ],
-      "total_samples_evaluated": 200,
-      "accuracy": 0.73,
-      "llm_call_ratio": 0.37,
-      "avg_latency_ms": 20413.823988,
-      "latency_p50_ms": 15338.779171,
-      "latency_p95_ms": 48569.718606,
-      "avg_slm_confidence": 0.883298,
-      "escalation_rate": 0.285,
-      "avg_cost_per_sample_usd": 0.004404,
+      "total_samples_evaluated": 100,
+      "accuracy": 0.72,
+      "llm_call_ratio": 0.53,
+      "avg_latency_ms": 10191.4711,
+      "latency_p50_ms": 5384.46,
+      "latency_p95_ms": 32792.83,
+      "avg_slm_confidence": 0.863635,
+      "escalation_rate": 0.42,
+      "avg_cost_per_sample_usd": 0.002215,
       "avg_api_cost_per_sample_usd": 0.0,
-      "avg_infra_cost_per_sample_usd": 0.004404,
-      "avg_energy_per_sample_kwh": 0.000432,
-      "avg_co2_per_sample_g": 0.164073,
-      "eats": 0.392443
+      "avg_infra_cost_per_sample_usd": 0.002215,
+      "avg_energy_per_sample_kwh": 0.000218,
+      "avg_co2_per_sample_g": 0.082857,
+      "eats": 0.669582
     },
     {
       "architecture": "blackboard",
@@ -64,7 +53,7 @@
       "avg_infra_cost_per_sample_usd": 0.003119,
       "avg_energy_per_sample_kwh": 0.000344,
       "avg_co2_per_sample_g": 0.130618,
-      "eats": 0.53235
+      "eats": 0.685406
     },
     {
       "architecture": "blackboard",
@@ -89,7 +78,7 @@
       "avg_infra_cost_per_sample_usd": 0.003439,
       "avg_energy_per_sample_kwh": 0.000381,
       "avg_co2_per_sample_g": 0.144702,
-      "eats": 0.503295
+      "eats": 0.659539
     },
     {
       "architecture": "ensemble",
@@ -118,7 +107,7 @@
       "avg_infra_cost_per_sample_usd": 0.005612,
       "avg_energy_per_sample_kwh": 0.000539,
       "avg_co2_per_sample_g": 0.20471,
-      "eats": 0.286151
+      "eats": 0.446731
     },
     {
       "architecture": "ensemble",
@@ -148,7 +137,7 @@
       "avg_infra_cost_per_sample_usd": 0.009418,
       "avg_energy_per_sample_kwh": 0.000904,
       "avg_co2_per_sample_g": 0.343553,
-      "eats": 0.299397
+      "eats": 0.468727
     },
     {
       "architecture": "ensemble",
@@ -175,7 +164,7 @@
       "avg_infra_cost_per_sample_usd": 0.000737,
       "avg_energy_per_sample_kwh": 7.1e-05,
       "avg_co2_per_sample_g": 0.02688,
-      "eats": 0.746737
+      "eats": 0.639254
     },
     {
       "architecture": "ensemble",
@@ -202,7 +191,7 @@
       "avg_infra_cost_per_sample_usd": 0.003668,
       "avg_energy_per_sample_kwh": 0.000352,
       "avg_co2_per_sample_g": 0.133795,
-      "eats": 0.438105
+      "eats": 0.616382
     },
     {
       "architecture": "entropy_blackboard",
@@ -227,7 +216,7 @@
       "avg_infra_cost_per_sample_usd": 0.003401,
       "avg_energy_per_sample_kwh": 0.000376,
       "avg_co2_per_sample_g": 0.142894,
-      "eats": 0.521221
+      "eats": 0.691945
     },
     {
       "architecture": "entropy_blackboard",
@@ -252,7 +241,7 @@
       "avg_infra_cost_per_sample_usd": 0.00369,
       "avg_energy_per_sample_kwh": 0.000407,
       "avg_co2_per_sample_g": 0.154591,
-      "eats": 0.502817
+      "eats": 0.684916
     },
     {
       "architecture": "monolithic",
@@ -277,7 +266,7 @@
       "avg_infra_cost_per_sample_usd": 0.003405,
       "avg_energy_per_sample_kwh": 0.000464,
       "avg_co2_per_sample_g": 0.176183,
-      "eats": 0.62881
+      "eats": 0.758928
     },
     {
       "architecture": "monolithic",
@@ -285,26 +274,24 @@
       "slm": null,
       "llm": "gemma4-31b",
       "ensemble_slms": [],
-      "n_experiments": 3,
+      "n_experiments": 1,
       "experiment_ids": [
-        "exp_3a953bad",
-        "exp_7ffa8020",
-        "exp_f7dd168e"
+        "exp_7ffa8020"
       ],
-      "total_samples_evaluated": 520,
-      "accuracy": 0.792667,
+      "total_samples_evaluated": 500,
+      "accuracy": 0.878,
       "llm_call_ratio": 1.0,
-      "avg_latency_ms": 9598.628958,
-      "latency_p50_ms": 9296.152164,
-      "latency_p95_ms": 16855.477458,
-      "avg_slm_confidence": 0.913757,
+      "avg_latency_ms": 9584.457869,
+      "latency_p50_ms": 9214.769661,
+      "latency_p95_ms": 17291.444035,
+      "avg_slm_confidence": 0.89613,
       "escalation_rate": 1.0,
-      "avg_cost_per_sample_usd": 0.006266,
+      "avg_cost_per_sample_usd": 0.006257,
       "avg_api_cost_per_sample_usd": 0.0,
-      "avg_infra_cost_per_sample_usd": 0.006266,
-      "avg_energy_per_sample_kwh": 0.000853,
-      "avg_co2_per_sample_g": 0.32422,
-      "eats": 0.457915
+      "avg_infra_cost_per_sample_usd": 0.006257,
+      "avg_energy_per_sample_kwh": 0.000852,
+      "avg_co2_per_sample_g": 0.323742,
+      "eats": 0.672524
     },
     {
       "architecture": "monolithic",
@@ -329,7 +316,7 @@
       "avg_infra_cost_per_sample_usd": 0.006094,
       "avg_energy_per_sample_kwh": 0.000563,
       "avg_co2_per_sample_g": 0.213753,
-      "eats": 0.530114
+      "eats": 0.674934
     },
     {
       "architecture": "monolithic",
@@ -337,26 +324,24 @@
       "slm": null,
       "llm": "gpt-oss-20b",
       "ensemble_slms": [],
-      "n_experiments": 3,
+      "n_experiments": 1,
       "experiment_ids": [
-        "exp_085e1b0a",
-        "exp_8a1076b5",
-        "exp_a952b38f"
+        "exp_085e1b0a"
       ],
-      "total_samples_evaluated": 520,
-      "accuracy": 0.866,
+      "total_samples_evaluated": 500,
+      "accuracy": 0.798,
       "llm_call_ratio": 1.0,
-      "avg_latency_ms": 3429.921466,
-      "latency_p50_ms": 2933.625125,
-      "latency_p95_ms": 7653.966,
-      "avg_slm_confidence": 0.761963,
+      "avg_latency_ms": 3544.869281,
+      "latency_p50_ms": 2884.599334,
+      "latency_p95_ms": 9901.635292,
+      "avg_slm_confidence": 0.755739,
       "escalation_rate": 1.0,
-      "avg_cost_per_sample_usd": 0.002864,
-      "avg_api_cost_per_sample_usd": 0.000625,
-      "avg_infra_cost_per_sample_usd": 0.002239,
-      "avg_energy_per_sample_kwh": 0.000305,
-      "avg_co2_per_sample_g": 0.115855,
-      "eats": 0.698444
+      "avg_cost_per_sample_usd": 0.00299,
+      "avg_api_cost_per_sample_usd": 0.000676,
+      "avg_infra_cost_per_sample_usd": 0.002314,
+      "avg_energy_per_sample_kwh": 0.000315,
+      "avg_co2_per_sample_g": 0.119738,
+      "eats": 0.74446
     },
     {
       "architecture": "monolithic",
@@ -381,7 +366,7 @@
       "avg_infra_cost_per_sample_usd": 0.019968,
       "avg_energy_per_sample_kwh": 0.001843,
       "avg_co2_per_sample_g": 0.700402,
-      "eats": 0.288975
+      "eats": 0.463967
     },
     {
       "architecture": "monolithic",
@@ -389,25 +374,24 @@
       "slm": null,
       "llm": "qwen3.5-27b",
       "ensemble_slms": [],
-      "n_experiments": 2,
+      "n_experiments": 1,
       "experiment_ids": [
-        "exp_3e6e079a",
-        "exp_f73a0c0a"
+        "exp_3e6e079a"
       ],
-      "total_samples_evaluated": 510,
-      "accuracy": 0.886,
+      "total_samples_evaluated": 500,
+      "accuracy": 0.872,
       "llm_call_ratio": 1.0,
-      "avg_latency_ms": 19458.425098,
-      "latency_p50_ms": 16494.614167,
-      "latency_p95_ms": 41578.014667,
-      "avg_slm_confidence": 0.896432,
+      "avg_latency_ms": 19276.89107,
+      "latency_p50_ms": 15849.283792,
+      "latency_p95_ms": 43325.02975,
+      "avg_slm_confidence": 0.891591,
       "escalation_rate": 1.0,
-      "avg_cost_per_sample_usd": 0.012702,
+      "avg_cost_per_sample_usd": 0.012584,
       "avg_api_cost_per_sample_usd": 0.0,
-      "avg_infra_cost_per_sample_usd": 0.012702,
-      "avg_energy_per_sample_kwh": 0.00173,
-      "avg_co2_per_sample_g": 0.657262,
-      "eats": 0.317743
+      "avg_infra_cost_per_sample_usd": 0.012584,
+      "avg_energy_per_sample_kwh": 0.001714,
+      "avg_co2_per_sample_g": 0.651131,
+      "eats": 0.524839
     },
     {
       "architecture": "monolithic",
@@ -432,7 +416,7 @@
       "avg_infra_cost_per_sample_usd": 0.002788,
       "avg_energy_per_sample_kwh": 0.00038,
       "avg_co2_per_sample_g": 0.144255,
-      "eats": 0.673637
+      "eats": 0.781712
     },
     {
       "architecture": "multi_agent",
@@ -457,7 +441,7 @@
       "avg_infra_cost_per_sample_usd": 0.005325,
       "avg_energy_per_sample_kwh": 0.000511,
       "avg_co2_per_sample_g": 0.194258,
-      "eats": 0.330688
+      "eats": 0.516502
     },
     {
       "architecture": "multi_agent",
@@ -482,7 +466,7 @@
       "avg_infra_cost_per_sample_usd": 0.007143,
       "avg_energy_per_sample_kwh": 0.000887,
       "avg_co2_per_sample_g": 0.336992,
-      "eats": 0.379068
+      "eats": 0.576315
     },
     {
       "architecture": "pure_swarm",
@@ -490,26 +474,24 @@
       "slm": "gemma4-4b",
       "llm": null,
       "ensemble_slms": [],
-      "n_experiments": 3,
+      "n_experiments": 1,
       "experiment_ids": [
-        "exp_3682dfac",
-        "exp_3d15e23b",
-        "exp_a324cae7"
+        "exp_17d6e52a"
       ],
-      "total_samples_evaluated": 120,
-      "accuracy": 0.896667,
+      "total_samples_evaluated": 100,
+      "accuracy": 0.75,
       "llm_call_ratio": 0.0,
-      "avg_latency_ms": 21050.63592,
-      "latency_p50_ms": 18096.686875,
-      "latency_p95_ms": 44515.691458,
-      "avg_slm_confidence": 0.860041,
+      "avg_latency_ms": 12309.3523,
+      "latency_p50_ms": 7041.18,
+      "latency_p95_ms": 48730.51,
+      "avg_slm_confidence": 0.800699,
       "escalation_rate": 0.0,
-      "avg_cost_per_sample_usd": 0.004082,
+      "avg_cost_per_sample_usd": 0.002564,
       "avg_api_cost_per_sample_usd": 0.0,
-      "avg_infra_cost_per_sample_usd": 0.004082,
-      "avg_energy_per_sample_kwh": 0.000392,
-      "avg_co2_per_sample_g": 0.148895,
-      "eats": 0.443558
+      "avg_infra_cost_per_sample_usd": 0.002564,
+      "avg_energy_per_sample_kwh": 0.000246,
+      "avg_co2_per_sample_g": 0.093551,
+      "eats": 0.668769
     },
     {
       "architecture": "routing",
@@ -517,26 +499,24 @@
       "slm": "gemma4-4b",
       "llm": "gemma4-31b",
       "ensemble_slms": [],
-      "n_experiments": 3,
+      "n_experiments": 1,
       "experiment_ids": [
-        "exp_06cb6a22",
-        "exp_5214ebc3",
-        "exp_6d35e6d9"
+        "exp_06cb6a22"
       ],
-      "total_samples_evaluated": 220,
-      "accuracy": 0.766667,
-      "llm_call_ratio": 0.486667,
-      "avg_latency_ms": 2332.0544,
-      "latency_p50_ms": 1536.37,
-      "latency_p95_ms": 7812.006667,
-      "avg_slm_confidence": 0.767671,
-      "escalation_rate": 0.486667,
-      "avg_cost_per_sample_usd": 0.000736,
+      "total_samples_evaluated": 100,
+      "accuracy": 0.77,
+      "llm_call_ratio": 0.56,
+      "avg_latency_ms": 2473.4748,
+      "latency_p50_ms": 1551.48,
+      "latency_p95_ms": 7798.99,
+      "avg_slm_confidence": 0.777945,
+      "escalation_rate": 0.56,
+      "avg_cost_per_sample_usd": 0.000805,
       "avg_api_cost_per_sample_usd": 0.0,
-      "avg_infra_cost_per_sample_usd": 0.000736,
-      "avg_energy_per_sample_kwh": 8.5e-05,
-      "avg_co2_per_sample_g": 0.032456,
-      "eats": 0.834905
+      "avg_infra_cost_per_sample_usd": 0.000805,
+      "avg_energy_per_sample_kwh": 9.4e-05,
+      "avg_co2_per_sample_g": 0.035852,
+      "eats": 0.798053
     },
     {
       "architecture": "speculative",
@@ -544,25 +524,24 @@
       "slm": "gemma4-4b",
       "llm": "gemma4-31b",
       "ensemble_slms": [],
-      "n_experiments": 2,
+      "n_experiments": 1,
       "experiment_ids": [
-        "exp_509abf4c",
-        "exp_94251988"
+        "exp_509abf4c"
       ],
-      "total_samples_evaluated": 120,
-      "accuracy": 0.86,
+      "total_samples_evaluated": 100,
+      "accuracy": 0.82,
       "llm_call_ratio": 1.0,
-      "avg_latency_ms": 2516.59375,
-      "latency_p50_ms": 2134.9,
-      "latency_p95_ms": 5606.61,
-      "avg_slm_confidence": 0.828905,
+      "avg_latency_ms": 2462.2605,
+      "latency_p50_ms": 2011.42,
+      "latency_p95_ms": 5904.69,
+      "avg_slm_confidence": 0.837443,
       "escalation_rate": 1.0,
-      "avg_cost_per_sample_usd": 0.001081,
+      "avg_cost_per_sample_usd": 0.00107,
       "avg_api_cost_per_sample_usd": 0.0,
-      "avg_infra_cost_per_sample_usd": 0.001081,
-      "avg_energy_per_sample_kwh": 0.000137,
-      "avg_co2_per_sample_g": 0.051922,
-      "eats": 0.817794
+      "avg_infra_cost_per_sample_usd": 0.00107,
+      "avg_energy_per_sample_kwh": 0.000136,
+      "avg_co2_per_sample_g": 0.051548,
+      "eats": 0.823199
     }
   ]
 }

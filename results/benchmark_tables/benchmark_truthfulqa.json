@@ -1,6 +1,6 @@
 {
   "benchmark": "truthfulqa",
-  "generated_at": "2026-06-13T03:02:05.158504+00:00",
+  "generated_at": "2026-06-24T12:25:53.825233+00:00",
   "min_total_samples_required": 100,
   "n_unique_configs": 17,
   "skipped_configs_below_min_samples": [],
@@ -28,7 +28,7 @@
       "avg_infra_cost_per_sample_usd": 0.001985,
       "avg_energy_per_sample_kwh": 0.000202,
       "avg_co2_per_sample_g": 0.076658,
-      "eats": 0.49376
+      "eats": 0.635539
     },
     {
       "architecture": "blackboard",
@@ -53,7 +53,7 @@
       "avg_infra_cost_per_sample_usd": 0.003331,
       "avg_energy_per_sample_kwh": 0.000372,
       "avg_co2_per_sample_g": 0.141269,
-      "eats": 0.383655
+      "eats": 0.546747
     },
     {
       "architecture": "blackboard",
@@ -78,7 +78,7 @@
       "avg_infra_cost_per_sample_usd": 0.00366,
       "avg_energy_per_sample_kwh": 0.000408,
       "avg_co2_per_sample_g": 0.155014,
-      "eats": 0.364588
+      "eats": 0.536953
     },
     {
       "architecture": "ensemble",
@@ -108,7 +108,7 @@
       "avg_infra_cost_per_sample_usd": 0.006392,
       "avg_energy_per_sample_kwh": 0.000614,
       "avg_co2_per_sample_g": 0.233168,
-      "eats": 0.278533
+      "eats": 0.441521
     },
     {
       "architecture": "entropy_blackboard",
@@ -133,7 +133,7 @@
       "avg_infra_cost_per_sample_usd": 0.00346,
       "avg_energy_per_sample_kwh": 0.000419,
       "avg_co2_per_sample_g": 0.159177,
-      "eats": 0.430921
+      "eats": 0.601236
     },
     {
       "architecture": "entropy_blackboard",
@@ -158,7 +158,7 @@
       "avg_infra_cost_per_sample_usd": 0.003104,
       "avg_energy_per_sample_kwh": 0.000385,
       "avg_co2_per_sample_g": 0.146183,
-      "eats": 0.462281
+      "eats": 0.611844
     },
     {
       "architecture": "monolithic",
@@ -183,7 +183,7 @@
       "avg_infra_cost_per_sample_usd": 0.004355,
       "avg_energy_per_sample_kwh": 0.000593,
       "avg_co2_per_sample_g": 0.225362,
-      "eats": 0.469737
+      "eats": 0.652857
     },
     {
       "architecture": "monolithic",
@@ -191,25 +191,24 @@
       "slm": null,
       "llm": "gemma4-31b",
       "ensemble_slms": [],
-      "n_experiments": 2,
+      "n_experiments": 1,
       "experiment_ids": [
-        "exp_a89e96f9",
         "exp_db60849b"
       ],
-      "total_samples_evaluated": 510,
-      "accuracy": 0.936,
+      "total_samples_evaluated": 500,
+      "accuracy": 0.872,
       "llm_call_ratio": 1.0,
-      "avg_latency_ms": 5811.458466,
-      "latency_p50_ms": 5175.207124,
-      "latency_p95_ms": 12514.932281,
-      "avg_slm_confidence": 0.894991,
+      "avg_latency_ms": 5360.444573,
+      "latency_p50_ms": 4814.571889,
+      "latency_p95_ms": 8987.492478,
+      "avg_slm_confidence": 0.883098,
       "escalation_rate": 1.0,
-      "avg_cost_per_sample_usd": 0.003794,
+      "avg_cost_per_sample_usd": 0.003499,
       "avg_api_cost_per_sample_usd": 0.0,
-      "avg_infra_cost_per_sample_usd": 0.003794,
-      "avg_energy_per_sample_kwh": 0.000517,
-      "avg_co2_per_sample_g": 0.196298,
-      "eats": 0.528806
+      "avg_infra_cost_per_sample_usd": 0.003499,
+      "avg_energy_per_sample_kwh": 0.000476,
+      "avg_co2_per_sample_g": 0.181064,
+      "eats": 0.704499
     },
     {
       "architecture": "monolithic",
@@ -234,7 +233,7 @@
       "avg_infra_cost_per_sample_usd": 0.005401,
       "avg_energy_per_sample_kwh": 0.000499,
       "avg_co2_per_sample_g": 0.189443,
-      "eats": 0.465673
+      "eats": 0.612908
     },
     {
       "architecture": "monolithic",
@@ -259,7 +258,7 @@
       "avg_infra_cost_per_sample_usd": 0.002183,
       "avg_energy_per_sample_kwh": 0.000297,
       "avg_co2_per_sample_g": 0.112984,
-      "eats": 0.577085
+      "eats": 0.659387
     },
     {
       "architecture": "monolithic",
@@ -284,7 +283,7 @@
       "avg_infra_cost_per_sample_usd": 0.014131,
       "avg_energy_per_sample_kwh": 0.001304,
       "avg_co2_per_sample_g": 0.49568,
-      "eats": 0.274166
+      "eats": 0.439842
     },
     {
       "architecture": "monolithic",
@@ -309,7 +308,7 @@
       "avg_infra_cost_per_sample_usd": 0.002803,
       "avg_energy_per_sample_kwh": 0.000382,
       "avg_co2_per_sample_g": 0.145015,
-      "eats": 0.575104
+      "eats": 0.715797
     },
     {
       "architecture": "multi_agent",
@@ -334,7 +333,7 @@
       "avg_infra_cost_per_sample_usd": 0.003886,
       "avg_energy_per_sample_kwh": 0.000373,
       "avg_co2_per_sample_g": 0.141752,
-      "eats": 0.318475
+      "eats": 0.516849
     },
     {
       "architecture": "multi_agent",
@@ -359,7 +358,7 @@
       "avg_infra_cost_per_sample_usd": 0.005037,
       "avg_energy_per_sample_kwh": 0.000633,
       "avg_co2_per_sample_g": 0.240525,
-      "eats": 0.393668
+      "eats": 0.609902
     },
     {
       "architecture": "pure_swarm",
@@ -369,22 +368,22 @@
       "ensemble_slms": [],
       "n_experiments": 1,
       "experiment_ids": [
-        "exp_03b53489"
+        "exp_c28bc724"
       ],
       "total_samples_evaluated": 100,
-      "accuracy": 0.72,
+      "accuracy": 0.67,
       "llm_call_ratio": 0.0,
-      "avg_latency_ms": 27187.072831,
-      "latency_p50_ms": 17681.524167,
-      "latency_p95_ms": 77448.820042,
-      "avg_slm_confidence": 0.892054,
+      "avg_latency_ms": 8807.8978,
+      "latency_p50_ms": 6813.07,
+      "latency_p95_ms": 27659.34,
+      "avg_slm_confidence": 0.764453,
       "escalation_rate": 0.0,
-      "avg_cost_per_sample_usd": 0.005414,
+      "avg_cost_per_sample_usd": 0.001835,
       "avg_api_cost_per_sample_usd": 0.0,
-      "avg_infra_cost_per_sample_usd": 0.005414,
-      "avg_energy_per_sample_kwh": 0.00052,
-      "avg_co2_per_sample_g": 0.197494,
-      "eats": 0.245179
+      "avg_infra_cost_per_sample_usd": 0.001835,
+      "avg_energy_per_sample_kwh": 0.000176,
+      "avg_co2_per_sample_g": 0.06694,
+      "eats": 0.60552
     },
     {
       "architecture": "routing",
@@ -409,7 +408,7 @@
       "avg_infra_cost_per_sample_usd": 0.000572,
       "avg_energy_per_sample_kwh": 7.1e-05,
       "avg_co2_per_sample_g": 0.02688,
-      "eats": 0.844124
+      "eats": 0.853739
     },
     {
       "architecture": "speculative",
@@ -434,7 +433,7 @@
       "avg_infra_cost_per_sample_usd": 0.000756,
       "avg_energy_per_sample_kwh": 9.6e-05,
       "avg_co2_per_sample_g": 0.036428,
-      "eats": 0.816841
+      "eats": 0.860387
     }
   ]
 }

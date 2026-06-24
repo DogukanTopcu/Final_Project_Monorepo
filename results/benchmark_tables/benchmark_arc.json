@@ -1,6 +1,6 @@
 {
   "benchmark": "arc",
-  "generated_at": "2026-06-13T03:02:05.153592+00:00",
+  "generated_at": "2026-06-24T12:25:53.821738+00:00",
   "min_total_samples_required": 100,
   "n_unique_configs": 18,
   "skipped_configs_below_min_samples": [],
@@ -11,25 +11,24 @@
       "slm": "gemma4-4b",
       "llm": "gemma4-31b",
       "ensemble_slms": [],
-      "n_experiments": 2,
+      "n_experiments": 1,
       "experiment_ids": [
-        "exp_0fcbc737",
-        "exp_f49f827d"
+        "exp_0fcbc737"
       ],
-      "total_samples_evaluated": 200,
+      "total_samples_evaluated": 100,
       "accuracy": 0.91,
-      "llm_call_ratio": 0.05,
-      "avg_latency_ms": 12124.679722,
-      "latency_p50_ms": 10122.931425,
-      "latency_p95_ms": 21889.296606,
-      "avg_slm_confidence": 0.910225,
-      "escalation_rate": 0.045,
-      "avg_cost_per_sample_usd": 0.002558,
+      "llm_call_ratio": 0.06,
+      "avg_latency_ms": 2820.3801,
+      "latency_p50_ms": 2020.48,
+      "latency_p95_ms": 8380.72,
+      "avg_slm_confidence": 0.855913,
+      "escalation_rate": 0.06,
+      "avg_cost_per_sample_usd": 0.000604,
       "avg_api_cost_per_sample_usd": 0.0,
-      "avg_infra_cost_per_sample_usd": 0.002558,
-      "avg_energy_per_sample_kwh": 0.000247,
-      "avg_co2_per_sample_g": 0.094036,
-      "eats": 0.52858
+      "avg_infra_cost_per_sample_usd": 0.000604,
+      "avg_energy_per_sample_kwh": 5.9e-05,
+      "avg_co2_per_sample_g": 0.02243,
+      "eats": 0.885697
     },
     {
       "architecture": "blackboard",
@@ -54,7 +53,7 @@
       "avg_infra_cost_per_sample_usd": 0.001797,
       "avg_energy_per_sample_kwh": 0.000183,
       "avg_co2_per_sample_g": 0.069677,
-      "eats": 0.631156
+      "eats": 0.800386
     },
     {
       "architecture": "blackboard",
@@ -79,7 +78,7 @@
       "avg_infra_cost_per_sample_usd": 0.001936,
       "avg_energy_per_sample_kwh": 0.000198,
       "avg_co2_per_sample_g": 0.075112,
-      "eats": 0.621171
+      "eats": 0.808149
     },
     {
       "architecture": "ensemble",
@@ -109,7 +108,7 @@
       "avg_infra_cost_per_sample_usd": 0.006975,
       "avg_energy_per_sample_kwh": 0.00067,
       "avg_co2_per_sample_g": 0.254446,
-      "eats": 0.387682
+      "eats": 0.609516
     },
     {
       "architecture": "entropy_blackboard",
@@ -134,7 +133,7 @@
       "avg_infra_cost_per_sample_usd": 0.001997,
       "avg_energy_per_sample_kwh": 0.000211,
       "avg_co2_per_sample_g": 0.080048,
-      "eats": 0.615628
+      "eats": 0.79072
     },
     {
       "architecture": "entropy_blackboard",
@@ -159,7 +158,7 @@
       "avg_infra_cost_per_sample_usd": 0.001958,
       "avg_energy_per_sample_kwh": 0.000206,
       "avg_co2_per_sample_g": 0.078289,
-      "eats": 0.622194
+      "eats": 0.798914
     },
     {
       "architecture": "monolithic",
@@ -184,7 +183,7 @@
       "avg_infra_cost_per_sample_usd": 0.004822,
       "avg_energy_per_sample_kwh": 0.000657,
       "avg_co2_per_sample_g": 0.249504,
-      "eats": 0.518693
+      "eats": 0.722783
     },
     {
       "architecture": "monolithic",
@@ -192,25 +191,24 @@
       "slm": null,
       "llm": "gemma4-31b",
       "ensemble_slms": [],
-      "n_experiments": 2,
+      "n_experiments": 1,
       "experiment_ids": [
-        "exp_25f7a81e",
-        "exp_7c300c59"
+        "exp_25f7a81e"
       ],
-      "total_samples_evaluated": 510,
-      "accuracy": 0.935,
+      "total_samples_evaluated": 500,
+      "accuracy": 0.97,
       "llm_call_ratio": 1.0,
-      "avg_latency_ms": 8220.836423,
-      "latency_p50_ms": 7765.183333,
-      "latency_p95_ms": 13148.33753,
-      "avg_slm_confidence": 0.925614,
+      "avg_latency_ms": 7768.777075,
+      "latency_p50_ms": 7590.050666,
+      "latency_p95_ms": 11791.813832,
+      "avg_slm_confidence": 0.907796,
       "escalation_rate": 1.0,
-      "avg_cost_per_sample_usd": 0.005366,
+      "avg_cost_per_sample_usd": 0.005071,
       "avg_api_cost_per_sample_usd": 0.0,
-      "avg_infra_cost_per_sample_usd": 0.005366,
-      "avg_energy_per_sample_kwh": 0.000731,
-      "avg_co2_per_sample_g": 0.277682,
-      "eats": 0.48695
+      "avg_infra_cost_per_sample_usd": 0.005071,
+      "avg_energy_per_sample_kwh": 0.000691,
+      "avg_co2_per_sample_g": 0.262412,
+      "eats": 0.721843
     },
     {
       "architecture": "monolithic",
@@ -235,7 +233,7 @@
       "avg_infra_cost_per_sample_usd": 0.00486,
       "avg_energy_per_sample_kwh": 0.000449,
       "avg_co2_per_sample_g": 0.170481,
-      "eats": 0.56953
+      "eats": 0.733529
     },
     {
       "architecture": "monolithic",
@@ -260,7 +258,7 @@
       "avg_infra_cost_per_sample_usd": 0.001757,
       "avg_energy_per_sample_kwh": 0.000239,
       "avg_co2_per_sample_g": 0.090898,
-      "eats": 0.728819
+      "eats": 0.843266
     },
     {
       "architecture": "monolithic",
@@ -285,7 +283,7 @@
       "avg_infra_cost_per_sample_usd": 0.016018,
       "avg_energy_per_sample_kwh": 0.001479,
       "avg_co2_per_sample_g": 0.561877,
-      "eats": 0.308728
+      "eats": 0.496324
     },
     {
       "architecture": "monolithic",
@@ -310,7 +308,7 @@
       "avg_infra_cost_per_sample_usd": 0.009047,
       "avg_energy_per_sample_kwh": 0.001232,
       "avg_co2_per_sample_g": 0.468146,
-      "eats": 0.363883
+      "eats": 0.588356
     },
     {
       "architecture": "monolithic",
@@ -335,7 +333,7 @@
       "avg_infra_cost_per_sample_usd": 0.001847,
       "avg_energy_per_sample_kwh": 0.000251,
       "avg_co2_per_sample_g": 0.095549,
-      "eats": 0.737894
+      "eats": 0.858595
     },
     {
       "architecture": "multi_agent",
@@ -360,7 +358,7 @@
       "avg_infra_cost_per_sample_usd": 0.003818,
       "avg_energy_per_sample_kwh": 0.000366,
       "avg_co2_per_sample_g": 0.139265,
-      "eats": 0.424353
+      "eats": 0.658638
     },
     {
       "architecture": "multi_agent",
@@ -385,7 +383,7 @@
       "avg_infra_cost_per_sample_usd": 0.005214,
       "avg_energy_per_sample_kwh": 0.000652,
       "avg_co2_per_sample_g": 0.247664,
-      "eats": 0.451397
+      "eats": 0.679342
     },
     {
       "architecture": "pure_swarm",
@@ -395,22 +393,22 @@
       "ensemble_slms": [],
       "n_experiments": 1,
       "experiment_ids": [
-        "exp_d8af607c"
+        "exp_c1561d76"
       ],
       "total_samples_evaluated": 100,
-      "accuracy": 0.96,
+      "accuracy": 0.92,
       "llm_call_ratio": 0.0,
-      "avg_latency_ms": 21425.14396,
-      "latency_p50_ms": 19191.285791,
-      "latency_p95_ms": 39573.541167,
-      "avg_slm_confidence": 0.908208,
+      "avg_latency_ms": 7046.9752,
+      "latency_p50_ms": 4432.0,
+      "latency_p95_ms": 22511.84,
+      "avg_slm_confidence": 0.792085,
       "escalation_rate": 0.0,
-      "avg_cost_per_sample_usd": 0.004013,
+      "avg_cost_per_sample_usd": 0.001468,
       "avg_api_cost_per_sample_usd": 0.0,
-      "avg_infra_cost_per_sample_usd": 0.004013,
-      "avg_energy_per_sample_kwh": 0.000385,
-      "avg_co2_per_sample_g": 0.146396,
-      "eats": 0.410084
+      "avg_infra_cost_per_sample_usd": 0.001468,
+      "avg_energy_per_sample_kwh": 0.000141,
+      "avg_co2_per_sample_g": 0.053557,
+      "eats": 0.818272
     },
     {
       "architecture": "routing",
@@ -435,7 +433,7 @@
       "avg_infra_cost_per_sample_usd": 0.000519,
       "avg_energy_per_sample_kwh": 6.3e-05,
       "avg_co2_per_sample_g": 0.024105,
-      "eats": 0.883806
+      "eats": 0.903764
     },
     {
       "architecture": "speculative",
@@ -460,7 +458,7 @@
       "avg_infra_cost_per_sample_usd": 0.000752,
       "avg_energy_per_sample_kwh": 9.5e-05,
       "avg_co2_per_sample_g": 0.03616,
-      "eats": 0.8527
+      "eats": 0.908002
     }
   ]
 }

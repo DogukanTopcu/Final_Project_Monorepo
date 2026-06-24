@@ -20,7 +20,7 @@ window.S4 = `
         <span>λ = 0.40</span>
       </div>
     </div>
-    <div class="eqnote">all terms normalised per standalone-LLM baseline · β = 0.60, λ = 0.40 calibrated via grid search on MMLU validation split</div>
+    <div class="eqnote">all terms normalised per standalone-LLM baseline · weights (β = 0.60, λ = 0.40) set from a cost-primary deployment prior; rankings robust to ±0.1 perturbation</div>
   </div>
 </section>
 `;

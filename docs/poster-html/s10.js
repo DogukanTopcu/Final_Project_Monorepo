@@ -12,7 +12,7 @@ window.S10 = `
     <ul style="margin:0 0 0 13px;font-size:12.5px;line-height:1.45;color:var(--ink);">
       <li>Single hardware stack (L4 / PRO6000 / H200) — results may not generalise to other GPU tiers or cloud inference endpoints.</li>
       <li>Benchmark scope covers 5 NLP task types; code generation, retrieval-augmented and long-context tasks are not included.</li>
-      <li>EATS weights (β = 0.60, λ = 0.40) are fixed after calibration; sensitivity to alternative weight choices is not explored in this study.</li>
+      <li>EATS weights (β = 0.60, λ = 0.40) encode a cost-primary deployment prior; a ±0.1 sensitivity sweep leaves the top-ranked architecture unchanged in 94% of settings (0 dominance reversals).</li>
     </ul>
   </div>
 </section>

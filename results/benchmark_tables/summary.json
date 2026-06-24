@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-13T03:02:05.159593+00:00",
+  "generated_at": "2026-06-24T12:25:53.826020+00:00",
   "cutoff": "2026-05-27T23:59:59+00:00",
   "min_total_samples_required": 100,
   "benchmarks": {
@@ -68,7 +68,7 @@
         "speculative"
       ],
       "min_total_samples_required": 100,
-      "n_skipped_configs_below_min_samples": 1,
+      "n_skipped_configs_below_min_samples": 0,
       "output": "C:\\Users\\Meric\\Documents\\GitHub\\Final_Project_Monorepo\\scripts\\..\\results\\benchmark_tables\\benchmark_mmlu.json"
     },
     "truthfulqa": {
